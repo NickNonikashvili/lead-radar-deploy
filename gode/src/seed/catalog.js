@@ -17,8 +17,11 @@ const TIERS = ["quality", "balanced", "budget", "private"];
 // API-and-data-retention page. Prices are what WE pay; the margin is applied at billing time.
 //
 // Column conventions:
-// - price_in / price_out: USD per 1M tokens at the short-context rate (long-prompt surcharges, e.g.
-//   OpenAI's 2x above 272K input tokens, are not modelled; the provider-reported cost wins anyway).
+// - price_in / price_out: USD per 1M tokens at the short-context rate. OpenRouter reports the real
+//   cost of every request, which wins over these prices. Direct OpenAI and self-hosted report none,
+//   so for them the optional params.pricing (cached-input rate, long-prompt multipliers, below)
+//   matters: without it a cache hit is billed at the full input price and a prompt above OpenAI's
+//   272K tier at the short-context rate.
 // - Media price_per_unit is the price AT THE DEFAULT params below (resolution, quality, length);
 //   changing a default param means changing the price too.
 // - region: where a request may be processed in the worst case across the hosts the gateway can
@@ -28,6 +31,9 @@ const TIERS = ["quality", "balanced", "budget", "private"];
 //   Google models are false: OpenRouter's ZDR filter accepts Safety Retention endpoints and Vertex
 //   requires Safety Retention for Google models since 2026-10-18. OpenAI direct is false: ZDR needs
 //   OpenAI's prior approval. fal is false: it keeps queue payloads and serves public result URLs.
+//   validateModel enforces this for admin edits and imports: never zdr on fal, zdr on openai only
+//   with OPENAI_ZDR_APPROVED, and self_hosted / region "self" only on the selfhosted gateway (the
+//   pipeline sends unredacted text only to that gateway).
 // - retention_note is published verbatim on the public /privacy page: keep it factual.
 // - params.reasoning = { mandatory, efforts } mirrors OpenRouter's per-model reasoning object
 //   (src/providers/effort-map.js maps our effort onto it). Media params are the upstream request
@@ -38,6 +44,15 @@ const TIERS = ["quality", "balanced", "budget", "private"];
 //                          400 bad_request before any upstream call (fal would answer 422)
 //     openrouter_provider  OpenRouter text models: merged into the request's `provider` routing
 //                          object (with the ZDR fields), e.g. pinning an EU model to its EU host
+//     pricing              text models without a provider-reported cost (direct OpenAI):
+//                          { cached_in: USD per 1M cached input tokens,
+//                            long_context: { above_input_tokens, in_mult, out_mult } }; prompts
+//                          with more input tokens than above_input_tokens are priced at
+//                          price_in x in_mult (cached_in too) and price_out x out_mult
+//     duration_options     media models with a `duration` input: the values the endpoint accepts,
+//                          either a list (["4s","6s","8s"], [6, 8, 10]) or { min, max } whole
+//                          seconds. The classifier's duration_s is snapped onto it (the pipeline
+//                          removes this key before the adapter call); without it the default stays
 /** @type {Array<object>} */
 const MODELS = (() => {
   const zdrVia = (hosts) =>
@@ -191,7 +206,11 @@ const MODELS = (() => {
       price_in: 8, price_out: 40, price_unit: null, price_per_unit: null,
       zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
       supports_reasoning: true, context_length: 1050000,
-      params: { reasoning: { mandatory: true, efforts: ["max", "xhigh", "high", "medium", "low"] } },
+      // OpenAI reports no cost: cache reads are $0.40/1M, prompts of 272K tokens or more cost $16/$60.
+      params: {
+        reasoning: { mandatory: true, efforts: ["max", "xhigh", "high", "medium", "low"] },
+        pricing: { cached_in: 0.4, long_context: { above_input_tokens: 272000, in_mult: 2, out_mult: 1.5 } },
+      },
     },
     {
       // Alternate: OpenAI's everyday model. Rejects effort 'none'.
@@ -209,7 +228,8 @@ const MODELS = (() => {
       price_in: 1, price_out: 5, price_unit: null, price_per_unit: null,
       zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
       supports_reasoning: true, context_length: 1050000,
-      params: { reasoning: { mandatory: false, efforts: ["max", "xhigh", "high", "medium", "low", "none"] } },
+      // Cache reads $0.05/1M (no long-prompt rate was published for Terra).
+      params: { reasoning: { mandatory: false, efforts: ["max", "xhigh", "high", "medium", "low", "none"] }, pricing: { cached_in: 0.05 } },
     },
     {
       // Alternate and classifier fallback: OpenAI's cheapest current model with structured outputs.
@@ -219,7 +239,11 @@ const MODELS = (() => {
       price_in: 0.1, price_out: 0.5, price_unit: null, price_per_unit: null,
       zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
       supports_reasoning: true, context_length: 1050000,
-      params: { reasoning: { mandatory: false, efforts: ["max", "xhigh", "high", "medium", "low", "none"] } },
+      // Cache reads $0.01/1M; prompts of 272K tokens or more cost $0.20/$0.75.
+      params: {
+        reasoning: { mandatory: false, efforts: ["max", "xhigh", "high", "medium", "low", "none"] },
+        pricing: { cached_in: 0.01, long_context: { above_input_tokens: 272000, in_mult: 2, out_mult: 1.5 } },
+      },
     },
 
     // ===== Private tier: self-hosted open weights =====
@@ -308,7 +332,7 @@ const MODELS = (() => {
       price_in: null, price_out: null, price_unit: "second", price_per_unit: 0.1,
       zdr: false, retention_note: falPartner("Alibaba", false), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { resolution: "720p", duration: 5, aspect_ratio: "16:9", audio: true },
+      params: { resolution: "720p", duration: 5, aspect_ratio: "16:9", audio: true, duration_options: { min: 2, max: 30 } },
     },
     {
       // Video balanced pick: $0.05/s at 720p with audio. Veo takes duration as "4s" | "6s" | "8s".
@@ -317,7 +341,7 @@ const MODELS = (() => {
       price_in: null, price_out: null, price_unit: "second", price_per_unit: 0.05,
       zdr: false, retention_note: falPartner("Google", true), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { resolution: "720p", duration: "4s", aspect_ratio: "16:9", generate_audio: true },
+      params: { resolution: "720p", duration: "4s", aspect_ratio: "16:9", generate_audio: true, duration_options: ["4s", "6s", "8s"] },
     },
     {
       // Alternate: the doc's premium video option, $0.40/s at 720p with audio.
@@ -326,7 +350,7 @@ const MODELS = (() => {
       price_in: null, price_out: null, price_unit: "second", price_per_unit: 0.4,
       zdr: false, retention_note: falPartner("Google", true), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { resolution: "720p", duration: "4s", aspect_ratio: "16:9", generate_audio: true },
+      params: { resolution: "720p", duration: "4s", aspect_ratio: "16:9", generate_audio: true, duration_options: ["4s", "6s", "8s"] },
     },
     {
       // Video budget pick (and private fallback): $0.025 per ~3 s clip at 720p. fal lists the whole
@@ -345,7 +369,8 @@ const MODELS = (() => {
       price_in: null, price_out: null, price_unit: "second", price_per_unit: 0.06,
       zdr: false, retention_note: falOwn(), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { resolution: "1080p", duration: 6, aspect_ratio: "16:9" },
+      // Above 10 s fal needs 25 fps at 1080p, which is the default fps.
+      params: { resolution: "1080p", duration: 6, aspect_ratio: "16:9", duration_options: [6, 8, 10, 12, 14, 16, 18, 20] },
     },
 
     // ===== Music =====
@@ -375,7 +400,7 @@ const MODELS = (() => {
       price_in: null, price_out: null, price_unit: "request", price_per_unit: 0.0217,
       zdr: false, retention_note: falOwn(), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { duration: 30 },
+      params: { duration: 30, duration_options: { min: 5, max: 120 } }, // up to 2 minutes, same price
     },
     {
       // Alternate: songs with vocals, $0.15 per generation.
@@ -593,10 +618,133 @@ function validateParams(params) {
       }
     }
   }
+  if (p.pricing !== undefined && p.pricing !== null) errors.push(...validatePricing(p.pricing));
+  if (p.duration_options !== undefined && p.duration_options !== null) {
+    errors.push(...validateDurationOptions(p.duration_options));
+    if (p.duration === undefined || p.duration === null) errors.push("params.duration_options needs a default params.duration");
+  }
   return errors;
 }
 
-function validateModel(m) {
+const isPlain = (v) => Boolean(v) && typeof v === "object" && !Array.isArray(v);
+const finiteAtLeast = (v, min) => typeof v === "number" && Number.isFinite(v) && v >= min;
+
+/** params.pricing = { cached_in?, long_context?: { above_input_tokens, in_mult?, out_mult? } } */
+function validatePricing(pricing) {
+  if (!isPlain(pricing)) return ["params.pricing must be an object"];
+  const errors = [];
+  for (const k of Object.keys(pricing)) {
+    if (!["cached_in", "long_context"].includes(k)) errors.push(`params.pricing.${k.slice(0, 40)} is not supported`);
+  }
+  if (pricing.cached_in !== undefined && pricing.cached_in !== null && !finiteAtLeast(pricing.cached_in, 0)) {
+    errors.push("params.pricing.cached_in must be a price of 0 or more (USD per 1M tokens)");
+  }
+  const lc = pricing.long_context;
+  if (lc !== undefined && lc !== null) {
+    if (!isPlain(lc)) errors.push("params.pricing.long_context must be an object");
+    else {
+      for (const k of Object.keys(lc)) {
+        if (!["above_input_tokens", "in_mult", "out_mult"].includes(k)) errors.push(`params.pricing.long_context.${k.slice(0, 40)} is not supported`);
+      }
+      if (!(Number.isInteger(lc.above_input_tokens) && lc.above_input_tokens > 0)) {
+        errors.push("params.pricing.long_context.above_input_tokens must be a positive whole number");
+      }
+      for (const k of ["in_mult", "out_mult"]) {
+        if (lc[k] !== undefined && !(finiteAtLeast(lc[k], 0) && lc[k] > 0)) errors.push(`params.pricing.long_context.${k} must be a positive number`);
+      }
+    }
+  }
+  return errors;
+}
+
+/** Seconds a duration value stands for: 5, "5", "4s" -> 5, 5, 4; anything else -> null. */
+function durationSeconds(v) {
+  if (typeof v === "number") return Number.isFinite(v) && v > 0 ? v : null;
+  if (typeof v === "string" && /^\d+(?:\.\d+)?s?$/.test(v.trim())) {
+    const n = parseFloat(v);
+    return n > 0 ? n : null;
+  }
+  return null;
+}
+
+/** params.duration_options: a non-empty list of durations, or { min, max } whole seconds. */
+function validateDurationOptions(options) {
+  if (Array.isArray(options)) {
+    if (!options.length || options.length > 100) return ["params.duration_options must list 1 to 100 durations"];
+    if (options.some((o) => durationSeconds(o) === null)) return ['params.duration_options entries must be durations such as 5 or "4s"'];
+    return [];
+  }
+  if (isPlain(options)) {
+    const keys = Object.keys(options);
+    const { min, max } = options;
+    if (keys.some((k) => k !== "min" && k !== "max") || !Number.isInteger(min) || !Number.isInteger(max) || min <= 0 || min > max) {
+      return ["params.duration_options must be { min, max } in whole seconds with 0 < min <= max"];
+    }
+    return [];
+  }
+  return ["params.duration_options must be a list or { min, max }"];
+}
+
+/**
+ * The value for a media model's `duration` input that comes closest to `seconds` (the classifier's
+ * duration_s) among params.duration_options, in the format of the catalog default ("4s" or 5).
+ * Ties go to the shorter (cheaper) value, so the classifier's 5 s default keeps Veo at "4s".
+ * Returns null when the model has no duration input or no declared options: the default stays.
+ */
+function durationFor(model, seconds) {
+  const p = model?.params || {};
+  const want = typeof seconds === "number" && Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+  if (want === null || p.duration === undefined || p.duration === null) return null;
+  const options = p.duration_options;
+  if (Array.isArray(options)) {
+    let best = null;
+    for (const o of options) {
+      const s = durationSeconds(o);
+      if (s === null) continue;
+      const better = best === null || Math.abs(s - want) < Math.abs(best.s - want) || (Math.abs(s - want) === Math.abs(best.s - want) && s < best.s);
+      if (better) best = { s, o };
+    }
+    return best ? best.o : null;
+  }
+  if (isPlain(options) && Number.isInteger(options.min) && Number.isInteger(options.max) && options.min <= options.max) {
+    const n = Math.min(options.max, Math.max(options.min, Math.round(want)));
+    if (typeof p.duration === "number") return n;
+    return typeof p.duration === "string" && /s$/.test(p.duration.trim()) ? `${n}s` : String(n);
+  }
+  return null;
+}
+
+/**
+ * Per-token rates (USD per 1M tokens, i.e. micro-USD per token) for a text request with this many
+ * input tokens: { in, out, cachedIn } where null means "unknown". The long-prompt multipliers of
+ * params.pricing apply above its threshold; cachedIn falls back to the input rate.
+ */
+function textRates(model, inputTokens = 0) {
+  const price = (v) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null);
+  const pricing = isPlain(model?.params?.pricing) ? model.params.pricing : {};
+  let rateIn = price(model?.price_in);
+  let rateOut = price(model?.price_out);
+  let cachedIn = price(pricing.cached_in);
+  const lc = isPlain(pricing.long_context) ? pricing.long_context : null;
+  if (lc && Number.isInteger(lc.above_input_tokens) && Number(inputTokens) > lc.above_input_tokens) {
+    const inMult = finiteAtLeast(lc.in_mult, 0) ? lc.in_mult : 1;
+    const outMult = finiteAtLeast(lc.out_mult, 0) ? lc.out_mult : 1;
+    if (rateIn !== null) rateIn *= inMult;
+    if (cachedIn !== null) cachedIn *= inMult;
+    if (rateOut !== null) rateOut *= outMult;
+  }
+  return { in: rateIn, out: rateOut, cachedIn: cachedIn ?? rateIn };
+}
+
+/**
+ * Problems with a model as a whole (admin edits, imports). The gateway rules guard privacy:
+ * the pipeline sends unredacted text only to the selfhosted gateway, and the picker treats zdr and
+ * self_hosted models as safe for private requests, so neither flag may claim more than the gateway
+ * can enforce.
+ * @param {object} m
+ * @param {{ openaiZdrApproved?: boolean }} [opts]  config.gateways.openai.zdrApproved
+ */
+function validateModel(m, { openaiZdrApproved = false } = {}) {
   const errors = [];
   if (!m || typeof m !== "object") return ["model must be an object"];
   if (!m.id || typeof m.id !== "string") errors.push("id is required");
@@ -605,6 +753,12 @@ function validateModel(m) {
   if (m.id && m.gateway && m.slug && m.id !== `${m.gateway}:${m.slug}`) errors.push(`id must be "${m.gateway}:${m.slug}"`);
   const jobs = Array.isArray(m.jobs) ? m.jobs : safeJsonParse(m.jobs, null);
   if (!Array.isArray(jobs) || !jobs.length || jobs.some((j) => !JOBS.includes(j))) errors.push("jobs must be a non-empty array of known jobs");
+  if (m.self_hosted && m.gateway !== "selfhosted") errors.push("self_hosted is only for models on the selfhosted gateway");
+  if (m.region === "self" && m.gateway !== "selfhosted") errors.push('region "self" is only for models on the selfhosted gateway');
+  if (m.zdr && m.gateway === "fal") errors.push("zdr is not possible on fal (it keeps queue payloads and serves public result links)");
+  if (m.zdr && m.gateway === "openai" && !openaiZdrApproved) {
+    errors.push("zdr on openai needs OPENAI_ZDR_APPROVED=1 (OpenAI must approve zero retention for this key first)");
+  }
   errors.push(...validateParams(m.params));
   return errors;
 }
@@ -657,6 +811,35 @@ function seedCatalog(db, { force = false } = {}) {
   return { seeded: true, models: MODELS.length, routes: ROUTES.length };
 }
 
+/**
+ * Boot-time fix-up for rows saved before validateModel enforced the gateway rules: clears
+ * self_hosted and region "self" off the selfhosted gateway, zdr on fal, and zdr on openai unless
+ * OpenAI approved zero retention. Returns the ids it changed (ids only, safe to log).
+ * @param {{ openaiZdrApproved?: boolean }} [opts]
+ */
+function repairCatalog(db, { openaiZdrApproved = false } = {}) {
+  const bad = db
+    .prepare(
+      `SELECT id FROM models
+        WHERE (self_hosted = 1 AND gateway <> 'selfhosted')
+           OR (region = 'self' AND gateway <> 'selfhosted')
+           OR (zdr = 1 AND gateway = 'fal')
+           OR (zdr = 1 AND gateway = 'openai' AND ? = 0)
+        ORDER BY id`
+    )
+    .all(openaiZdrApproved ? 1 : 0)
+    .map((r) => r.id);
+  if (!bad.length) return [];
+  db.tx(() => {
+    const t = now();
+    db.prepare("UPDATE models SET self_hosted = 0, updated_at = ? WHERE self_hosted = 1 AND gateway <> 'selfhosted'").run(t);
+    db.prepare("UPDATE models SET region = NULL, updated_at = ? WHERE region = 'self' AND gateway <> 'selfhosted'").run(t);
+    db.prepare("UPDATE models SET zdr = 0, updated_at = ? WHERE zdr = 1 AND gateway = 'fal'").run(t);
+    if (!openaiZdrApproved) db.prepare("UPDATE models SET zdr = 0, updated_at = ? WHERE zdr = 1 AND gateway = 'openai'").run(t);
+  });
+  return bad;
+}
+
 function exportCatalog(db) {
   return {
     models: db.prepare("SELECT * FROM models ORDER BY id").all().map(rowToModel),
@@ -664,10 +847,14 @@ function exportCatalog(db) {
   };
 }
 
-/** Upsert models then routes from an exported catalog. Throws on validation errors (nothing written). */
-function importCatalog(db, { models = [], routes = [] } = {}, { source = "admin" } = {}) {
+/**
+ * Upsert models then routes from an exported catalog. Throws on validation errors (nothing written).
+ * An export taken before the gateway rules existed may now be refused (e.g. self_hosted on an
+ * OpenRouter model): that is intended, fix the file.
+ */
+function importCatalog(db, { models = [], routes = [] } = {}, { source = "admin", openaiZdrApproved = false } = {}) {
   const errors = [];
-  models.forEach((m, i) => validateModel(m).forEach((e) => errors.push(`models[${i}]: ${e}`)));
+  models.forEach((m, i) => validateModel(m, { openaiZdrApproved }).forEach((e) => errors.push(`models[${i}]: ${e}`)));
   if (errors.length) throw new AppError(400, "bad_request", errors.join("; "));
   db.tx(() => {
     for (const m of models) upsertModel(db, m);
@@ -704,9 +891,12 @@ module.exports = {
   modelToParams,
   validateModel,
   validateParams,
+  durationFor,
+  textRates,
   upsertModel,
   setRoute,
   seedCatalog,
+  repairCatalog,
   exportCatalog,
   importCatalog,
   getModel,

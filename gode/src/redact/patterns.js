@@ -690,11 +690,71 @@ function detectPersons(text, out) {
 // Overlap resolution
 // ---------------------------------------------------------------------------------------------
 
+// High-risk types: one exposed fragment of these is already a leak (and a privacy signal).
+const HIGH_RISK_TYPES = Object.freeze(["CARD", "IBAN", "SSN", "BANK_ACCOUNT", "PASSPORT", "SECRET"]);
+const HIGH_RISK = new Set(HIGH_RISK_TYPES);
+
+/** Order in which overlapping entities win: higher score, then longer span, then earlier start. */
+const beats = (a, b) => b.score - a.score || b.end - b.start - (a.end - a.start) || a.start - b.start;
+
+/**
+ * A high-risk entity must never lose part of itself to an overlapping entity of another type: a
+ * known name inside a password ("password: rex-1985!Qz" with "Rex" in the map) would otherwise win
+ * on score, replace only "rex" and send "-1985!Qz" upstream, counted as PERSON. So within each
+ * cluster of overlapping entities, a high-risk entity absorbs (takes the union of) every other-type
+ * entity it overlaps, keeping its own type and score. Two exceptions keep the normal rule:
+ * look-alikes the user typed ("[SECRET_1]") are text, not data; and an entity that fully covers the
+ * high-risk one with a higher score already hides all of it. Between two high-risk entities the
+ * winner absorbs the loser. Mutates and returns `list` minus the absorbed entries.
+ */
+function absorbIntoHighRisk(list) {
+  if (!list.some((e) => HIGH_RISK.has(e.type) && !e.literal)) return list;
+  list.sort((a, b) => a.start - b.start || b.end - a.end);
+  const out = [];
+  let cluster = [];
+  let clusterEnd = -1;
+  const flush = () => {
+    if (cluster.length > 1) absorbCluster(cluster);
+    for (const e of cluster) if (!e.absorbed) out.push(e);
+    cluster = [];
+  };
+  for (const e of list) {
+    if (cluster.length && e.start >= clusterEnd) flush();
+    cluster.push(e);
+    clusterEnd = Math.max(clusterEnd, e.end);
+  }
+  flush();
+  return out;
+}
+
+function absorbCluster(cluster) {
+  const isRisky = (e) => HIGH_RISK.has(e.type) && !e.literal;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const a of cluster) {
+      for (const b of cluster) {
+        if (a === b || a.absorbed || b.absorbed || a.type === b.type) continue;
+        if (b.end <= a.start || b.start >= a.end) continue; // no overlap
+        if (!isRisky(a) && !isRisky(b)) continue;
+        // h absorbs x: h is the high-risk one, or the winner when both are.
+        const [h, x] = isRisky(a) && (!isRisky(b) || beats(a, b) <= 0) ? [a, b] : [b, a];
+        if (!isRisky(x) && x.start <= h.start && x.end >= h.end && x.score > h.score) continue;
+        h.start = Math.min(h.start, x.start);
+        h.end = Math.max(h.end, x.end);
+        x.absorbed = true;
+        changed = true;
+      }
+    }
+  }
+}
+
 /**
  * Make entities non-overlapping, sorted by start.
  * 1. Overlapping entities of the SAME type merge into their union, so a partial span from one
  *    recognizer never leaves part of a value exposed ("Ada" + "Ada Lovelace" → "Ada Lovelace").
- * 2. Across types, the higher score wins, then the longer span, then the earlier start.
+ * 2. A high-risk entity absorbs the other-type entities it overlaps (see absorbIntoHighRisk).
+ * 3. Otherwise, across types, the higher score wins, then the longer span, then the earlier start.
  * Extra boolean flags (`literal`, `known`) survive a merge only when every merged part had them.
  */
 function resolveOverlaps(entities, text) {
@@ -723,9 +783,9 @@ function resolveOverlaps(entities, text) {
     }
     if (cur) merged.push(cur);
   }
-  merged.sort((a, b) => b.score - a.score || b.end - b.start - (a.end - a.start) || a.start - b.start);
+  const ranked = absorbIntoHighRisk(merged).sort(beats);
   const accepted = []; // kept sorted by start
-  for (const e of merged) {
+  for (const e of ranked) {
     let lo = 0;
     let hi = accepted.length;
     while (lo < hi) {
@@ -771,4 +831,5 @@ module.exports = {
   isDateLike,
   escapeRegExp,
   IBAN_LENGTHS,
+  HIGH_RISK_TYPES,
 };

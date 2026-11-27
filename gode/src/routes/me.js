@@ -1,10 +1,11 @@
-// The signed-in user: GET/PATCH/DELETE /api/me and the transparency log (GET /api/transparency).
+// The signed-in user: GET/PATCH/DELETE /api/me, POST /api/me/password and the transparency log
+// (GET /api/transparency).
 const express = require("express");
 const { publicUser, PASSWORD_MAX } = require("../auth");
-const { verifyPassword } = require("../crypto");
-const { AppError, microsToUsd, safeJsonParse } = require("../util");
+const { AppError, ah, microsToUsd, safeJsonParse } = require("../util");
 const { PLANS } = require("../router/effort");
-const { bodyObject, onlyKeys, stringField, booleanField, intQuery, badRequest } = require("./validate");
+const { TEXT_MAX } = require("./chat");
+const { bodyObject, onlyKeys, stringField, booleanField, intQuery, idField, badRequest } = require("./validate");
 
 const BOOLEAN_SETTINGS = ["strict_privacy", "eu_only", "auto_pick", "share_prompts"];
 const TRANSPARENCY_DEFAULT = 50;
@@ -15,16 +16,27 @@ const TRANSPARENCY_MAX = 200;
  */
 function createMeRoutes({ db, config, auth, stripe, redactor, providers, limiters }) {
   const router = express.Router();
+  // The classifier model of each request is joined too (cm): it receives every message it
+  // classifies, so the log names it next to the model that answered. 'heuristic' (or NULL, for a
+  // regenerate/switch that reused the earlier decision) means nothing was sent for classifying.
+  const TRANSPARENCY_SELECT = `SELECT r.id, r.created_at, r.kind, r.job, r.tier, r.model_id, m.label AS model_label, r.gateway,
+              r.upstream_provider, r.effort, r.zdr, r.private, r.redactions, r.charged_micros, r.status, r.error_code,
+              r.classifier_model, cm.label AS classifier_label, cm.gateway AS classifier_gateway, cm.zdr AS classifier_zdr,
+              cm.region AS classifier_region, cm.self_hosted AS classifier_self_hosted
+         FROM requests r
+         LEFT JOIN models m ON m.id = r.model_id
+         LEFT JOIN models cm ON cm.id = r.classifier_model`;
   const stmt = {
     userById: db.prepare("SELECT * FROM users WHERE id = ?"),
-    transparency: db.prepare(
-      `SELECT r.id, r.created_at, r.kind, r.job, r.tier, r.model_id, m.label AS model_label, r.gateway,
-              r.upstream_provider, r.effort, r.zdr, r.private, r.redactions, r.charged_micros, r.status, r.error_code
-         FROM requests r LEFT JOIN models m ON m.id = r.model_id
-        WHERE r.user_id = ?
-        ORDER BY r.created_at DESC, r.rowid DESC
-        LIMIT ?`
+    transparency: db.prepare(`${TRANSPARENCY_SELECT} WHERE r.user_id = ? ORDER BY r.created_at DESC, r.rowid DESC LIMIT ?`),
+    // Keyset paging: rows strictly older than the cursor row, in the same order (created_at ties
+    // broken by rowid, as above).
+    transparencyBefore: db.prepare(
+      `${TRANSPARENCY_SELECT}
+        WHERE r.user_id = ?1 AND (r.created_at < ?2 OR (r.created_at = ?2 AND r.rowid < ?3))
+        ORDER BY r.created_at DESC, r.rowid DESC LIMIT ?4`
     ),
+    cursorRow: db.prepare("SELECT created_at, rowid AS rid FROM requests WHERE id = ? AND user_id = ?"),
   };
 
   /** What the UI needs to know about this deployment. No secrets, no per-user data. */
@@ -44,6 +56,10 @@ function createMeRoutes({ db, config, auth, stripe, redactor, providers, limiter
       // mock serves every gateway; that is also what the router does).
       selfhosted: Boolean(status.selfhosted ?? config.gateways.selfhosted.baseUrl),
       private_fallback: config.router.privateFallback,
+      // Generated media is served through /api/media (the browser never contacts the media host).
+      media_proxy: Boolean(config.privacy.mediaProxy),
+      // Longest message the chat API accepts, so the composer can stop there.
+      text_max: TEXT_MAX,
     };
   }
 
@@ -74,21 +90,53 @@ function createMeRoutes({ db, config, auth, stripe, redactor, providers, limiter
 
   // Delete everything: the account, its chats, its routing log and its data key. The password is
   // asked again so a borrowed, signed-in browser can't wipe the account.
-  router.delete("/me", auth.requireUser, limiters.password, (req, res) => {
-    const body = bodyObject(req);
-    onlyKeys(body, ["password"]);
-    const password = stringField(body.password, "password", { required: true, trim: false, max: PASSWORD_MAX });
-    if (!verifyPassword(password, req.user.password_hash)) throw new AppError(401, "unauthorized", "Wrong password.");
-    auth.deleteEverything(req.user.id);
-    auth.clearCookie(res);
-    res.json({ ok: true });
-  });
+  router.delete(
+    "/me",
+    auth.requireUser,
+    limiters.password,
+    ah(async (req, res) => {
+      const body = bodyObject(req);
+      onlyKeys(body, ["password"]);
+      const password = stringField(body.password, "password", { required: true, trim: false, max: PASSWORD_MAX });
+      if (!(await auth.checkPassword(req.user, password))) throw new AppError(401, "unauthorized", "Wrong password.");
+      auth.deleteEverything(req.user.id);
+      auth.clearCookie(res);
+      res.json({ ok: true });
+    })
+  );
+
+  // Change the password. The current one is asked again; every other signed-in device is signed
+  // out (this browser's session stays).
+  router.post(
+    "/me/password",
+    auth.requireUser,
+    limiters.password,
+    ah(async (req, res) => {
+      const body = bodyObject(req);
+      onlyKeys(body, ["current", "next"]);
+      const current = stringField(body.current, "current", { required: true, trim: false, max: PASSWORD_MAX });
+      const next = stringField(body.next, "next", { required: true, trim: false, max: 1000 });
+      const { revoked } = await auth.changePassword(req.user, { current, next, keepToken: req.sessionToken });
+      res.json({ ok: true, signed_out_sessions: revoked });
+    })
+  );
 
   // The user's own routing log: which model answered, where it ran, what it cost, how many personal
-  // details were hidden. Metadata only: the requests table never holds prompts or answers.
+  // details were hidden, and which classifier read the message. Metadata only: the requests table
+  // never holds prompts or answers. Paged newest first: ?before=<id of the last row seen>.
   router.get("/transparency", auth.requireUser, (req, res) => {
     const limit = intQuery(req.query.limit, "limit", { min: 1, max: TRANSPARENCY_MAX, dflt: TRANSPARENCY_DEFAULT });
-    const requests = stmt.transparency.all(req.user.id, limit).map((r) => ({
+    const before = idField(req.query.before, "before");
+    let rows;
+    if (before) {
+      const cursor = stmt.cursorRow.get(before, req.user.id);
+      if (!cursor) throw badRequest("Unknown before cursor.");
+      rows = stmt.transparencyBefore.all(req.user.id, cursor.created_at, cursor.rid, limit + 1);
+    } else {
+      rows = stmt.transparency.all(req.user.id, limit + 1);
+    }
+    const hasMore = rows.length > limit;
+    const requests = rows.slice(0, limit).map((r) => ({
       id: r.id,
       created_at: r.created_at,
       kind: r.kind,
@@ -105,8 +153,13 @@ function createMeRoutes({ db, config, auth, stripe, redactor, providers, limiter
       cost_usd: microsToUsd(r.charged_micros),
       status: r.status,
       error_code: r.error_code,
+      classifier_model: r.classifier_model || null,
+      classifier_label: r.classifier_model === "heuristic" ? "Gode's own rules" : r.classifier_label || r.classifier_model || null,
+      classifier_gateway: r.classifier_gateway || null,
+      classifier_zdr: r.classifier_model && r.classifier_model !== "heuristic" ? Boolean(r.classifier_zdr || r.classifier_self_hosted) : null,
+      classifier_region: r.classifier_region || null,
     }));
-    res.json({ requests });
+    res.json({ requests, has_more: hasMore, next_before: hasMore ? requests[requests.length - 1].id : null });
   });
 
   return router;

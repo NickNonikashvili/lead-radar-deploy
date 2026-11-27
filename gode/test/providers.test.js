@@ -298,7 +298,10 @@ describe("gateway adapters against mock upstream", () => {
         })(),
         /rate_limit_exceeded/
       );
-      assert.deepEqual(seen, [{ type: "delta", text: "Hello" }]);
+      assert.deepEqual(seen, [
+        { type: "meta", upstreamProvider: "MockProvider" },
+        { type: "delta", text: "Hello" },
+      ]);
     });
 
     it("a 200 stream holding only an error chunk is a failure", async () => {
@@ -944,7 +947,7 @@ describe("mock provider", () => {
       })(),
       /mid-stream/
     );
-    assert.equal(seen.length, 1);
+    assert.deepEqual(seen.map((e) => e.type), ["meta", "delta"]);
     await rejectsUpstream(mock.generateMedia({ model: M.klein, job: "image", prompt: "GODE_MOCK_FAIL" }), /media/);
   });
 

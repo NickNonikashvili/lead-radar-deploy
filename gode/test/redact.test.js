@@ -6,6 +6,7 @@ const http = require("node:http");
 const { detectBuiltin, luhnValid, ibanValid, ssnValid, resolveOverlaps } = require("../src/redact/patterns");
 const { createPresidioClient, labelForPresidioType, PresidioError } = require("../src/redact/presidio");
 const { createRedactor, normalizeValue, HIGH_RISK_TYPES } = require("../src/redact");
+const { AppError } = require("../src/util");
 
 // ---------------------------------------------------------------------------------------------
 // helpers
@@ -503,7 +504,7 @@ describe("resolveOverlaps", () => {
     const out = resolveOverlaps(
       [
         { type: "PHONE", start: 0, end: 10, score: 0.7 },
-        { type: "CARD", start: 2, end: 8, score: 1 },
+        { type: "EMAIL", start: 2, end: 8, score: 1 },
         { type: "IP", start: 12, end: 15, score: 0.9 },
         { type: "LOCATION", start: 12, end: 18, score: 0.9 },
       ],
@@ -512,10 +513,84 @@ describe("resolveOverlaps", () => {
     assert.deepEqual(
       out.map((e) => [e.type, e.start, e.end]),
       [
-        ["CARD", 2, 8],
+        ["EMAIL", 2, 8],
         ["LOCATION", 12, 18],
       ]
     );
+  });
+
+  test("a high-risk span absorbs other-type spans it overlaps, so no fragment of it is exposed", () => {
+    // A known name (0.95) inside a password (0.9) used to win and leave the rest of the password.
+    const contained = resolveOverlaps(
+      [
+        { type: "SECRET", start: 2, end: 14, score: 0.9 },
+        { type: "PERSON", start: 2, end: 5, score: 0.95, known: true },
+      ],
+      text
+    );
+    assert.deepEqual(contained, [{ type: "SECRET", start: 2, end: 14, score: 0.9, value: "cdefghijklmn" }]);
+    // Partial overlap: the union, typed as the high-risk entity.
+    const partial = resolveOverlaps(
+      [
+        { type: "SECRET", start: 0, end: 6, score: 0.85 },
+        { type: "PERSON", start: 4, end: 12, score: 1 },
+      ],
+      text
+    );
+    assert.deepEqual(partial.map((e) => [e.type, e.start, e.end]), [["SECRET", 0, 12]]);
+    // A card inside a lower-scored phone span takes the phone digits around it too.
+    const card = resolveOverlaps(
+      [
+        { type: "PHONE", start: 0, end: 10, score: 0.7 },
+        { type: "CARD", start: 2, end: 8, score: 1 },
+      ],
+      text
+    );
+    assert.deepEqual(card.map((e) => [e.type, e.start, e.end]), [["CARD", 0, 10]]);
+    // An entity that covers the high-risk one with a higher score already hides all of it.
+    const covered = resolveOverlaps(
+      [
+        { type: "EMAIL", start: 0, end: 10, score: 1 },
+        { type: "SECRET", start: 0, end: 6, score: 0.9 },
+      ],
+      text
+    );
+    assert.deepEqual(covered.map((e) => [e.type, e.start, e.end]), [["EMAIL", 0, 10]]);
+    // Typed look-alikes ("[SECRET_1]") are text, not data: they never absorb anything.
+    const literal = resolveOverlaps(
+      [
+        { type: "SECRET", start: 0, end: 6, score: 1, literal: true },
+        { type: "PERSON", start: 4, end: 12, score: 0.6 },
+      ],
+      text
+    );
+    assert.deepEqual(literal.map((e) => [e.type, e.start, e.end]), [["SECRET", 0, 6]]);
+    // Chains: the union grows until nothing other-type overlaps it; distant entities are untouched.
+    const chain = resolveOverlaps(
+      [
+        { type: "SECRET", start: 4, end: 8, score: 0.85 },
+        { type: "PERSON", start: 6, end: 11, score: 0.95 },
+        { type: "LOCATION", start: 10, end: 14, score: 0.9 },
+        { type: "EMAIL", start: 20, end: 24, score: 1 },
+      ],
+      text
+    );
+    assert.deepEqual(
+      chain.map((e) => [e.type, e.start, e.end]),
+      [
+        ["SECRET", 4, 14],
+        ["EMAIL", 20, 24],
+      ]
+    );
+    // Two high-risk types: the winner takes the union.
+    const both = resolveOverlaps(
+      [
+        { type: "CARD", start: 0, end: 8, score: 1 },
+        { type: "SSN", start: 6, end: 12, score: 0.85 },
+      ],
+      text
+    );
+    assert.deepEqual(both.map((e) => [e.type, e.start, e.end]), [["CARD", 0, 12]]);
   });
 
   test("same type: overlapping spans merge into their union", () => {
@@ -1098,28 +1173,33 @@ describe("redactor with Presidio", () => {
     assert.equal(builtins.messages[0].content, "my name is [PERSON_1], [EMAIL_1]");
   });
 
-  test("Presidio down: built-ins still redact, one warning without text, recovery noticed", async () => {
+  const openConfig = (url) => ({ privacy: { ...config(url).privacy, presidioFailMode: "open" } });
+
+  test("Presidio down (PRESIDIO_FAIL_MODE=open): built-ins still redact, one warning without text, recovery noticed", async () => {
     mode = "error";
     const logger = quietLogger();
-    const r = createRedactor(config(stub.url), { logger, presidioRetryMs: 0 });
+    const r = createRedactor(openConfig(stub.url), { logger, presidioRetryMs: 0 });
     for (let i = 0; i < 3; i++) {
       const res = await r.redactMessages([{ role: "user", content: "my name is Ada Lovelace, email ada@x.io, tell Maria Garcia" }], null);
       assert.equal(res.messages[0].content, "my name is [PERSON_1], email [EMAIL_1], tell Maria Garcia");
     }
     assert.equal(logger.lines.warn.length, 1);
-    assert.match(logger.lines.warn[0], /Presidio analyzer unavailable \(presidio: HTTP 503\)/);
+    assert.match(logger.lines.warn[0], /Presidio analyzer unavailable \(presidio: HTTP 503\); using built-in recognizers only/);
+    assert.equal(r.presidioStatus().state, "down");
     assert.ok(!/Ada|Maria|ada@x\.io/.test(logger.lines.warn[0]));
     mode = "ok";
     const res = await r.redactMessages([{ role: "user", content: "tell Maria Garcia" }], null);
     assert.equal(res.messages[0].content, "tell [PERSON_1]");
     assert.equal(logger.lines.info.length, 1);
+    assert.match(logger.lines.info[0], /reachable again after \d+ s; 3 texts redacted with built-in recognizers only meanwhile/);
     assert.equal(logger.lines.warn.length, 1);
+    assert.equal(r.presidioStatus().state, "up");
   });
 
-  test("Presidio unreachable: falls back quickly and backs off", async () => {
+  test("Presidio unreachable (open): falls back quickly and backs off", async () => {
     const logger = quietLogger();
     const url = await closedPortUrl();
-    const r = createRedactor(config(url), { logger, presidioRetryMs: 60_000 });
+    const r = createRedactor(openConfig(url), { logger, presidioRetryMs: 60_000 });
     const res = await r.redactMessages([{ role: "user", content: "card 4111 1111 1111 1111" }], null);
     assert.equal(res.messages[0].content, "card [CARD_1]");
     assert.equal(logger.lines.warn.length, 1);
@@ -1131,7 +1211,7 @@ describe("redactor with Presidio", () => {
     const hang = await startStub(() => "HANG");
     try {
       const logger = quietLogger();
-      const r = createRedactor(config(hang.url), { logger, presidioTimeoutMs: 200 });
+      const r = createRedactor(openConfig(hang.url), { logger, presidioTimeoutMs: 200 });
       const t0 = Date.now();
       const res = await r.redactMessages([{ role: "user", content: "mail ada@x.io" }], null);
       assert.equal(res.messages[0].content, "mail [EMAIL_1]");
@@ -1143,10 +1223,77 @@ describe("redactor with Presidio", () => {
     }
   });
 
+  test("Presidio down (closed, the default): nothing is redacted without it; 503 redaction_unavailable", async () => {
+    mode = "error";
+    const logger = quietLogger();
+    const r = createRedactor(config(stub.url), { logger, presidioRetryMs: 60_000 });
+    assert.deepEqual(r.presidioStatus(), { enabled: true, state: "unknown", failMode: "closed", downSince: null });
+    const n0 = stub.requests.length;
+    const history = Array.from({ length: 12 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", content: `message ${i} from ada@x.io` }));
+    for (let i = 0; i < 3; i++) {
+      await assert.rejects(r.redactMessages(history, null), (err) => {
+        assert.ok(err instanceof AppError);
+        assert.equal(err.status, 503);
+        assert.equal(err.code, "redaction_unavailable");
+        assert.equal(err.message, "The privacy filter is unavailable right now, so nothing was sent. Try again in a minute.");
+        return true;
+      });
+    }
+    // Generic (media) redaction and analyze() refuse too.
+    await assert.rejects(r.redactMessages([{ role: "user", content: "a photo of Maria Garcia" }], null, { mode: "generic" }), { code: "redaction_unavailable" });
+    await assert.rejects(r.analyze("tell Maria Garcia"), { code: "redaction_unavailable" });
+    // The breaker: the first failure stops the remaining analyses; later calls never reach Presidio.
+    assert.ok(stub.requests.length - n0 <= 4, `${stub.requests.length - n0} analyze calls`);
+    assert.equal(logger.lines.warn.length, 1);
+    assert.match(logger.lines.warn[0], /Presidio analyzer unavailable \(presidio: HTTP 503\); refusing prompts until it is back \(PRESIDIO_FAIL_MODE=closed\)/);
+    assert.ok(!/ada@x\.io|Maria/.test(logger.lines.warn.join("\n")));
+    const status = r.presidioStatus();
+    assert.equal(status.state, "down");
+    assert.ok(status.downSince > 0);
+    // Empty texts never need Presidio.
+    assert.deepEqual((await r.redactMessages([{ role: "user", content: "   " }], null)).messages, [{ role: "user", content: "   " }]);
+
+    // A healthy /health during the outage lets the next prompt probe at once.
+    mode = "ok";
+    assert.equal(await r.presidioHealth(), true);
+    const res = await r.redactMessages([{ role: "user", content: "tell Maria Garcia" }], null);
+    assert.equal(res.messages[0].content, "tell [PERSON_1]");
+    assert.equal(r.presidioStatus().state, "up");
+    assert.match(logger.lines.info[0], /reachable again after \d+ s; \d+ texts refused meanwhile/);
+  });
+
+  test("Presidio unreachable or timing out (closed): refuses fast, within the timeout", async () => {
+    const url = await closedPortUrl();
+    const r = createRedactor(config(url), { logger: quietLogger() });
+    await assert.rejects(r.redactMessages([{ role: "user", content: "card 4111 1111 1111 1111" }], null), { code: "redaction_unavailable" });
+    const hang = await startStub(() => "HANG");
+    try {
+      const h = createRedactor(config(hang.url), { logger: quietLogger(), presidioTimeoutMs: 200 });
+      const t0 = Date.now();
+      await assert.rejects(h.redactMessages([{ role: "user", content: "mail ada@x.io" }], null), { code: "redaction_unavailable" });
+      assert.ok(Date.now() - t0 < 1500);
+    } finally {
+      hang.server.closeAllConnections();
+      await hang.close();
+    }
+  });
+
+  test("an outage that lasts is logged again every presidioRemindMs, with counts only", async () => {
+    mode = "error";
+    const logger = quietLogger();
+    const r = createRedactor(openConfig(stub.url), { logger, presidioRetryMs: 60_000, presidioRemindMs: 0 });
+    await r.redactMessages([{ role: "user", content: "tell Maria Garcia" }], null);
+    await r.redactMessages([{ role: "user", content: "tell Maria Garcia again" }], null);
+    assert.ok(logger.lines.warn.length >= 2);
+    assert.match(logger.lines.warn.at(-1), /^\[redact\] Presidio analyzer still unavailable after \d+ min; \d+ texts redacted with built-in recognizers only so far$/);
+    mode = "ok";
+  });
+
   test("no Presidio URL: built-ins only, no requests", async () => {
     const r = createRedactor({ privacy: { presidioUrl: "" } });
     assert.equal(r.presidioEnabled, false);
     assert.equal(await r.presidioHealth(), false);
+    assert.deepEqual(r.presidioStatus(), { enabled: false, state: "off", failMode: "closed", downSince: null });
     const res = await r.redactMessages([{ role: "user", content: "tell Maria Garcia, ada@x.io" }], null);
     assert.equal(res.messages[0].content, "tell Maria Garcia, [EMAIL_1]");
   });

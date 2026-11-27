@@ -2,7 +2,7 @@
 // A small cheap model does the work (one JSON call per request); a keyword heuristic stands in
 // whenever that model is unavailable, slow, or returns something unusable, so routing never waits
 // on or fails because of the classifier. The text is already redacted when it gets here.
-const { JOBS, TEXT_JOBS, CLASSIFIER_MODEL_CANDIDATES, getModel } = require("../seed/catalog");
+const { JOBS, TEXT_JOBS, CLASSIFIER_MODEL_CANDIDATES, getModel, getRoutes, listModels } = require("../seed/catalog");
 const { isSensitive: builtinIsSensitive } = require("../redact");
 const { usdToMicros } = require("../util");
 const { clampDifficulty, isMediaJob } = require("./effort");
@@ -23,6 +23,13 @@ const FORMATS = ["text", "markdown", "list", "table", "code", "json", "image", "
 const ASPECTS = ["1:1", "4:3", "3:4", "3:2", "2:3", "4:5", "5:4", "16:9", "9:16", "21:9"];
 const DURATION_LIMITS = { video: [1, 30], music: [5, 300] };
 const DEFAULT_VIDEO_SECONDS = 5;
+// Regions an EU-only user's text may be processed in (same rule as the picker).
+const EU_REGIONS = ["eu", "self"];
+// A media follow-up ("now make a video of it") is short; the earlier request it points at is
+// folded into media_prompt, at most this many user messages back and this many characters.
+const FOLLOW_UP_MAX_CHARS = 160;
+const FOLLOW_UP_MAX_PARTS = 3;
+const MEDIA_PROMPT_MAX_CHARS = 2000;
 const FORMAT_BY_JOB = { image: "image", video: "video", music: "audio", voice: "audio", code: "code" };
 
 const CLASSIFIER_SYSTEM_PROMPT = `GODE_CLASSIFIER_V1
@@ -199,21 +206,62 @@ const EASY_RE = /\b(?:quick question|briefly|in one (?:sentence|line|word)|tl;?d
 const SHORT_RE = /\b(?:briefly|brief|short|one (?:sentence|line|word|paragraph)|tl;?dr|quick|concise|in a few words|yes or no)\b/i;
 const LONG_RE = /\b(?:detailed|in[- ]depth|comprehensive|thorough|essay|full|complete (?:guide|code|implementation)|report|step[- ]by[- ]step|\d{3,} words)\b/i;
 
-// Topics that make a request private on their own, whatever the classifier model says. Kept to
-// personal-context terms: with PRIVATE_FALLBACK=block a false positive refuses the request.
-const PRIVATE_RE = new RegExp(
-  "\\b(?:" +
-    [
-      "passwords?", "passcodes?", "private keys?", "seed phrase", "recovery phrase", "2fa codes?",
-      "diagnos(?:is|es|ed)", "medical", "medications?", "prescriptions?", "therap(?:y|ist)", "psychiatr\\w*",
-      "mental health", "hiv", "lab results?", "blood test results?", "health records?",
-      "salary", "salaries", "payslips?", "pay ?stubs?", "bank statements?", "bank account numbers?", "credit score",
-      "tax returns?", "lawsuits?", "divorce", "custody", "criminal record", "immigration status", "restraining order",
-      "social security numbers?", "passport numbers?", "confidential",
-    ].join("|") +
-    ")\\b",
-  "i"
-);
+// Keyword privacy. A keyword alone is not enough: "hash passwords with bcrypt" or "a form for a
+// medical booking app" are ordinary developer requests, and with PRIVATE_FALLBACK=block a false
+// positive refuses the request (with zdr it makes the whole conversation private for good). A
+// keyword counts when the sentence ties it to a real person: "my bank statement", "I was
+// diagnosed", "[PERSON_1]'s custody case", "my mom's lab results". General questions on these
+// topics are left to the classifier model, whose prompt says they are not private.
+
+// Health, money, legal and identity topics.
+const PERSONAL_TERMS = [
+  "diagnos(?:is|es|ed)", "medical", "medications?", "prescriptions?", "therap(?:y|ist)", "psychiatr\\w*",
+  "mental health", "hiv", "lab results?", "blood test results?", "health records?",
+  "salary", "salaries", "payslips?", "pay ?stubs?", "bank statements?", "bank account numbers?", "credit score",
+  "tax returns?", "lawsuits?", "divorce", "custody", "criminal record", "immigration status", "restraining order",
+  "social security numbers?", "passport numbers?", "seed phrase", "recovery phrase",
+];
+// Everyday software vocabulary as well: private only when someone's own secret is meant ("my
+// password", "our private key", "a password for my bank"), and never in a code request.
+const SECRET_TERMS = ["passwords?", "passcodes?", "private keys?", "2fa codes?", "confidential"];
+
+const termsRe = (terms) => `(?:${terms.join("|")})`;
+// One word inside a sentence (no sentence punctuation), followed by whitespace.
+const W = "[^\\s.?!;:]+\\s+";
+const FAMILY = "(?:mom|mum|dad|mother|father|wife|husband|partner|son|daughter|brother|sister|boyfriend|girlfriend|fianc[eé]e?|kids?|child|children|grandma|grandpa|grandmother|grandfather)(?:'s)?";
+const PLACEHOLDER_PERSON = "\\[PERSON_\\d+\\](?:'s)?";
+// Owners of a thing: "my diagnosis", "her custody", "[PERSON_1]'s salary", "dad's lab results".
+const OWNER = `(?:my|our|his|her|${FAMILY}|${PLACEHOLDER_PERSON})`;
+// Someone living through it: "gave me a diagnosis", "I was diagnosed", "we are going through a divorce".
+const EXPERIENCER = "(?:me|us|i'm|im|i am|i was|i've been|ive been|i have been|i have|i had|i got|we're|we are|we were|we've been|we have been|we have|we had|we got)";
+// Software nouns right after a keyword make it a technical use: "salary column", "password reset",
+// "medical records app", "confidential flag".
+const TECH_NOUN =
+  "(?:apps?|application|websites?|site|forms?|fields?|columns?|tables?|database|db|schema|api|endpoints?|system|software|features?|pages?|components?|modules?|class|functions?|scripts?|regex|hash(?:es|ing)?|validat(?:or|ion)|generators?|managers?|reset|polic(?:y|ies)|inputs?|portal|dashboard|platform|tools?|tracker|templates?|dataset|flags?|crud|bots?|plugins?|services?|booking|calculator|strength|checker|vault|hasher)";
+// "my users' passwords", "our app's private key": product data, not the speaker's own secret.
+const PRODUCT_OWNER = "(?:users?|customers?|clients?|members?|visitors?|employees?|accounts?|app|site|website|service|server|api|database)(?:'s|')?";
+
+const before = (subject, terms, maxWords) => new RegExp(`(?<![\\w'\\]])${subject}\\s+(?:${W}){0,${maxWords}}?(${termsRe(terms)})\\b`, "gi");
+const after = (terms, maxWords) => new RegExp(`\\b(${termsRe(terms)})\\b\\s+(?:${W}){0,${maxWords}}?(?:me|my|myself|us|our)\\b`, "gi");
+const PERSONAL_PATTERNS = [before(OWNER, PERSONAL_TERMS, 3), before(EXPERIENCER, PERSONAL_TERMS, 3), after(PERSONAL_TERMS, 3)];
+const SECRET_PATTERNS = [before(OWNER, SECRET_TERMS, 1), after(SECRET_TERMS, 3)];
+const TECH_AFTER_RE = new RegExp(`^\\s+(?:${W}){0,2}?${TECH_NOUN}\\b`, "i");
+const PRODUCT_OWNER_RE = new RegExp(`^(?:my|our)\\s+${PRODUCT_OWNER}\\s`, "i");
+
+/** True when one of `patterns` matches a keyword that is not used as a technical term. */
+function personalMatch(text, patterns, { productOwnerExempt = false } = {}) {
+  for (const re of patterns) {
+    re.lastIndex = 0;
+    for (const m of text.matchAll(re)) {
+      const term = m[1];
+      const termEnd = m.index + m[0].toLowerCase().lastIndexOf(term.toLowerCase()) + term.length;
+      if (TECH_AFTER_RE.test(text.slice(termEnd, termEnd + 80))) continue;
+      if (productOwnerExempt && PRODUCT_OWNER_RE.test(m[0])) continue;
+      return true;
+    }
+  }
+  return false;
+}
 
 const FILLER_RE =
   /^(?:hey|hi|hello|please|pls|ok(?:ay)?|so|gode,?|can you|could you|would you|will you|can u|i want you to|i need you to|i'd like you to|i would like you to|help me(?: to)?)\b[\s,]*/i;
@@ -337,28 +385,92 @@ function heuristicTitle(text) {
   return title.charAt(0).toUpperCase() + title.slice(1);
 }
 
+/** Sensitive topic about a real person (see PERSONAL_TERMS); generic and developer uses don't count. */
 function keywordPrivate(text) {
-  return PRIVATE_RE.test(text);
+  const t = String(text ?? "").replace(/[\u2018\u2019]/g, "'");
+  if (personalMatch(t, PERSONAL_PATTERNS)) return true;
+  // In a code request "password", "private key" and "confidential" are the subject matter; a real
+  // secret pasted into one is caught by the redactor (SECRET placeholders -> isSensitive).
+  if (heuristicJob(t) === "code") return false;
+  return personalMatch(t, SECRET_PATTERNS, { productOwnerExempt: true });
+}
+
+// "now make a video of it", "turn that into a song", "the same again but 9:16", "a vertical version".
+const FOLLOW_UP_RE =
+  /\b(?:of|from|with|for|into|to|on|about|make|turn|animate|redo|draw|render|read|narrate|say|sing|play|convert|change|show|use)\s+(?:it|this|that|these|those|them)\b|\b(?:the same|same one|same thing|same again|another one|one more|again|instead|version)\b/i;
+// "Draw a cat and make it blue" brings its own subject: "it" is the cat, not an earlier message.
+// The medium itself ("make a video of it") is not a subject.
+const OWN_SUBJECT_RE =
+  /\b(?:a|an|the|my|our|his|her|some)\s+(?!(?:video|clip|image|picture|pic|photo|song|track|tune|gif|animation|version|poster|drawing|painting|illustration|voice|recording|audio|loop|short|reel|one|bit|little|new|different|similar|vertical|horizontal|square|shorter|longer)\b)[a-z]/i;
+
+const historyText = (m) => (typeof m?.content === "string" ? m.content : typeof m?.text === "string" ? m.text : "");
+
+/** A short, one-sentence message that points back at an earlier one. */
+function isFollowUp(text) {
+  const t = text.trim();
+  if (!t || t.length > FOLLOW_UP_MAX_CHARS || /[.!?]\s+\S/.test(t)) return false;
+  const m = FOLLOW_UP_RE.exec(t);
+  return Boolean(m) && !OWN_SUBJECT_RE.test(t.slice(0, m.index));
+}
+
+/**
+ * A self-contained prompt for a media job whose latest message only makes sense with the earlier
+ * ones ("now make a video of it"): the request it refers to, then the follow-up. null when the
+ * latest message stands on its own. Text-to-speech reads its prompt aloud, so a voice follow-up
+ * ("read it aloud") takes the previous answer's text instead of the instructions. Placeholders
+ * ([PERSON_1]) are kept: the pipeline genericises them for media models.
+ */
+function followUpMediaPrompt(text, history, job) {
+  if (!isMediaJob(job) || !isFollowUp(text) || !Array.isArray(history) || !history.length) return null;
+  const items = history.filter((m) => m && (m.role === "user" || m.role === "assistant") && historyText(m).trim());
+  if (job === "voice") {
+    const answer = [...items].reverse().find((m) => m.role === "assistant");
+    const said = answer ? historyText(answer).trim() : "";
+    return said ? said.slice(0, MEDIA_PROMPT_MAX_CHARS) : null;
+  }
+  const users = items.filter((m) => m.role === "user").map((m) => historyText(m).trim());
+  const parts = [];
+  // Walk back through a chain of follow-ups ("make it blue", "now a video of it") to the request.
+  for (let i = users.length - 1; i >= 0 && parts.length < FOLLOW_UP_MAX_PARTS; i--) {
+    parts.unshift(users[i]);
+    if (!isFollowUp(users[i])) break;
+  }
+  if (!parts.length) return null;
+  const sentence = (s) => (/[.!?]$/.test(s) ? s : `${s}.`);
+  const latest = text.trim();
+  const combined = [...parts.map(sentence), latest.charAt(0).toUpperCase() + latest.slice(1)].join(" ");
+  return combined.length > MEDIA_PROMPT_MAX_CHARS ? combined.slice(-MEDIA_PROMPT_MAX_CHARS) : combined;
+}
+
+/** Adds output.media_prompt (media follow-ups only) without changing anything else. */
+function withMediaPrompt(result, text, history) {
+  const mediaPrompt = followUpMediaPrompt(text, history, result.job);
+  return mediaPrompt ? { ...result, output: { ...result.output, media_prompt: mediaPrompt } } : result;
 }
 
 /**
  * Keyword-and-length classification. Deterministic, offline, no cost.
  * @param {string} text  latest message, already redacted
  * @param {Record<string, number>} [redactionCounts]  entity counts from the redactor
+ * @param {{ history?: Array<{role, content}> }} [opts]  earlier redacted messages, for media_prompt
  */
-function heuristicClassify(text, redactionCounts) {
+function heuristicClassify(text, redactionCounts, { history } = {}) {
   const t = typeof text === "string" ? text : String(text ?? "");
   const job = heuristicJob(t);
   const difficulty = heuristicDifficulty(t, job);
-  return {
-    job,
-    difficulty,
-    private: keywordPrivate(t) || builtinIsSensitive(redactionCounts),
-    output: heuristicOutput(t, job, difficulty),
-    title: heuristicTitle(t),
-    classifierModel: "heuristic",
-    usage: { inputTokens: 0, outputTokens: 0, costMicros: 0 },
-  };
+  return withMediaPrompt(
+    {
+      job,
+      difficulty,
+      private: keywordPrivate(t) || builtinIsSensitive(redactionCounts),
+      output: heuristicOutput(t, job, difficulty),
+      title: heuristicTitle(t),
+      classifierModel: "heuristic",
+      usage: { inputTokens: 0, outputTokens: 0, costMicros: 0 },
+    },
+    t,
+    history
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -552,14 +664,41 @@ function createClassifier({ config, db, providers, redactor = null, timeoutMs = 
     return [...new Set(ids.map((id) => id.trim()))];
   }
 
-  /** First enabled, available, text-capable classifier model (zero-retention only when asked). */
-  function resolveModel({ zdrOnly = false } = {}) {
-    for (const id of candidateIds()) {
+  /**
+   * Self-hosted text models, best first: the configured classifier if it is one, the chat private
+   * pick, then any other. They are the only classifier for a request already known to be private,
+   * and a last resort otherwise (e.g. a deployment with no outside text gateway).
+   */
+  function selfHostedIds() {
+    const isSelf = (m) => m && m.self_hosted && m.jobs.some((j) => TEXT_JOBS.includes(j));
+    const configured = config?.router?.classifierModelId;
+    const ordered = [];
+    if (typeof configured === "string" && isSelf(getModel(db, configured.trim()))) ordered.push(configured.trim());
+    const privateCell = getRoutes(db).find((r) => r.job === "chat" && r.tier === "private");
+    if (privateCell && isSelf(getModel(db, privateCell.model_id))) ordered.push(privateCell.model_id);
+    for (const m of listModels(db)) if (isSelf(m)) ordered.push(m.id);
+    return [...new Set(ordered)];
+  }
+
+  /**
+   * First enabled, available, text-capable classifier model that meets the request's limits.
+   * @param {{ zdrOnly?: boolean, euOnly?: boolean, selfHostedOnly?: boolean }} [opts]
+   *   zdrOnly: strict privacy (zero-retention or self-hosted); euOnly: region eu or self;
+   *   selfHostedOnly: the request is private, so no outside model may see it.
+   * Without limits the candidate order stands, a non-zero-retention fallback included: a prompt
+   * nothing local calls private goes to an answering model on the same terms anyway, and falling
+   * back to the heuristic there would only miss the privacy the classifier model can still spot.
+   */
+  function resolveModel({ zdrOnly = false, euOnly = false, selfHostedOnly = false } = {}) {
+    const ids = selfHostedOnly ? selfHostedIds() : [...new Set([...candidateIds(), ...selfHostedIds()])];
+    for (const id of ids) {
       const model = getModel(db, id);
       if (!model || !model.enabled) continue;
       // Media gateways have no JSON completion.
       if (!model.jobs.some((j) => TEXT_JOBS.includes(j))) continue;
+      if (selfHostedOnly && !model.self_hosted) continue;
       if (zdrOnly && !(model.zdr || model.self_hosted)) continue;
+      if (euOnly && !(model.self_hosted || EU_REGIONS.includes(model.region))) continue;
       if (!providers.isAvailable(model)) continue;
       return model;
     }
@@ -603,17 +742,27 @@ function createClassifier({ config, db, providers, redactor = null, timeoutMs = 
    * @param {AbortSignal} [args.signal]  caller abort (client gone): rethrown, not swallowed
    * @param {boolean} [args.zdrOnly]  only use a zero-retention/self-hosted classifier model
    *   (pass user.strict_privacy); with none available the heuristic is used
+   * @param {boolean} [args.conversationPrivate]  the conversation was private before: classify on
+   *   our own servers only (self-hosted model or heuristic)
+   * @param {boolean} [args.euOnly]  only use a classifier hosted in the EU or self-hosted
    */
-  async function classify({ text, history, redactionCounts, signal, zdrOnly = false } = {}) {
+  async function classify({ text, history, redactionCounts, signal, zdrOnly = false, conversationPrivate = false, euOnly = false } = {}) {
     if (signal?.aborted) throw abortError(signal);
     const input = typeof text === "string" ? text : String(text ?? "");
-    const fallback = heuristicClassify(input, redactionCounts);
-    // Signals that hold whatever the classifier model says.
+    const fallback = heuristicClassify(input, redactionCounts, { history });
+    // Decided locally, before anything leaves: these hold whatever the classifier model says.
     const forcedPrivate = fallback.private || Boolean(redactor?.isSensitive?.(redactionCounts));
-    const heuristicResult = () => ({ ...fallback, private: forcedPrivate });
+    // A request known to be private (or in a conversation that already is) must not reach any
+    // outside model, the classifier included: only a self-hosted classifier may see it.
+    const localOnly = forcedPrivate || Boolean(conversationPrivate);
+    // Text turns of a private conversation stay private through the picker (conversationPrivate).
+    // A media prompt is only the latest message, unless it is a follow-up whose media_prompt
+    // quotes earlier messages: then it carries the conversation's privacy with it.
+    const carried = (r) => Boolean(conversationPrivate) && isMediaJob(r.job) && Boolean(r.output?.media_prompt);
+    const heuristicResult = () => ({ ...fallback, private: forcedPrivate || carried(fallback) });
 
     if (!input.trim()) return heuristicResult();
-    const model = resolveModel({ zdrOnly });
+    const model = resolveModel({ zdrOnly, euOnly, selfHostedOnly: localOnly });
     if (!model) return heuristicResult();
 
     let res;
@@ -632,7 +781,8 @@ function createClassifier({ config, db, providers, redactor = null, timeoutMs = 
       // The call was still billed upstream, so its cost stays on the request.
       return { ...heuristicResult(), usage };
     }
-    return { ...parsed, private: parsed.private || forcedPrivate, classifierModel: model.id, usage };
+    const result = withMediaPrompt({ ...parsed, classifierModel: model.id, usage }, input, history);
+    return { ...result, private: parsed.private || forcedPrivate || carried(result) };
   }
 
   return { classify, resolveModel };
@@ -647,5 +797,5 @@ module.exports = {
   CLASSIFIER_SCHEMA,
   CLASSIFIER_TIMEOUT_MS,
   // exported for tests
-  _internal: { scoreJobs, heuristicJob, heuristicDifficulty, heuristicOutput, heuristicTitle, keywordPrivate, buildUserMessage, usageFrom },
+  _internal: { scoreJobs, heuristicJob, heuristicDifficulty, heuristicOutput, heuristicTitle, keywordPrivate, followUpMediaPrompt, buildUserMessage, usageFrom },
 };

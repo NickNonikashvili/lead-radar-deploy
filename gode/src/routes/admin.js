@@ -1,6 +1,7 @@
-// Admin: the routing table, the model catalog, the learner and catalog export/import. Every route
-// here needs an admin (auth.requireAdmin: 401 signed out, 403 signed in without the role). The
-// first account and any address in ADMIN_EMAILS are admins (src/auth.js signup).
+// Admin: the routing table, the model catalog, the learner, catalog export/import, and user
+// accounts (find a user, adjust their credit). Every route here needs an admin
+// (auth.requireAdmin: 401 signed out, 403 signed in without the role). The first account and any
+// address in ADMIN_EMAILS are admins (src/auth.js signup).
 const express = require("express");
 const {
   JOBS,
@@ -15,15 +16,35 @@ const {
   exportCatalog,
   importCatalog,
 } = require("../seed/catalog");
-const { computeStats, gateMetrics, proposeRoutes, applyProposals } = require("../router/learn");
+const {
+  computeStats,
+  computeCellStats,
+  gateMetrics,
+  proposeRoutes,
+  applyProposals,
+  recordLearnRun,
+  markLearnRunApplied,
+  getLearnRun,
+  listLearnRuns,
+} = require("../router/learn");
+const { ROUTED_TIERS } = require("../router/pick");
 const { EFFORTS } = require("../router/effort");
 const { EFFORT_RANK } = require("../providers/effort-map");
-const { AppError, now } = require("../util");
+const { AppError, now, usdToMicros, microsToUsd } = require("../util");
 const { badRequest, bodyObject, isPlainObject, onlyKeys, idField, intQuery, booleanField, numberField, stringField } = require("./validate");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_DAYS = 365;
 const MAX_IMPORT_ITEMS = 2000;
+const MAX_PROPOSALS = 200;
+const MAX_USERS_LISTED = 50;
+// One adjustment, either way. A larger correction is several deliberate steps.
+const MAX_ADJUST_USD = 10_000;
+// Fields of a learner proposal an admin may send back to apply it as reviewed.
+const PROPOSAL_FIELDS = [
+  "job", "tier", "current_model_id", "proposed_model_id", "reason", "current_score", "proposed_score",
+  "current_n", "proposed_n", "current_requests", "proposed_requests",
+];
 
 const MODEL_FIELDS = [
   "id", "label", "vendor", "region", "gateway", "slug", "jobs", "price_in", "price_out", "price_unit",
@@ -77,11 +98,15 @@ function checkModelFields(m, where) {
   if (m.jobs !== undefined && !Array.isArray(m.jobs)) throw badRequest(`${field("jobs")} must be an array.`);
 }
 
-/** A complete model ready for upsertModel, or a 400 naming the first problems. */
-function checkFullModel(m, where) {
+/**
+ * A complete model ready for upsertModel, or a 400 naming the first problems. `opts` is passed to
+ * validateModel (openaiZdrApproved: a direct-OpenAI model may be flagged zdr only with OpenAI's
+ * zero-retention approval for this key).
+ */
+function checkFullModel(m, where, opts = {}) {
   checkModelFields(m, where);
   if (m.label === undefined) throw badRequest(`${where}.label is required.`);
-  const errors = validateModel(m);
+  const errors = validateModel(m, opts);
   if (errors.length) throw badRequest(`${where}: ${errors.slice(0, 3).join("; ")}.`);
   return m;
 }
@@ -103,6 +128,42 @@ function daysQuery(req, dflt) {
   return intQuery(req.query.days, "days", { min: 1, max: MAX_DAYS, dflt });
 }
 
+/** Proposals sent back by the admin page to apply exactly what was reviewed. */
+function checkProposals(list) {
+  if (!Array.isArray(list)) throw badRequest("proposals must be an array.");
+  if (list.length > MAX_PROPOSALS) throw badRequest("Too many proposals in one request.");
+  return list.map((p, i) => {
+    const where = `proposals[${i}]`;
+    if (!isPlainObject(p)) throw badRequest(`${where} must be an object.`);
+    onlyKeys(p, PROPOSAL_FIELDS, where);
+    if (!JOBS.includes(p.job) || routeJobOf(p.job) !== p.job) throw badRequest(`${where}.job is not a routed job.`);
+    // The private cell is a privacy decision: never changed from learner proposals.
+    if (!ROUTED_TIERS.includes(p.tier)) throw badRequest(`${where}.tier must be one of: ${ROUTED_TIERS.join(", ")}.`);
+    // current_model_id is what makes a stale proposal (the cell changed since) a no-op.
+    const out = {
+      job: p.job,
+      tier: p.tier,
+      current_model_id: idField(p.current_model_id, `${where}.current_model_id`, { required: true }),
+      proposed_model_id: idField(p.proposed_model_id, `${where}.proposed_model_id`, { required: true }),
+    };
+    if (p.reason !== undefined && p.reason !== null) out.reason = stringField(p.reason, `${where}.reason`, { max: 1000 });
+    for (const k of ["current_score", "proposed_score", "current_n", "proposed_n", "current_requests", "proposed_requests"]) {
+      if (p[k] !== undefined && p[k] !== null) out[k] = numberField(p[k], `${where}.${k}`, { min: 0, max: 1e9 });
+    }
+    return out;
+  });
+}
+
+// Phase 1 answers `action` with the chat routes; its cells are kept only for later phases.
+const routeJobOf = (job) => (job === "action" ? "chat" : job);
+
+/** The admin view of a user: no password hash, no keys, no settings. */
+function adminUser(row) {
+  return { id: row.id, email: row.email, balance_usd: microsToUsd(row.balance_micros), is_admin: Boolean(row.is_admin), created_at: row.created_at };
+}
+
+const escapeLike = (s) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
 // ---------------------------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------------------------
@@ -110,7 +171,7 @@ function daysQuery(req, dflt) {
 /**
  * @param {object} ctx  app context (see src/app.js)
  */
-function createAdminRoutes({ db, config, auth, classifier }) {
+function createAdminRoutes({ db, config, auth, classifier, credits }) {
   const router = express.Router();
   router.use("/admin", auth.requireAdmin);
 
@@ -128,6 +189,8 @@ function createAdminRoutes({ db, config, auth, classifier }) {
     const { job, tier } = req.params;
     if (!JOBS.includes(job)) throw badRequest(`Unknown job. Use one of: ${JOBS.join(", ")}.`);
     if (!TIERS.includes(tier)) throw badRequest(`Unknown tier. Use one of: ${TIERS.join(", ")}.`);
+    // Editing an action cell would look like it changes something, but action requests route as chat.
+    if (job !== routeJobOf(job)) throw badRequest("Action requests are answered with the chat routes for now; edit the chat cells instead.");
     const body = bodyObject(req);
     onlyKeys(body, ["model_id", "effort_override"]);
     const modelId = idField(body.model_id, "model_id", { required: true });
@@ -140,8 +203,10 @@ function createAdminRoutes({ db, config, auth, classifier }) {
     res.json({ ok: true });
   });
 
+  const modelOpts = { openaiZdrApproved: Boolean(config?.gateways?.openai?.zdrApproved) };
+
   router.post("/admin/models", (req, res) => {
-    const model = checkFullModel(bodyObject(req), "model");
+    const model = checkFullModel(bodyObject(req), "model", modelOpts);
     if (getModel(db, model.id)) throw new AppError(409, "conflict", "A model with this id already exists. Edit it instead.");
     upsertModel(db, model);
     res.status(201).json({ ok: true });
@@ -156,27 +221,98 @@ function createAdminRoutes({ db, config, auth, classifier }) {
       if (patch[k] !== undefined && patch[k] !== existing[k]) throw badRequest(`${k} can't be changed; add a new model instead.`);
     }
     if (!Object.keys(patch).length) throw badRequest("Nothing to update.");
-    upsertModel(db, checkFullModel({ ...existing, ...patch }, "model"));
+    upsertModel(db, checkFullModel({ ...existing, ...patch }, "model", modelOpts));
     res.json({ ok: true });
   });
 
   router.get("/admin/stats", (req, res) => {
     const days = daysQuery(req, config.learn.windowDays);
     const sinceMs = now() - days * DAY_MS;
-    res.json({ days, gate: gateMetrics(db, { sinceMs }), models: computeStats(db, { sinceMs }) });
+    const [lastRun] = listLearnRuns(db, { limit: 1 });
+    res.json({
+      days,
+      gate: gateMetrics(db, { sinceMs }),
+      models: computeStats(db, { sinceMs }),
+      // What the learner compares: each routing cell's own traffic.
+      cells: computeCellStats(db, { sinceMs }),
+      last_learn_run: lastRun ? { id: lastRun.id, source: lastRun.source, created_at: lastRun.created_at, proposals: lastRun.proposals.length, applied: lastRun.applied } : null,
+    });
   });
 
-  // Propose routing changes from the feedback signals; apply them only when asked.
+  // Propose routing changes from the feedback signals; apply them only when asked. Every call is
+  // stored as a learner run (learn_runs). To apply what the admin reviewed, send that run's id
+  // ({apply: true, run_id}) or the reviewed proposals themselves ({apply: true, proposals}): new
+  // feedback between "Run" and "Apply" must not change what gets applied. {apply: true} alone
+  // computes and applies in one step (scripts and automation).
   router.post("/admin/learn", (req, res) => {
     const body = bodyObject(req);
-    onlyKeys(body, ["apply", "days", "min_samples"]);
+    onlyKeys(body, ["apply", "days", "min_samples", "run_id", "proposals"]);
     const apply = body.apply === undefined ? false : booleanField(body.apply, "apply");
+    if ((body.run_id !== undefined || body.proposals !== undefined) && !apply) throw badRequest("run_id and proposals are only used with apply: true.");
+    if (body.run_id !== undefined && body.proposals !== undefined) throw badRequest("Send run_id or proposals, not both.");
+
+    if (body.run_id !== undefined) {
+      const runId = numberField(body.run_id, "run_id", { min: 1, max: Number.MAX_SAFE_INTEGER, integer: true });
+      const run = getLearnRun(db, runId);
+      if (!run) throw new AppError(404, "not_found", "Learner run not found.");
+      const applied = run.proposals.length ? applyProposals(db, run.proposals, { source: "learn" }) : 0;
+      markLearnRunApplied(db, run.id, applied);
+      return res.json({ proposals: run.proposals, applied, run_id: run.id });
+    }
+
     const days = body.days === undefined ? config.learn.windowDays : numberField(body.days, "days", { min: 1, max: MAX_DAYS, integer: true });
+    if (body.proposals !== undefined) {
+      const proposals = checkProposals(body.proposals);
+      const applied = proposals.length ? applyProposals(db, proposals, { source: "learn" }) : 0;
+      const runId = recordLearnRun(db, { source: "admin", days, proposals, applied });
+      return res.json({ proposals, applied, run_id: runId });
+    }
+
     const minSamples =
       body.min_samples === undefined ? config.learn.minSamples : numberField(body.min_samples, "min_samples", { min: 1, max: 1e6, integer: true });
     const proposals = proposeRoutes(db, { minSamples, sinceMs: now() - days * DAY_MS });
     const applied = apply && proposals.length ? applyProposals(db, proposals, { source: "learn" }) : 0;
-    res.json({ proposals, applied });
+    const runId = recordLearnRun(db, { source: "admin", days, proposals, applied });
+    res.json({ proposals, applied, run_id: runId });
+  });
+
+  // Recent learner runs (admin page, CLI and the weekly schedule), newest first.
+  router.get("/admin/learn/runs", (req, res) => {
+    const limit = intQuery(req.query.limit, "limit", { min: 1, max: 200, dflt: 20 });
+    res.json({ runs: listLearnRuns(db, { limit }) });
+  });
+
+  // Find users by (part of) their email address; without ?email=, the newest accounts.
+  router.get("/admin/users", (req, res) => {
+    const q = req.query.email;
+    if (q !== undefined && typeof q !== "string") throw badRequest("email must be a single value.");
+    const term = typeof q === "string" ? q.trim().slice(0, 200) : "";
+    const cols = "id, email, balance_micros, is_admin, created_at";
+    const rows = term
+      ? db
+          .prepare(`SELECT ${cols} FROM users WHERE email LIKE ? ESCAPE '\\' ORDER BY created_at DESC, id LIMIT ?`)
+          .all(`%${escapeLike(term)}%`, MAX_USERS_LISTED)
+      : db.prepare(`SELECT ${cols} FROM users ORDER BY created_at DESC, id LIMIT ?`).all(MAX_USERS_LISTED);
+    res.json({ users: rows.map(adminUser) });
+  });
+
+  // Add or take back credit (a refund made in Stripe, a goodwill credit). Written to the ledger as
+  // admin_adjust, so balance == SUM(ledger) still holds; the balance never goes below zero.
+  router.post("/admin/users/:id/credit", (req, res) => {
+    const target = db.prepare("SELECT id FROM users WHERE id = ?").get(req.params.id);
+    if (!target) throw new AppError(404, "not_found", "User not found.");
+    const body = bodyObject(req);
+    onlyKeys(body, ["usd", "note"]);
+    const usd = numberField(body.usd, "usd", { min: -MAX_ADJUST_USD, max: MAX_ADJUST_USD });
+    const micros = usdToMicros(usd);
+    if (!micros) throw badRequest("usd must not be zero.");
+    const note = stringField(body.note, "note", { max: 200 });
+    if (typeof credits?.adjust !== "function") throw new AppError(503, "unavailable", "Credit adjustments are not available.");
+    // The ref names the admin who made the change (and their note) for the ledger's audit trail.
+    const ref = `admin:${req.user.id}${note ? ` ${note}` : ""}`.slice(0, 240);
+    const out = credits.adjust(target.id, micros, ref);
+    const balance = typeof out === "number" ? out : Number(out?.balance ?? db.prepare("SELECT balance_micros FROM users WHERE id = ?").get(target.id).balance_micros);
+    res.json({ balance_usd: microsToUsd(balance) });
   });
 
   router.get("/admin/catalog/export", (req, res) => {
@@ -193,7 +329,7 @@ function createAdminRoutes({ db, config, auth, classifier }) {
     if (!Array.isArray(models) || !Array.isArray(routes)) throw badRequest("models and routes must be arrays.");
     if (models.length > MAX_IMPORT_ITEMS || routes.length > MAX_IMPORT_ITEMS) throw badRequest("Too many entries in one import.");
 
-    models.forEach((m, i) => checkFullModel(m, `models[${i}]`));
+    models.forEach((m, i) => checkFullModel(m, `models[${i}]`, modelOpts));
     const incoming = new Map(models.map((m) => [m.id, m]));
     routes.forEach((r, i) => {
       const where = `routes[${i}]`;
@@ -210,7 +346,7 @@ function createAdminRoutes({ db, config, auth, classifier }) {
     });
 
     // importCatalog / setRoute throw AppError 400 for anything the checks above missed.
-    importCatalog(db, { models, routes }, { source: "admin" });
+    importCatalog(db, { models, routes }, { source: "admin", ...modelOpts });
     res.json({ ok: true, models: models.length, routes: routes.length });
   });
 

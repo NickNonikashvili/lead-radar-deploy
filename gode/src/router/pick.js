@@ -4,6 +4,7 @@
 const { JOBS, TEXT_JOBS, listModels, getRoutes } = require("../seed/catalog");
 const { AppError, safeJsonParse } = require("../util");
 const { EFFORTS, TIER_RANK, chooseTier, clampDifficulty, difficultyToEffort, isMediaJob, normalizePlan } = require("./effort");
+const { resolveEffort } = require("../providers/effort-map");
 
 const ROUTED_TIERS = ["quality", "balanced", "budget"];
 const EU_REGIONS = ["eu", "self"];
@@ -14,6 +15,9 @@ const TYPICAL_INPUT_TOKENS = 1000;
 const TYPICAL_OUTPUT_TOKENS = 500;
 const TYPICAL_TTS_CHARS = 500;
 const DEFAULT_CLIP_SECONDS = 5;
+// Upstream-only reasoning levels, folded into Gode's vocabulary (none/low/medium/high) for the
+// chip, the route event and the requests log.
+const GODE_EFFORT = { minimal: "low", xhigh: "high", max: "high" };
 
 /** Phase 1 answers `action` with the chat route (see "Core vocabulary"). */
 function routeJob(job) {
@@ -85,6 +89,23 @@ function rankOf(tier) {
   return tier in TIER_RANK ? TIER_RANK[tier] : -1;
 }
 
+/**
+ * With no usable routing cell, pick by the wanted column among the eligible models: cheapest for
+ * budget, the middle price for balanced, the dearest for quality. (On a deployment with only an
+ * OpenAI key no seeded cell is usable, and the plan must still matter.) Unpriced models come last.
+ */
+function byTierPrice(models, tier) {
+  const sorted = [...models].sort(byPrice(1));
+  const priced = sorted.filter((m) => typicalPriceUsd(m) !== null);
+  const pool = priced.length ? priced : sorted;
+  if (!pool.length) return null;
+  if (tier === "quality") return pool[pool.length - 1];
+  if (tier === "balanced") return pool[Math.floor((pool.length - 1) / 2)];
+  return pool[0];
+}
+
+const FALLBACK_PHRASE = { budget: "the cheapest", balanced: "a mid-priced", quality: "the highest-priced" };
+
 /** Other routed tiers, nearest first; ties go to the cheaper tier. */
 function walkOrder(tier) {
   const r = rankOf(tier);
@@ -109,13 +130,18 @@ function createPicker({ db, config, providers } = {}) {
     return { models, routes };
   }
 
-  function buildContext({ job, difficulty, private: isPrivate, user, pins }) {
+  function buildContext({ job, difficulty, private: isPrivate, user, pins, conversationPrivate = false }) {
     if (!JOBS.includes(job)) throw new AppError(400, "bad_request", `Unknown job "${String(job).slice(0, 20)}"`);
     const u = user && typeof user === "object" ? user : {};
     const rjob = routeJob(job);
     const pinMap = normalizePins(pins);
     const classifiedPrivate = Boolean(isPrivate);
-    const stickyPrivate = !classifiedPrivate && conversationIsPrivate(pinMap, rjob);
+    // conversations.private (set once any turn was private) is sticky exactly like a private pin:
+    // text jobs re-send the earlier messages. A media prompt is only the latest message, so a media
+    // request is private only when classified so (the classifier marks a media follow-up that
+    // draws on earlier messages of a private conversation as private).
+    const stickyPrivate =
+      !classifiedPrivate && (conversationIsPrivate(pinMap, rjob) || (Boolean(conversationPrivate) && TEXT_JOBS.includes(rjob)));
     return {
       job: rjob,
       originalJob: job,
@@ -176,10 +202,20 @@ function createPicker({ db, config, providers } = {}) {
     return ROUTED_TIERS.find((t) => rows[t]?.model_id === modelId) || null;
   }
 
+  /**
+   * The effort the model will really run at: Gode's level for the difficulty (or the cell's
+   * override), mapped onto what the model accepts exactly as the provider will map it (Mistral
+   * runs "medium" as "high", a mandatory-reasoning model runs "none" as "low"), so the chip, the
+   * route event, the log and the cost estimate show what is billed. Providers re-resolve it, which
+   * changes nothing for a level the model accepts.
+   */
   function effortFor(ctx, model, route) {
     if (isMediaJob(ctx.job) || !model.supports_reasoning) return "none";
     const override = route?.effort_override;
-    return EFFORTS.includes(override) ? override : difficultyToEffort(ctx.difficulty);
+    const wanted = EFFORTS.includes(override) ? override : difficultyToEffort(ctx.difficulty);
+    const sent = resolveEffort(model, wanted);
+    if (!sent) return wanted;
+    return EFFORTS.includes(sent) ? sent : GODE_EFFORT[sent] || wanted;
   }
 
   function autoLabel(ctx, tier) {
@@ -197,9 +233,11 @@ function createPicker({ db, config, providers } = {}) {
     const old = validPin(ctx.pins[ctx.job]);
     let pinsUpdate = null;
     if (pin) {
-      const same = old && old.model_id === pin.model_id && old.tier === pin.tier && old.source === pin.source;
+      const same =
+        old && old.model_id === pin.model_id && old.tier === pin.tier && old.source === pin.source && old.routed_from === pin.routed_from;
       if (!same) pinsUpdate = { ...ctx.pins, [ctx.job]: pin };
     }
+    const stored = pin || (old && old.model_id === model.id ? old : null);
     return {
       model,
       tier,
@@ -212,6 +250,9 @@ function createPicker({ db, config, providers } = {}) {
       reason,
       pinsUpdate,
       private: ctx.private,
+      // Who chose the model: 'user' (switch menu, manual pick, or a user pin kept), 'auto' (the
+      // router), null when nothing is pinned for this answer. The menu says "Your pick" for 'user'.
+      pinSource: stored ? stored.source || null : null,
     };
   }
 
@@ -235,6 +276,10 @@ function createPicker({ db, config, providers } = {}) {
   function pickPrivate(ctx) {
     const pin = validPin(ctx.pins[ctx.job]);
     const why = ctx.stickyPrivate ? "private (earlier in this conversation)" : "private";
+    // A media prompt carries no history, so one private image says nothing about the next one:
+    // a private media pick never writes the job's pin (and never replaces the user's own pick).
+    const media = isMediaJob(ctx.job);
+    const pinFor = (p) => (media ? null : p);
     // The user's own pick is kept when it is private-safe: privacy is a hard filter, not a reason to
     // override an explicit choice.
     if (pin?.source === "user") {
@@ -245,15 +290,23 @@ function createPicker({ db, config, providers } = {}) {
           tier: "private",
           pinned: true,
           reason: `${why}: pinned for this conversation (your pick)`,
-          pin: { model_id: model.id, tier: "private", source: "user" },
+          pin: pinFor({ model_id: model.id, tier: "private", source: "user" }),
         });
       }
     }
     // Anything else becomes an auto private pin: a user-pinned model that is not private-safe can
-    // no longer receive this conversation's history.
-    const choose = (model, reason) =>
-      result(ctx, { model, tier: "private", pinned: false, reason, pin: { model_id: model.id, tier: "private", source: "auto" } });
+    // no longer receive this conversation's history. `routed_from` remembers which routed column a
+    // zero-retention fallback came from, so later turns can upgrade but never downgrade.
+    const choose = (model, reason, routedFrom = null) =>
+      result(ctx, {
+        model,
+        tier: "private",
+        pinned: false,
+        reason,
+        pin: pinFor({ model_id: model.id, tier: "private", source: "auto", ...(routedFrom ? { routed_from: routedFrom } : {}) }),
+      });
 
+    // The private cell (self-hosted) always wins, also over an earlier zero-retention fallback pin.
     const own = routeModel(ctx, "private");
     if (own) {
       const kind = own.self_hosted
@@ -265,15 +318,29 @@ function createPicker({ db, config, providers } = {}) {
     }
 
     if (privateFallback() === "block") {
-      throw new AppError(409, "private_blocked", "This looks private and no self-hosted model is available, so it was not sent to any AI provider.");
+      // Worded for both cases: a request the local signals call private never left our servers at
+      // all, but one only the classifier model called private was seen (redacted) by that model.
+      throw new AppError(409, "private_blocked", "This looks private and no self-hosted model is available, so it was not sent to an AI model for an answer.");
     }
+
+    // Zero-retention fallback. Like rule 5, the conversation keeps its fallback model and only
+    // moves up a column: re-choosing per turn would bounce between models as difficulty changes.
     const tier = chooseTier(ctx);
+    const kept = !media && pin?.source === "auto" && pin.tier === "private" ? ctx.models.get(pin.model_id) : null;
+    const keptOk = Boolean(kept) && eligible(kept, ctx);
+    const keptFrom = keptOk ? (ROUTED_TIERS.includes(pin.routed_from) ? pin.routed_from : routedTierOf(ctx, kept.id) || "budget") : null;
+    const reuse = () => result(ctx, { model: kept, tier: "private", pinned: true, reason: `${why}: pinned for this conversation (zero-retention model)`, pin: null });
+    if (keptOk && rankOf(tier) <= rankOf(keptFrom)) return reuse();
+
     for (const t of [tier, ...ROUTED_TIERS.filter((x) => x !== tier)]) {
       const model = routeModel(ctx, t);
-      if (model) return choose(model, `${why}: no self-hosted model, using zero-retention model (${t} pick)`);
+      if (!model) continue;
+      if (keptOk && rankOf(t) <= rankOf(keptFrom)) return reuse();
+      return choose(model, `${why}: no self-hosted model, using zero-retention model (${t} pick)`, t);
     }
+    if (keptOk) return reuse();
     const [best] = eligibleModels(ctx).sort(byPrice(-1));
-    if (best) return choose(best, `${why}: no self-hosted model, using zero-retention model`);
+    if (best) return choose(best, `${why}: no self-hosted model, using zero-retention model`, tier);
     throw new AppError(409, "private_blocked", "This looks private and no self-hosted or zero-retention model is available for it.");
   }
 
@@ -281,6 +348,9 @@ function createPicker({ db, config, providers } = {}) {
   function reusePin(ctx) {
     const pin = validPin(ctx.pins[ctx.job]);
     if (!pin) return null;
+    // An auto pin left by a private media request (before media picks stopped writing pins) would
+    // keep every later image on the private cell: ignore it, the next pick replaces it.
+    if (isMediaJob(ctx.job) && pin.source === "auto" && pin.tier === "private") return null;
     const model = ctx.models.get(pin.model_id);
     if (!eligible(model, ctx)) return null;
     const tier = pin.tier in TIER_RANK ? pin.tier : chooseTier(ctx);
@@ -297,9 +367,11 @@ function createPicker({ db, config, providers } = {}) {
     const wanted = chooseTier(ctx);
     if (rankOf(wanted) <= rankOf(pin.tier)) return reuse();
     const upgraded = pickAuto(ctx, { upgradeFrom: pin.tier });
-    // Only a routed pick of a higher tier is an upgrade; the cheapest-model fallback is not.
+    // An upgrade is a routed pick of a higher tier, or (no usable cell) a dearer fallback model;
+    // never a move to a cheaper model under a higher tier's name.
     const isRouted = ctx.routes[ctx.job]?.[upgraded.tier]?.model_id === upgraded.model.id;
-    return isRouted && rankOf(upgraded.tier) > rankOf(pin.tier) ? upgraded : reuse();
+    const dearer = (typicalPriceUsd(upgraded.model) ?? -1) > (typicalPriceUsd(model) ?? Infinity);
+    return rankOf(upgraded.tier) > rankOf(pin.tier) && (isRouted || dearer) ? upgraded : reuse();
   }
 
   // Rule 6: the plan's tier for this difficulty, then the nearest other tier, then the cheapest.
@@ -317,8 +389,8 @@ function createPicker({ db, config, providers } = {}) {
       const model = routeModel(ctx, t);
       if (model) return choose(model, t, `${label}; ${tier} pick can't be used here, using ${t}`);
     }
-    const [cheapest] = eligibleModels(ctx).sort(byPrice(1));
-    if (cheapest) return choose(cheapest, tier, `${label}; no routed pick available, using the cheapest available model`);
+    const fallback = byTierPrice(eligibleModels(ctx), tier);
+    if (fallback) return choose(fallback, tier, `${label}; no routed pick available, using ${FALLBACK_PHRASE[tier] || "the cheapest"} available model`);
     throw noModelError(ctx);
   }
 
@@ -337,8 +409,8 @@ function createPicker({ db, config, providers } = {}) {
    * @returns {{ model, tier, effort, pinned, zdrRequired, reason, pinsUpdate, private }}
    *   `private` is the effective privacy decision (classifier flag OR sticky conversation privacy).
    */
-  function pick({ job, difficulty, private: isPrivate = false, user = {}, pins = null, overrideModelId = null } = {}) {
-    const ctx = buildContext({ job, difficulty, private: isPrivate, user, pins });
+  function pick({ job, difficulty, private: isPrivate = false, user = {}, pins = null, overrideModelId = null, conversationPrivate = false } = {}) {
+    const ctx = buildContext({ job, difficulty, private: isPrivate, user, pins, conversationPrivate });
     if (overrideModelId !== null && overrideModelId !== undefined && String(overrideModelId).trim()) {
       return pickOverride(ctx, overrideModelId);
     }
@@ -350,23 +422,26 @@ function createPicker({ db, config, providers } = {}) {
   }
 
   /**
-   * Eligible + available models for the switch menu: routed picks first (private pick first for a
-   * private request, then quality, balanced, budget), then alternates by price, dearest first.
-   * Pass `pins` to apply the conversation's sticky privacy.
+   * Eligible + available models for the switch menu: the current model first (the answer's model,
+   * else the conversation's pin for the job), then the routed picks (the private pick first for a
+   * private request, then quality, balanced, budget), then every other model by price, cheapest
+   * first. Pass `pins` and `conversationPrivate` to apply the conversation's sticky privacy, and
+   * the answer's own `private` flag, so the menu lists exactly what a switch would accept.
    */
-  function candidates({ job, user = {}, private: isPrivate = false, pins = null } = {}) {
-    const ctx = buildContext({ job, difficulty: undefined, private: isPrivate, user, pins });
-    const tiers = ctx.private ? ["private", ...ROUTED_TIERS] : ROUTED_TIERS;
+  function candidates({ job, user = {}, private: isPrivate = false, pins = null, conversationPrivate = false, currentModelId = null } = {}) {
+    const ctx = buildContext({ job, difficulty: undefined, private: isPrivate, user, pins, conversationPrivate });
     const seen = new Set();
     const out = [];
-    for (const t of tiers) {
-      const model = routeModel(ctx, t);
-      if (model && !seen.has(model.id)) {
+    const add = (model) => {
+      if (model && !seen.has(model.id) && eligible(model, ctx)) {
         seen.add(model.id);
         out.push(model);
       }
-    }
-    const rest = eligibleModels(ctx).filter((m) => !seen.has(m.id)).sort(byPrice(-1));
+    };
+    const current = typeof currentModelId === "string" && currentModelId ? currentModelId : validPin(ctx.pins[ctx.job])?.model_id;
+    if (current) add(ctx.models.get(current));
+    for (const t of ctx.private ? ["private", ...ROUTED_TIERS] : ROUTED_TIERS) add(routeModel(ctx, t));
+    const rest = eligibleModels(ctx).filter((m) => !seen.has(m.id)).sort(byPrice(1));
     return [...out, ...rest];
   }
 

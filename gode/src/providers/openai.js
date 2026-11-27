@@ -41,6 +41,7 @@ function createOpenAIProvider(config) {
     chatFields,
     jsonFields: (args, effort) => (effort ? { reasoning_effort: effort } : {}),
     defaultUpstreamProvider: "OpenAI",
+    timeouts: () => config.gateways.timeouts,
   });
 
   /** Image generation via POST /images/generations; gpt-image models always return base64. */

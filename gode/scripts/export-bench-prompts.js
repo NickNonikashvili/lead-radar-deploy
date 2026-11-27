@@ -6,8 +6,14 @@
 //
 // What is exported per prompt: a pseudonymous id (a hash of the message id, so a row cannot be
 // looked up without the database), the redacted prompt text, and the job the router gave it.
-// Never exported: user ids, emails, conversation ids, timestamps, answers. Prompts the router
-// classified as private (health, money, legal, ...) are left out even for opted-in users.
+// Never exported: user ids, emails, conversation ids, timestamps, answers. Conversations the router
+// ever treated as private (health, money, legal, ...) are left out entirely, even for opted-in
+// users: conversations.private, or any request of the conversation marked private, including turns
+// whose answer failed or was stopped (they have no answer to link the privacy flag through).
+//
+// Each conversation is redacted the way the chat redacted it: in order, with its stored placeholder
+// map, so a name introduced in an earlier turn ("my name is Jane Doe") stays hidden when a later
+// prompt mentions it without the trigger phrase.
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
@@ -23,8 +29,9 @@ const ID_SALT = "gode-bench-export:";
 const USAGE = `Usage: node scripts/export-bench-prompts.js [--out <file>] [--limit N]
 
 Exports up to N user prompts (default ${DEFAULT_LIMIT}) as benchmark JSONL {id, prompt, job_hint},
-only from users who turned on "share prompts", with personal details replaced by placeholders.
-Prompts the router flagged as private are never exported. The sample is random but stable.
+only from users who turned on "share prompts", with personal details replaced by placeholders
+(each conversation is redacted with its own placeholder map, as in the chat). Conversations the
+router ever treated as private are never exported. The sample is random but stable.
 
 Options:
   --out <file>   output file   (default bench/prompts.real.jsonl; keep it out of git)
@@ -79,20 +86,26 @@ function exportId(messageId) {
 }
 
 /**
- * Candidate user messages from opted-in users, newest version only, with the router's job and
- * privacy flag from the request that answered them (via the assistant message's request).
+ * Candidate user messages from opted-in users, newest version only, with the router's job (from
+ * the request that answered them) and whether their conversation was ever private. Privacy is
+ * judged per conversation: text turns re-send earlier messages, a failed or stopped private turn
+ * has no answer to link its request through (requests.message_id is NULL), and the placeholder map
+ * that redacts the conversation holds the private turn's values too.
  */
 function selectCandidates(db) {
   return db
     .prepare(
-      `SELECT m.id, m.user_id, m.content_enc, u.wrapped_dek,
+      `SELECT m.id, m.user_id, m.conversation_id, m.content_enc, u.wrapped_dek, c.pii_map_enc,
               (SELECT r.job FROM messages a JOIN requests r ON r.id = a.request_id OR r.message_id = a.id
                 WHERE a.parent_id = m.id AND a.role = 'assistant'
                 ORDER BY a.superseded ASC, a.created_at DESC LIMIT 1) AS job,
-              (SELECT MAX(r.private) FROM messages a JOIN requests r ON r.id = a.request_id OR r.message_id = a.id
-                WHERE a.parent_id = m.id AND a.role = 'assistant') AS private
+              (c.private = 1
+               OR EXISTS (SELECT 1 FROM requests r WHERE r.conversation_id = m.conversation_id AND r.private = 1)
+               OR EXISTS (SELECT 1 FROM messages a JOIN requests r ON r.id = a.request_id OR r.message_id = a.id
+                           WHERE a.conversation_id = m.conversation_id AND a.role = 'assistant' AND r.private = 1)) AS private
          FROM messages m
          JOIN users u ON u.id = m.user_id
+         JOIN conversations c ON c.id = m.conversation_id
         WHERE m.role = 'user' AND m.superseded = 0 AND u.share_prompts = 1`
     )
     .all();
@@ -102,6 +115,43 @@ function selectCandidates(db) {
 function messageText(content) {
   if (typeof content === "string") return content;
   return content && typeof content.text === "string" ? content.text : "";
+}
+
+/**
+ * Redact one conversation the way the chat did: every current message in order, with the
+ * conversation's stored (decrypted) placeholder map. Returns Map(message id -> redacted text), or
+ * null when the map cannot be decrypted (never fall back to redacting without it).
+ */
+async function redactConversation({ db, keyring, redactor }, { conversationId, wrappedDek, piiMapEnc }) {
+  let map = null;
+  if (piiMapEnc) {
+    try {
+      map = keyring.decrypt(wrappedDek, piiMapEnc, { json: true });
+    } catch {
+      return null;
+    }
+  }
+  const rows = db
+    .prepare("SELECT id, role, content_enc FROM messages WHERE conversation_id = ? AND superseded = 0 ORDER BY created_at, rowid")
+    .all(conversationId);
+  const messages = [];
+  for (const row of rows) {
+    let text;
+    try {
+      text = messageText(keyring.decrypt(wrappedDek, row.content_enc, { json: true }));
+    } catch {
+      continue; // counted when the row itself is a candidate
+    }
+    if (text.trim() && (row.role === "user" || row.role === "assistant")) messages.push({ id: row.id, role: row.role, content: text });
+  }
+  if (!messages.length) return new Map();
+  // Always redact, whatever REDACTION says: the opt-in promise is "redacted prompts only".
+  const red = await redactor.redactMessages(
+    messages.map(({ role, content }) => ({ role, content })),
+    map,
+    { mode: "placeholder" }
+  );
+  return new Map(messages.map((m, i) => [m.id, red.messages[i].content]));
 }
 
 /**
@@ -115,6 +165,7 @@ async function buildExport({ db, keyring, redactor, limit }) {
   const stats = { candidates: candidates.length, private: 0, empty: 0, undecryptable: 0, redacted_prompts: 0, users: 0 };
   const users = new Set();
   const rows = [];
+  const conversations = new Map(); // conversation id -> Promise<Map | null>
   for (const c of ordered) {
     if (rows.length >= limit) break;
     if (Number(c.private) === 1) {
@@ -133,10 +184,21 @@ async function buildExport({ db, keyring, redactor, limit }) {
       stats.empty += 1;
       continue;
     }
-    // Always redact, whatever REDACTION says: the opt-in promise is "redacted prompts only".
-    const red = await redactor.redactMessages([{ role: "user", content: text }], null, { mode: "placeholder" });
-    if (Object.values(red.counts || {}).some((n) => n > 0)) stats.redacted_prompts += 1;
-    const row = { id: exportId(c.id), prompt: red.messages[0].content };
+    if (!conversations.has(c.conversation_id)) {
+      conversations.set(
+        c.conversation_id,
+        redactConversation({ db, keyring, redactor }, { conversationId: c.conversation_id, wrappedDek: c.wrapped_dek, piiMapEnc: c.pii_map_enc })
+      );
+    }
+    const redacted = await conversations.get(c.conversation_id);
+    const prompt = redacted ? redacted.get(c.id) : undefined;
+    if (typeof prompt !== "string") {
+      // The conversation's placeholder map would not decrypt: no export without it.
+      stats.undecryptable += 1;
+      continue;
+    }
+    if (prompt !== text) stats.redacted_prompts += 1;
+    const row = { id: exportId(c.id), prompt };
     if (JOBS.includes(c.job)) row.job_hint = c.job;
     rows.push(row);
     users.add(c.user_id);
@@ -232,4 +294,4 @@ if (require.main === module) {
   );
 }
 
-module.exports = { main, parseArgs, stableSample, exportId, selectCandidates, buildExport, messageText, USAGE, ConfigError };
+module.exports = { main, parseArgs, stableSample, exportId, selectCandidates, redactConversation, buildExport, messageText, USAGE, ConfigError };

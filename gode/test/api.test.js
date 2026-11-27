@@ -195,8 +195,9 @@ describe("auth routes", () => {
       "auto_pick", "balance_usd", "created_at", "email", "eu_only", "id", "is_admin", "plan", "share_prompts", "strict_privacy",
     ]);
     assert.equal(r.body.user.email, email, "email normalised");
-    assert.equal(r.body.user.is_admin, true, "first account is admin");
+    assert.equal(r.body.user.is_admin, true, "first account is admin (no ADMIN_EMAILS, FIRST_USER_ADMIN on outside production)");
     assert.equal(r.body.user.balance_usd, 0.25, "signup bonus");
+    assert.equal(r.body.signup_bonus_usd, 0.25);
     assert.ok(!r.text.includes("password_hash") && !r.text.includes("wrapped_dek"));
 
     const me = await c.json("GET", "/api/me");
@@ -217,6 +218,8 @@ describe("auth routes", () => {
       presidio: false,
       selfhosted: true,
       private_fallback: "zdr",
+      media_proxy: true,
+      text_max: 32000,
     });
     assert.equal(r.body.user.is_admin, false, "later accounts are not admins");
   });
@@ -236,6 +239,8 @@ describe("auth routes", () => {
       [{ email: 42, password: PASSWORD }, /email must be a string/],
       [{ email: nextEmail(), password: 12345678 }, /password must be a string/],
       [{ email: nextEmail(), password: PASSWORD, admin: true }, /Unknown field "admin"/],
+      [{ email: nextEmail(), password: "12345678" }, /too common/],
+      [{ email: nextEmail(), password: "        " }, /only spaces/],
     ];
     for (const [body, message] of cases) {
       const r = await t.client().json("POST", "/api/auth/signup", body);
@@ -329,23 +334,89 @@ describe("rate limits", () => {
     }
   });
 
-  test("login: a second limiter per lower-cased email", async () => {
-    const t = await createTestApp();
+  test("login: failed attempts per email count per network, so an attacker can't lock the owner out", async () => {
+    // TRUST_PROXY so X-Forwarded-For stands in for different client networks.
+    const t = await createTestApp({ TRUST_PROXY: "1" }, { rateLimits: { auth: { max: 100 } } });
     try {
       const email = nextEmail("victim");
       await t.client().signup(email, PASSWORD);
-      const c = t.client();
-      // The signup was the first of 10 hits for this email (signup and login share the limiter).
-      for (let i = 0; i < 9; i++) {
-        const r = await c.json("POST", "/api/auth/login", { email: i % 2 ? email.toUpperCase() : email, password: "wrong-password" });
+      const attacker = t.client();
+      const from = (ip) => ({ headers: { "X-Forwarded-For": ip } });
+      for (let i = 0; i < 10; i++) {
+        const r = await attacker.json("POST", "/api/auth/login", { email: i % 2 ? email.toUpperCase() : email, password: "wrong-password" }, from("203.0.113.9"));
         assert.equal(r.status, 401, `attempt ${i + 1}`);
       }
-      const limited = await c.json("POST", "/api/auth/login", { email, password: PASSWORD });
-      assert.equal(limited.status, 429, "even the right password waits once the account is under attack");
-      assert.equal(limited.body.code, "rate_limited");
-      // Other accounts from the same IP are still fine (the IP limiter is at 12 of 20).
-      const other = await c.json("POST", "/api/auth/login", { email: nextEmail("other"), password: PASSWORD });
-      assert.equal(other.status, 401);
+      const locked = await attacker.json("POST", "/api/auth/login", { email, password: "wrong-password" }, from("203.0.113.9"));
+      assert.equal(locked.status, 429, "the attacker's network is stopped for this account");
+      assert.equal(locked.body.code, "rate_limited");
+      assert.ok(Number(locked.headers.get("retry-after")) > 0);
+      // The owner, from their own network, gets in with the right password.
+      const owner = t.client();
+      const ok = await owner.json("POST", "/api/auth/login", { email, password: PASSWORD }, from("198.51.100.20"));
+      assert.equal(ok.status, 200, "the right password is never refused for someone else's failures");
+      // Successful logins don't count: the owner can log in again and again.
+      for (let i = 0; i < 12; i++) assert.equal((await owner.json("POST", "/api/auth/login", { email, password: PASSWORD }, from("198.51.100.20"))).status, 200);
+      // Rotating addresses inside one IPv6 /64 is one network.
+      const v6 = t.client();
+      for (let i = 0; i < 10; i++) {
+        assert.equal((await v6.json("POST", "/api/auth/login", { email, password: "wrong" + i }, from(`2001:db8:7:7::${i + 1}`))).status, 401);
+      }
+      assert.equal((await v6.json("POST", "/api/auth/login", { email, password: "wrong" }, from("2001:db8:7:7::ffff"))).status, 429);
+    } finally {
+      await t.close();
+    }
+  });
+
+  test("login: a much higher global ceiling per email stops guessing spread over many networks", async () => {
+    const t = await createTestApp({ TRUST_PROXY: "1" }, { rateLimits: { auth: { max: 1000 }, authEmailGlobal: { max: 15 } } });
+    try {
+      const email = nextEmail("target");
+      await t.client().signup(email, PASSWORD);
+      const c = t.client();
+      for (let i = 0; i < 15; i++) {
+        const r = await c.json("POST", "/api/auth/login", { email, password: "wrong" }, { headers: { "X-Forwarded-For": `192.0.2.${i + 1}` } });
+        assert.equal(r.status, 401);
+      }
+      const r = await c.json("POST", "/api/auth/login", { email, password: PASSWORD }, { headers: { "X-Forwarded-For": "192.0.2.200" } });
+      assert.equal(r.status, 429);
+    } finally {
+      await t.close();
+    }
+  });
+
+  test("signup: a daily limit per network (IPv6 by /64), counting new accounts and duplicates", async () => {
+    const t = await createTestApp({ TRUST_PROXY: "1" }, { rateLimits: { auth: { max: 1000 }, signup: { max: 3 } } });
+    try {
+      const from = (ip) => ({ headers: { "X-Forwarded-For": ip } });
+      const dupEmail = nextEmail("farm");
+      assert.equal((await t.client().json("POST", "/api/auth/signup", { email: dupEmail, password: PASSWORD }, from("2001:db8:5:5::1"))).status, 201);
+      assert.equal((await t.client().json("POST", "/api/auth/signup", { email: dupEmail, password: PASSWORD }, from("2001:db8:5:5::2"))).status, 409);
+      // Validation errors don't count.
+      assert.equal((await t.client().json("POST", "/api/auth/signup", { email: nextEmail(), password: "short" }, from("2001:db8:5:5::3"))).status, 400);
+      assert.equal((await t.client().json("POST", "/api/auth/signup", { email: nextEmail("farm"), password: PASSWORD }, from("2001:db8:5:5::4"))).status, 201);
+      const limited = await t.client().json("POST", "/api/auth/signup", { email: nextEmail("farm"), password: PASSWORD }, from("2001:db8:5:5:abcd::9"));
+      assert.equal(limited.status, 429);
+      assert.match(limited.body.error, /today/);
+      assert.equal((await t.client().json("POST", "/api/auth/signup", { email: nextEmail("farm"), password: PASSWORD }, from("2001:db8:5:6::1"))).status, 201, "another /64");
+    } finally {
+      await t.close();
+    }
+  });
+
+  test("signup bonus: once per address (survives delete everything), capped per UTC day", async () => {
+    const t = await createTestApp({ SIGNUP_BONUS_DAILY_CAP: "2" });
+    try {
+      const email = nextEmail("recycle");
+      const first = t.client();
+      const u = await first.signup(email, PASSWORD);
+      assert.equal(u.balance_usd, 0.25);
+      assert.deepEqual((await first.json("DELETE", "/api/me", { password: PASSWORD })).body, { ok: true });
+      const again = await t.client().json("POST", "/api/auth/signup", { email, password: PASSWORD });
+      assert.equal(again.status, 201);
+      assert.equal(again.body.user.balance_usd, 0, "no second bonus for the same address");
+      assert.equal(again.body.signup_bonus_usd, 0);
+      assert.equal((await t.client().signup(nextEmail("second"), PASSWORD)).balance_usd, 0.25);
+      assert.equal((await t.client().signup(nextEmail("third"), PASSWORD)).balance_usd, 0, "daily cap of 2 reached");
     } finally {
       await t.close();
     }
@@ -551,20 +622,23 @@ describe("conversations", () => {
 
     const r = await alice.c.json("GET", `/api/conversations/${convId}`);
     assert.equal(r.status, 200);
-    assert.deepEqual(r.body.conversation, { id: convId, title: "Maths", pins, updated_at: r.body.conversation.updated_at });
+    assert.deepEqual(r.body.conversation, { id: convId, title: "Maths", pins, private: false, updated_at: r.body.conversation.updated_at });
     assert.equal(r.body.messages.length, 2, "superseded answer hidden");
     const [q, a] = r.body.messages;
-    assert.deepEqual(q, { id: old.userMsgId, role: "user", text: "What is 2+2?", media: [], created_at: at, parent_id: null });
+    assert.deepEqual(q, { id: old.userMsgId, role: "user", text: "What is 2+2?", media: [], created_at: at, parent_id: null, answered: true });
     assert.equal(a.id, newAsst);
     assert.equal(a.text, "Four");
     assert.deepEqual(a.media, [{ type: "image", url: "data:image/svg+xml,x" }]);
     assert.equal(a.parent_id, old.userMsgId);
     assert.deepEqual(a.request, {
       id: reqId,
+      kind: "regenerate",
       job: "chat",
       tier: "quality",
       model_id: OPUS,
       model_label: "Claude Opus 5.5",
+      model_region: "us",
+      pick_source: "auto",
       effort: "high",
       cost_usd: 0.04,
       chip: "Claude Opus 5.5 · high effort · $0.04",
@@ -944,9 +1018,12 @@ describe("GET /api/transparency", () => {
       assert.equal(r.status, 200);
       assert.equal(r.body.requests.length, 4, "only my rows");
       assert.deepEqual(Object.keys(r.body.requests[0]).sort(), [
+        "classifier_gateway", "classifier_label", "classifier_model", "classifier_region", "classifier_zdr",
         "cost_usd", "created_at", "effort", "error_code", "gateway", "id", "job", "kind", "model_id", "model_label", "private",
         "redactions", "status", "tier", "upstream_provider", "zdr",
       ]);
+      assert.equal(r.body.has_more, false);
+      assert.equal(r.body.next_before, null);
       const [first, second] = r.body.requests;
       assert.equal(first.status, "error");
       assert.equal(first.error_code, "upstream_error");
@@ -959,6 +1036,47 @@ describe("GET /api/transparency", () => {
       assert.equal((await a.c.json("GET", "/api/transparency?limit=2")).body.requests.length, 2);
       for (const q of ["0", "201", "abc", "1.5", "-1"]) assert.equal((await a.c.json("GET", `/api/transparency?limit=${q}`)).status, 400, q);
       assert.equal((await a.c.json("GET", "/api/transparency?limit=200")).status, 200);
+    } finally {
+      await t.close();
+    }
+  });
+
+  test("names the classifier each request went to, and pages with ?before=", async () => {
+    const t = await createTestApp({}, { pipeline: scriptedPipeline() });
+    try {
+      const a = await signedIn(t, "pager");
+      const b = await signedIn(t, "nosy");
+      const base = Date.now() - 60_000;
+      const ids = [];
+      // Same created_at for two rows: ties are broken by insertion order, never skipped or repeated.
+      for (let i = 0; i < 5; i++) {
+        ids.push(insertRequest(t, { user_id: a.user.id, created_at: base + Math.min(i, 3), classifier_model: i === 0 ? "heuristic" : i === 1 ? "openai:gpt-6-luna" : "openrouter:deepseek/deepseek-v4.1-flash" }));
+      }
+      const page1 = await a.c.json("GET", "/api/transparency?limit=2");
+      assert.equal(page1.body.requests.length, 2);
+      assert.equal(page1.body.has_more, true);
+      assert.equal(page1.body.next_before, page1.body.requests[1].id);
+      const page2 = await a.c.json("GET", `/api/transparency?limit=2&before=${page1.body.next_before}`);
+      const page3 = await a.c.json("GET", `/api/transparency?limit=2&before=${page2.body.next_before}`);
+      assert.equal(page3.body.has_more, false);
+      const seen = [...page1.body.requests, ...page2.body.requests, ...page3.body.requests].map((r) => r.id);
+      assert.deepEqual(seen, [...ids].reverse(), "every row once, newest first");
+
+      const byId = Object.fromEntries(seen.map((id, i) => [id, [...page1.body.requests, ...page2.body.requests, ...page3.body.requests][i]]));
+      assert.deepEqual(
+        [byId[ids[0]], byId[ids[1]], byId[ids[2]]].map((r) => [r.classifier_model, r.classifier_label, r.classifier_zdr]),
+        [
+          ["heuristic", "Gode's own rules", null],
+          ["openai:gpt-6-luna", "GPT-6 Luna", false],
+          ["openrouter:deepseek/deepseek-v4.1-flash", "DeepSeek V4.1 Flash", true],
+        ]
+      );
+      assert.equal(byId[ids[2]].classifier_gateway, "openrouter");
+
+      // Someone else's row (or junk) is not a cursor.
+      const theirs = insertRequest(t, { user_id: b.user.id });
+      assert.equal((await a.c.json("GET", `/api/transparency?before=${theirs}`)).status, 400);
+      assert.equal((await a.c.json("GET", "/api/transparency?before=nope")).status, 400);
     } finally {
       await t.close();
     }
@@ -1172,9 +1290,11 @@ describe("admin routes", () => {
   const route = (job, tier) => t.deps.db.prepare("SELECT * FROM routes WHERE job = ? AND tier = ?").get(job, tier);
 
   before(async () => {
-    t = await createTestApp({ ADMIN_EMAILS: "boss@example.test" }, { pipeline: scriptedPipeline() });
-    admin = await signedIn(t, "founder"); // first account
-    regular = await signedIn(t, "member");
+    // ADMIN_EMAILS set: exactly the listed addresses are admins (being first means nothing).
+    t = await createTestApp({ ADMIN_EMAILS: "founder@example.test, boss@example.test" }, { pipeline: scriptedPipeline() });
+    regular = await signedIn(t, "member"); // the first account: not listed, not admin
+    admin = { c: t.client() };
+    admin.user = await admin.c.signup("founder@example.test", PASSWORD);
   });
   after(() => t.close());
 
@@ -1197,7 +1317,9 @@ describe("admin routes", () => {
       assert.equal((await t.client().json(method, url, body)).status, 401, `${method} ${url} signed out`);
     }
     assert.equal(route("chat", "budget").model_id, "openrouter:deepseek/deepseek-v4.1-flash");
-    // ADMIN_EMAILS makes later accounts admins too.
+    assert.equal(regular.user.is_admin, false, "the first account is not admin when ADMIN_EMAILS is set");
+    assert.equal(admin.user.is_admin, true);
+    // Any listed address is an admin.
     const boss = t.client();
     await boss.signup("boss@example.test", PASSWORD);
     assert.equal((await boss.json("GET", "/api/admin/routing")).status, 200);
@@ -1317,10 +1439,12 @@ describe("admin routes", () => {
     assert.equal((await admin.c.json("GET", "/api/admin/stats")).body.days, 28);
     for (const d of ["0", "366", "x"]) assert.equal((await admin.c.json("GET", `/api/admin/stats?days=${d}`)).status, 400, d);
 
-    // Enough happy answers from an alternate to beat the code/quality pick (which has no data).
+    // Enough happy answers from an alternate to beat the code/quality pick, which has enough
+    // unhappy ratings of its own (the learner only replaces a pick it has ratings for).
     const now = Date.now();
     for (let i = 0; i < 3; i++) {
       insertRequest(t, { user_id: regular.user.id, job: "code", model_id: HAIKU, tier: "quality", feedback: 1, created_at: now - 1000 + i });
+      insertRequest(t, { user_id: regular.user.id, job: "code", model_id: OPUS, tier: "quality", feedback: -1, created_at: now - 2000 + i });
     }
     const dry = await admin.c.json("POST", "/api/admin/learn", { apply: false, min_samples: 3 });
     assert.equal(dry.status, 200);

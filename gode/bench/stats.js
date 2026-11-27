@@ -185,6 +185,8 @@ function summarize(results, { judgeModelId = null } = {}) {
       // Rows decided by a side failing never reached the judge, so they are not judge errors.
       errors: compared.filter((r) => r.verdict?.error && !r.verdict?.by_error).length,
       total_cost_usd: sum(compared.map((r) => r.verdict?.judge_cost_usd)),
+      // Judge calls restricted to zero-retention endpoints (either side answered under ZDR).
+      zdr: compared.filter((r) => r.verdict?.judge_zdr).length,
       answered_by_judge_model: {
         gode: compared.filter((r) => sameAsJudge(r.gode)).length,
         auto: compared.filter((r) => sameAsJudge(r.auto)).length,
@@ -312,7 +314,8 @@ function renderMarkdown(summary, meta = {}) {
   out.push("");
   out.push(
     "Gode's cost includes its classifier call; its latency includes classification and the pick. " +
-      "Both sides received the same redacted prompt."
+      "Both sides received the same redacted prompt, also when Gode picked a self-hosted model." +
+      (s.judge?.zdr ? ` The judge ran on zero-retention endpoints for ${plural(s.judge.zdr, "comparison")} where a side did.` : "")
   );
 
   out.push("");

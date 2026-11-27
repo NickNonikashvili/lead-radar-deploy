@@ -219,10 +219,19 @@ test("reserve refuses an empty or negative balance and unknown users", () => {
   assertInvariant(db);
 });
 
-test("reserve holds min(estimate, balance)", () => {
+test("reserve holds the full estimate and refuses a balance below it", () => {
   const { db, credits } = setup();
   addUser(db, credits, "u1", 30);
-  const { holdId, amount } = credits.reserve("u1", 100);
+  // More than the balance: refused, with the amounts in the message; nothing is held.
+  assert.throws(
+    () => credits.reserve("u1", 100),
+    (err) => err.status === 402 && err.code === "insufficient_credits" && /\$0\.0001 of credit and your balance is \$0\.00003/.test(err.message)
+  );
+  assert.throws(() => credits.reserve("u1", 100, { message: "Custom." }), (err) => err.message === "Custom.");
+  assert.equal(holdCount(db), 0);
+  assert.equal(credits.balance("u1"), 30);
+
+  const { holdId, amount } = credits.reserve("u1", 30); // exactly the balance is fine
   assert.equal(amount, 30);
   assert.equal(credits.balance("u1"), 0);
   const hold = db.prepare("SELECT * FROM holds WHERE id = ?").get(holdId);
@@ -241,13 +250,31 @@ test("reserve holds min(estimate, balance)", () => {
   assertInvariant(db);
 });
 
-test("concurrent reserves cannot spend the same credit twice", () => {
+test("concurrent reserves cannot spend the same credit twice, and none starts underfunded", () => {
   const { db, credits } = setup();
   addUser(db, credits, "u1", 100);
   assert.equal(credits.reserve("u1", 80).amount, 80);
-  assert.equal(credits.reserve("u1", 80).amount, 20);
+  // 20 left: a second 80 hold is refused instead of starting on a capped 20.
   rejectsWith(() => credits.reserve("u1", 80), 402, "insufficient_credits");
+  assert.equal(credits.reserve("u1", 20).amount, 20);
+  rejectsWith(() => credits.reserve("u1", 1), 402, "insufficient_credits");
   assertInvariant(db);
+});
+
+test("affordableOutputTokens: the largest output cap whose full hold fits the balance", () => {
+  const { db, credits } = setup();
+  const model = { price_in: 8, price_out: 40 }; // micro-USD per token
+  const holdFor = (n, extra = 0) => credits.priceFor(credits.estimateApiCostMicros({ model, inputTokens: 100, maxOutputTokens: n }) + extra);
+  assert.equal(credits.affordableOutputTokens({ model, inputTokens: 100, maxOutputTokens: 4096, balanceMicros: 1e9 }), 4096);
+  const n = credits.affordableOutputTokens({ model, inputTokens: 100, maxOutputTokens: 4096, balanceMicros: 10_000 });
+  assert.ok(n > 0 && n < 4096);
+  assert.ok(holdFor(n) <= 10_000 && holdFor(n + 1) > 10_000, `exact cap ${n}`);
+  const withClassifier = credits.affordableOutputTokens({ model, inputTokens: 100, maxOutputTokens: 4096, extraApiMicros: 500, balanceMicros: 10_000 });
+  assert.ok(withClassifier < n && holdFor(withClassifier, 500) <= 10_000);
+  // Not even the input fits.
+  assert.equal(credits.affordableOutputTokens({ model, inputTokens: 100, maxOutputTokens: 4096, balanceMicros: 100 }), -1);
+  assert.equal(credits.affordableOutputTokens({ model, inputTokens: 100, maxOutputTokens: 4096, balanceMicros: -5 }), -1);
+  assert.equal(holdCount(db), 0);
 });
 
 test("settle refunds the difference, charges, deletes the hold and refuses a second settle", () => {
@@ -256,7 +283,7 @@ test("settle refunds the difference, charges, deletes the hold and refuses a sec
   const { holdId } = credits.reserve("u1", 500);
   assert.equal(credits.balance("u1"), 500);
   const out = credits.settle(holdId, 200, "req-1");
-  assert.deepEqual(out, { balance: 800 });
+  assert.deepEqual(out, { balance: 800, charged: 200 });
   assert.equal(credits.balance("u1"), 800);
   assert.equal(holdCount(db), 0);
   const rows = credits.ledger("u1").map((r) => [r.kind, r.delta_micros, r.ref]);
@@ -285,18 +312,42 @@ test("settle with zero charge writes no charge row; charge ref defaults to the h
   assertInvariant(db);
 });
 
-test("overspend: settle may go negative, then the next reserve fails until topped up", () => {
-  const { db, credits } = setup();
+test("settle never charges more than the hold: the overrun is absorbed and logged by id only", () => {
+  const config = loadConfig({ GODE_MOCK: "1" });
+  const db = openDb(":memory:");
+  const lines = [];
+  const credits = createCredits(db, config, { logger: { warn: (l) => lines.push(String(l)) } });
   addUser(db, credits, "u1", 100);
   const { holdId, amount } = credits.reserve("u1", 50);
   assert.equal(amount, 50);
-  assert.deepEqual(credits.settle(holdId, 300, "req-big"), { balance: -200 });
-  rejectsWith(() => credits.reserve("u1", 1), 402, "insufficient_credits");
-  credits.grant("u1", 150, "dev_topup", "topup-1");
-  assert.equal(credits.balance("u1"), -50);
-  rejectsWith(() => credits.reserve("u1", 1), 402, "insufficient_credits");
-  credits.grant("u1", 100, "dev_topup", "topup-2");
-  assert.equal(credits.reserve("u1", 500).amount, 50);
+  assert.deepEqual(credits.settle(holdId, 300, "req-big"), { balance: 50, charged: 50 });
+  assert.equal(credits.ledger("u1", { kinds: ["charge"] })[0].delta_micros, -50);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /^\[credits\] charge for req-big capped at hold [0-9a-f-]{36}; the overrun is absorbed$/);
+  assert.ok(!/300|250|u1/.test(lines[0]), "no amounts or user ids in the log");
+  // A charge within the hold logs nothing.
+  const second = credits.reserve("u1", 50);
+  credits.settle(second.holdId, 10, "req-small");
+  assert.equal(lines.length, 1);
+  assert.equal(credits.balance("u1"), 40);
+  assertInvariant(db);
+});
+
+test("adjust: admin credit up or down, never below zero", () => {
+  const { db, credits } = setup();
+  addUser(db, credits, "u1", 1000);
+  assert.equal(credits.adjust("u1", 500, "note-1"), 1500);
+  assert.equal(credits.adjust("u1", -2000, "note-2"), 0, "clamped at zero");
+  assert.equal(credits.adjust("u1", -10, "note-3"), 0, "nothing to take");
+  const rows = credits.ledger("u1", { kinds: ["admin_adjust"] }).map((r) => [r.delta_micros, r.ref]);
+  assert.deepEqual(rows, [[-1500, "note-2"], [500, "note-1"], [1000, "test-opening-balance"]]);
+  rejectsWith(() => credits.adjust("u1", 1.5, "x"), 400, "bad_request");
+  rejectsWith(() => credits.adjust("nobody", 5, "x"), 404, "not_found");
+  // Credit on hold is already out of the balance, so it can't be taken twice.
+  credits.adjust("u1", 300, "note-4");
+  credits.reserve("u1", 200);
+  assert.equal(credits.held("u1"), 200);
+  assert.equal(credits.adjust("u1", -1000, "note-5"), 0);
   assertInvariant(db);
 });
 
@@ -339,6 +390,15 @@ test("releaseStaleHolds refunds only holds older than the cutoff", () => {
   credits.reserve("u1", 10);
   assert.equal(credits.releaseStaleHolds(0), 1);
   assert.throws(() => credits.releaseStaleHolds(-5), RangeError);
+  // `keep`: holds of requests still running in this process survive the sweep, however old.
+  const live = credits.reserve("u1", 20);
+  const dead = credits.reserve("u1", 30);
+  db.prepare("UPDATE holds SET created_at = ?").run(Date.now() - 60 * 60 * 1000);
+  assert.equal(credits.held("u1"), 50);
+  assert.equal(credits.releaseStaleHolds(30 * 60 * 1000, { keep: [live.holdId] }), 1);
+  assert.equal(db.prepare("SELECT id FROM holds").get().id, live.holdId);
+  assert.ok(!db.prepare("SELECT 1 FROM holds WHERE id = ?").get(dead.holdId));
+  assert.equal(credits.held("u1"), 20);
   assertInvariant(db);
 });
 
@@ -422,19 +482,19 @@ test("invariant holds across a long random sequence of operations", () => {
     const op = int(7);
     if (op <= 1) {
       const est = int(4_000);
-      if (expected[u] <= 0) {
+      if (expected[u] <= 0 || est > expected[u]) {
         rejectsWith(() => credits.reserve(u, est), 402, "insufficient_credits");
       } else {
         const r = credits.reserve(u, est);
-        assert.equal(r.amount, Math.min(est, expected[u]));
+        assert.equal(r.amount, est);
         expected[u] -= r.amount;
         open.push({ holdId: r.holdId, userId: u, amount: r.amount });
       }
     } else if (op === 2 && open.length) {
       const h = open.splice(int(open.length), 1)[0];
-      const charged = int(Math.max(1, h.amount * 2)); // sometimes more than held
-      credits.settle(h.holdId, charged, `req-${step}`);
-      expected[h.userId] += h.amount - charged;
+      const charged = int(Math.max(1, h.amount * 2)); // sometimes more than held: capped
+      assert.equal(credits.settle(h.holdId, charged, `req-${step}`).charged, Math.min(charged, h.amount));
+      expected[h.userId] += h.amount - Math.min(charged, h.amount);
       closed.push(h.holdId);
     } else if (op === 3 && open.length) {
       const h = open.splice(int(open.length), 1)[0];
@@ -510,6 +570,7 @@ test("createCheckout posts the exact form to Stripe and returns url + id", async
       ["client_reference_id", "user-alpha"],
       ["metadata[user_id]", "user-alpha"],
       ["metadata[credit_micros]", "10000000"],
+      ["metadata[gode]", "credit_pack"],
     ]
   );
   // Standard form encoding: brackets and the hash are percent-encoded on the wire.
@@ -736,7 +797,7 @@ test("handleEvent: deleted account -> event recorded, no grant", () => {
   assert.ok(logs.every((l) => !l.includes("user-gone")), "logs must not contain user ids");
 });
 
-test("handleEvent trusts amount_total over metadata.credit_micros", () => {
+test("handleEvent refuses a session whose amount paid does not match its credit pack", () => {
   const { db, credits, stripe, logs } = stripeSetup();
   addUser(db, credits, "user-alpha");
   const ev = sessionEvent({
@@ -745,10 +806,10 @@ test("handleEvent trusts amount_total over metadata.credit_micros", () => {
     amountTotal: 500,
     metadata: { user_id: "user-alpha", credit_micros: "25000000" },
   });
-  assert.deepEqual(stripe.handleEvent(ev), { handled: true, duplicate: false });
-  assert.equal(credits.balance("user-alpha"), 5_000_000);
+  assert.deepEqual(stripe.handleEvent(ev), { handled: false, duplicate: false });
+  assert.equal(credits.balance("user-alpha"), 0);
   assert.equal(logs.length, 1);
-  assert.match(logs[0], /credit_micros differs/);
+  assert.match(logs[0], /does not match the session's credit pack/);
   assert.ok(logs.every((l) => !l.includes("user-alpha")));
 });
 
@@ -763,11 +824,17 @@ test("handleEvent skips sessions it cannot safely credit", () => {
     sessionEvent({ sessionId: "cs_mismatch", metadata: { user_id: "user-beta" } }), // client_reference_id = alpha
     sessionEvent({ sessionId: "cs_sub", extra: { mode: "subscription" } }),
     sessionEvent({ type: "checkout.session.async_payment_succeeded", sessionId: "cs_weird", paymentStatus: "unpaid" }),
+    // A Payment Link for another product on the same Stripe account: ?client_reference_id=<our user>.
+    sessionEvent({ sessionId: "cs_paymentlink", amountTotal: 300, metadata: {} }),
+    // Our metadata, but an amount that is not one of the credit packs.
+    sessionEvent({ sessionId: "cs_notpack", amountTotal: 300, metadata: { user_id: "user-alpha", credit_micros: "3000000" } }),
   ];
   for (const ev of cases) assert.deepEqual(stripe.handleEvent(ev), { handled: false, duplicate: false }, ev.data.object.id);
   assert.equal(credits.balance("user-alpha"), 0);
   assert.equal(credits.balance("user-beta"), 0);
-  assert.equal(logs.length, 5); // every anomaly logged except the foreign subscription
+  assert.equal(logs.length, 7); // every anomaly logged except the foreign subscription
+  assert.ok(logs.some((l) => /no metadata\.user_id/.test(l) && l.includes("cs_paymentlink")));
+  assert.ok(logs.some((l) => /not one of the credit packs/.test(l) && l.includes("cs_notpack")));
   assert.ok(logs.every((l) => !l.includes("user-alpha") && !l.includes("user-beta")));
 
   // Older Adaptive Pricing sessions: the customer's currency, our amount in currency_conversion.

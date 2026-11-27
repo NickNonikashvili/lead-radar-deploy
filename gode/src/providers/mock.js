@@ -152,6 +152,8 @@ function createMockProvider(config) {
     // Echoing the (redacted) words shows placeholder restoration working end to end.
     const answer = `${label} (mock) here. You said: "${echo}". This is an offline demo answer, no AI was called.`;
     const words = answer.match(/\S+\s*/g) || [];
+    // Like the real gateways: who got the prompt is reported before the first delta.
+    yield { type: "meta", upstreamProvider: "mock" };
     for (let i = 0; i < words.length; i++) {
       await sleep(WORD_DELAY_MS, signal);
       yield { type: "delta", text: words[i] };

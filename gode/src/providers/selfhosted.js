@@ -28,6 +28,10 @@ function createSelfhostedProvider(config) {
     chatFields: (args, effort) => ({ stream_options: { include_usage: true }, ...reasoningFields(effort) }),
     jsonFields: (args, effort) => reasoningFields(effort),
     defaultUpstreamProvider: "self-hosted",
+    timeouts: () => config.gateways.timeouts,
+    // One server: a failure to serve means it is down, so private requests use PRIVATE_FALLBACK
+    // (via the registry's isAvailable) instead of failing one after another.
+    outageRetryMs: () => gw.retryMs ?? 30_000,
   });
 }
 

@@ -16,6 +16,10 @@ const REQUEST_TIMEOUT_MS = 15_000;
 // currency one minor unit (a cent) is exactly 10,000 micros.
 const MICROS_PER_MINOR_UNIT = 10_000;
 const FULFILMENT_EVENTS = new Set(["checkout.session.completed", "checkout.session.async_payment_succeeded"]);
+// Marks our own Checkout Sessions. Informational for now: sessions created before it existed live
+// up to 24 h, so the webhook relies on metadata.user_id + metadata.credit_micros (which a Payment
+// Link URL cannot set) and on the amount being one of our packs.
+const SESSION_MARKER = "credit_pack";
 // Stripe's zero- and three-decimal currencies. A pack price in these would be off by 100x or 10x.
 const NOT_TWO_DECIMAL = new Set(
   "bif clp djf gnf jpy kmf krw mga pyg rwf ugx vnd vuv xaf xof xpf bhd jod kwd omr tnd".split(" ")
@@ -143,6 +147,7 @@ function createStripe(config, credits, db, { log = console } = {}) {
       ["client_reference_id", user.id],
       ["metadata[user_id]", user.id],
       ["metadata[credit_micros]", String(amountMinor * MICROS_PER_MINOR_UNIT)],
+      ["metadata[gode]", SESSION_MARKER],
     ]);
     const session = await postForm("/v1/checkout/sessions", form);
     if (typeof session.id !== "string" || typeof session.url !== "string") {
@@ -184,7 +189,11 @@ function createStripe(config, credits, db, { log = console } = {}) {
     return event;
   }
 
-  /** Credit to grant for a paid session, or null. Trusts what was actually paid, not our metadata. */
+  /**
+   * Credit to grant for a paid session, or null. The amount comes from what was actually paid, and
+   * must match both the credit our checkout recorded in metadata and one of the configured packs:
+   * anything else is not one of our credit packs (another product on the same Stripe account).
+   */
   function creditFromSession(event, session) {
     let minor = session.amount_total;
     const paidCurrency = session.currency ? String(session.currency).toLowerCase() : currency;
@@ -203,8 +212,13 @@ function createStripe(config, credits, db, { log = console } = {}) {
     }
     const credit = minor * MICROS_PER_MINOR_UNIT;
     const claimed = session.metadata?.credit_micros;
-    if (claimed !== undefined && claimed !== null && Number(claimed) !== credit) {
-      warn("metadata credit_micros differs from amount paid; granting the amount paid", event, session);
+    if (claimed === undefined || claimed === null || Number(claimed) !== credit) {
+      warn("amount paid does not match the session's credit pack; no credit granted, check in Stripe", event, session);
+      return null;
+    }
+    if (!billing.packsUsd.some((p) => Math.round(p * 100) * MICROS_PER_MINOR_UNIT === credit)) {
+      warn("amount paid is not one of the credit packs; no credit granted, check in Stripe", event, session);
+      return null;
     }
     return credit;
   }
@@ -219,14 +233,16 @@ function createStripe(config, credits, db, { log = console } = {}) {
       warn("async_payment_succeeded for an unpaid session; no credit granted", event, session);
       return null;
     }
+    // metadata.user_id is required: our checkout always sets it, and unlike client_reference_id
+    // (which a Payment Link takes from a URL parameter) a customer cannot set it.
     const metaUser = session.metadata?.user_id || null;
     const refUser = session.client_reference_id || null;
-    const userId = metaUser || refUser;
+    const userId = metaUser;
     if (!userId || typeof userId !== "string") {
-      warn("paid session has no user id; no credit granted", event, session);
+      warn("paid session has no metadata.user_id (not a Gode credit pack); no credit granted", event, session);
       return null;
     }
-    if (metaUser && refUser && metaUser !== refUser) {
+    if (refUser && metaUser !== refUser) {
       warn("metadata user_id and client_reference_id differ; no credit granted", event, session);
       return null;
     }

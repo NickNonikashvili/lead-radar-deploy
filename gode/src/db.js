@@ -1,6 +1,7 @@
 // SQLite storage via Node's built-in node:sqlite (Node >= 22.5): no native build step.
 // All access is synchronous and the app runs as a single process, so a BEGIN IMMEDIATE ... COMMIT
-// block is atomic with respect to other requests.
+// block is atomic with respect to other requests. Pragmas set per connection in openDb():
+// foreign_keys, busy_timeout 5 s, secure_delete, and for files WAL with synchronous=FULL.
 const fs = require("fs");
 const path = require("path");
 
@@ -207,9 +208,18 @@ function openDb(file) {
   if (file !== ":memory:") fs.mkdirSync(path.dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
   db.exec("PRAGMA foreign_keys = ON;");
+  // A second connection (the cron learner, `npm run seed -- --force`, a backup) may hold the write
+  // lock for a moment: wait for it instead of failing at once with "database is locked". node:sqlite
+  // is synchronous, so a wait blocks the event loop; such locks last milliseconds in practice.
+  db.exec("PRAGMA busy_timeout = 5000;");
+  // Deleted rows ("delete everything", expired sessions) are overwritten with zeros, not left in
+  // free pages of the file.
+  db.exec("PRAGMA secure_delete = ON;");
   if (file !== ":memory:") {
     db.exec("PRAGMA journal_mode = WAL;");
-    db.exec("PRAGMA synchronous = NORMAL;");
+    // FULL, not NORMAL: in WAL mode NORMAL can roll back a committed transaction on power loss, and
+    // a Stripe credit grant acknowledged with 2xx is never redelivered. One extra fsync per commit.
+    db.exec("PRAGMA synchronous = FULL;");
   }
   db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL);");
   const applied = new Set(db.prepare("SELECT version FROM schema_migrations").all().map((r) => r.version));

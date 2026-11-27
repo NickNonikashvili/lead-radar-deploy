@@ -6,6 +6,8 @@
 const express = require("express");
 const { AppError, microsToUsd, newId, now, safeJsonParse } = require("../util");
 const { chipFor } = require("../chat/pipeline");
+const { publicMediaUrl } = require("../media");
+const { checkpointWal } = require("../auth");
 const { bodyObject, onlyKeys, stringField } = require("./validate");
 
 const TITLE_MAX = 200;
@@ -42,16 +44,23 @@ function readPins(row, user, keyring) {
   return pins && typeof pins === "object" && !Array.isArray(pins) ? pins : {};
 }
 
-/** Decrypted message content -> { text, media }. Stored as encrypted JSON { text, media? }. */
+/**
+ * Decrypted message content -> { text, media, stopped }. Stored as encrypted JSON
+ * { text, media?, stopped? } (stopped: the user pressed Stop and this partial answer was kept).
+ */
 function readContent(user, keyring, contentEnc) {
   const plain = keyring.decrypt(user.wrapped_dek, contentEnc);
-  if (plain === null) return { text: "", media: [] };
+  if (plain === null) return { text: "", media: [], stopped: false };
   const parsed = safeJsonParse(plain, undefined);
   if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-    return { text: typeof parsed.text === "string" ? parsed.text : "", media: Array.isArray(parsed.media) ? parsed.media : [] };
+    return {
+      text: typeof parsed.text === "string" ? parsed.text : "",
+      media: Array.isArray(parsed.media) ? parsed.media : [],
+      stopped: parsed.stopped === true,
+    };
   }
   // Tolerate a bare string (or a JSON string) as the whole text.
-  return { text: typeof parsed === "string" ? parsed : plain, media: [] };
+  return { text: typeof parsed === "string" ? parsed : plain, media: [], stopped: false };
 }
 
 function readTitle(user, keyring, titleEnc) {
@@ -70,7 +79,7 @@ function chipText({ label, job, effort, costUsd }) {
 /**
  * @param {object} ctx  app context (see src/app.js)
  */
-function createConversationRoutes({ db, auth, keyring }) {
+function createConversationRoutes({ db, config, auth, keyring }) {
   const router = express.Router();
   const stmt = {
     list: db.prepare("SELECT id, title_enc, updated_at FROM conversations WHERE user_id = ? ORDER BY updated_at DESC, rowid DESC"),
@@ -80,8 +89,9 @@ function createConversationRoutes({ db, auth, keyring }) {
     // Current messages only: regenerate/switch mark the answer they replace as superseded.
     messages: db.prepare(
       `SELECT m.id, m.role, m.content_enc, m.parent_id, m.request_id, m.created_at,
-              r.id AS r_id, r.job, r.tier, r.model_id, md.label AS model_label, r.effort, r.charged_micros,
-              r.private, r.zdr, r.redactions, r.feedback, r.pinned, r.status
+              r.id AS r_id, r.kind, r.job, r.tier, r.model_id, md.label AS model_label, md.region AS model_region,
+              md.gateway AS model_gateway, r.effort, r.charged_micros, r.private, r.zdr, r.redactions, r.feedback,
+              r.pinned, r.status
          FROM messages m
          LEFT JOIN requests r ON r.id = m.request_id AND r.user_id = m.user_id
          LEFT JOIN models md ON md.id = r.model_id
@@ -99,16 +109,30 @@ function createConversationRoutes({ db, auth, keyring }) {
     return stringField(body.title, "title", { required, max: TITLE_MAX });
   }
 
-  function requestMeta(row) {
+  /**
+   * 'user' when the user chose this model (a manual pick, a switch, or a later answer from the
+   * model they pinned), else 'auto' (the router's pick). The switch menu words its header by it.
+   */
+  function pickSource(row, pins) {
+    if (row.kind === "manual" || row.kind === "switch") return "user";
+    const pin = pins && pins[row.job === "action" ? "chat" : row.job];
+    return row.pinned && pin && pin.source === "user" && pin.model_id === row.model_id ? "user" : "auto";
+  }
+
+  function requestMeta(row, pins) {
     if (!row.r_id) return undefined;
     const label = row.model_label || row.model_id;
     const costUsd = microsToUsd(row.charged_micros);
     return {
       id: row.r_id,
+      kind: row.kind,
       job: row.job,
       tier: row.tier,
       model_id: row.model_id,
       model_label: label,
+      // Where it ran ('self' = our own servers): the privacy badge depends on it.
+      model_region: row.model_gateway === "selfhosted" ? "self" : row.model_region || null,
+      pick_source: pickSource(row, pins),
       effort: row.effort,
       cost_usd: costUsd,
       chip: chipText({ label, job: row.job, effort: row.effort, costUsd }),
@@ -140,12 +164,22 @@ function createConversationRoutes({ db, auth, keyring }) {
 
   router.get("/conversations/:id", auth.requireUser, (req, res) => {
     const conv = findOwnConversation(db, req.user.id, req.params.id);
-    const messages = stmt.messages.all(conv.id, req.user.id).map((m) => {
-      const { text, media } = readContent(req.user, keyring, m.content_enc);
-      const message = { id: m.id, role: m.role, text, media, created_at: m.created_at, parent_id: m.parent_id || null };
+    const pins = readPins(conv, req.user, keyring);
+    const rows = stmt.messages.all(conv.id, req.user.id);
+    // A question with no current answer (its answer failed, was stopped before any text, or the
+    // page closed mid-answer): the UI marks it "No answer" and offers to try again.
+    const answeredIds = new Set(rows.filter((m) => m.role === "assistant" && m.parent_id).map((m) => m.parent_id));
+    const messages = rows.map((m) => {
+      const { text, media, stopped } = readContent(req.user, keyring, m.content_enc);
+      // The stored message keeps the upstream URL; the browser gets Gode's media proxy link.
+      const shown = media.map((item, i) => (item && typeof item === "object" ? { ...item, url: publicMediaUrl(config, m.id, i, item.url) } : item));
+      const message = { id: m.id, role: m.role, text, media: shown, created_at: m.created_at, parent_id: m.parent_id || null };
       if (m.role === "assistant") {
-        const request = requestMeta(m);
+        if (stopped) message.stopped = true;
+        const request = requestMeta(m, pins);
         if (request) message.request = request;
+      } else {
+        message.answered = answeredIds.has(m.id);
       }
       return message;
     });
@@ -153,7 +187,8 @@ function createConversationRoutes({ db, auth, keyring }) {
       conversation: {
         id: conv.id,
         title: readTitle(req.user, keyring, conv.title_enc),
-        pins: readPins(conv, req.user, keyring),
+        pins,
+        private: Boolean(conv.private),
         updated_at: conv.updated_at,
       },
       messages,
@@ -169,12 +204,15 @@ function createConversationRoutes({ db, auth, keyring }) {
 
   // Deletes the content (messages, title, placeholder map). The routing log rows in `requests`
   // stay: they hold no content and are the user's billing record (transparency log, ledger refs).
+  // The user's data key stays live, so the deleted ciphertext must not linger in the WAL either:
+  // the checkpoint after the commit rewrites it (secure_delete zeroes the freed pages).
   router.delete("/conversations/:id", auth.requireUser, (req, res) => {
     const conv = findOwnConversation(db, req.user.id, req.params.id);
     db.tx(() => {
       stmt.deleteMessages.run(conv.id);
       stmt.deleteConversation.run(conv.id, req.user.id);
     });
+    checkpointWal(db);
     res.json({ ok: true });
   });
 

@@ -2,35 +2,61 @@
 //
 // Envelope encryption: every user gets a random 256-bit data key (DEK). The DEK encrypts that
 // user's chats, titles and placeholder maps with AES-256-GCM. The DEK itself is stored only in
-// wrapped form (encrypted with the server MASTER KEY). Deleting a user deletes their wrapped DEK,
-// which makes any leftover ciphertext (backups, WAL pages) unreadable.
+// wrapped form (encrypted with the server MASTER KEY), in the users table of the same database.
+// Deleting a user deletes the wrapped DEK from the live database (secure_delete zeroes the freed
+// pages and "delete everything" truncates the WAL), so leftover ciphertext there is unreadable. A
+// BACKUP taken before the deletion still holds both the wrapped DEK and the ciphertext, and the
+// master key opens it: deleted data stays readable in backups until those backups expire.
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
-const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64, maxmem: 64 * 1024 * 1024 };
+// New hashes: OWASP's scrypt option N=2^15, r=8, p=3 (32 MiB, about 200 ms of one core). Hashes
+// made with older parameters keep verifying: verifyPassword reads N, r and p from the stored
+// string, and needsRehash() tells the login path to upgrade them.
+const SCRYPT = { N: 2 ** 15, r: 8, p: 3, keylen: 64, maxmem: 64 * 1024 * 1024 };
+// A stored hash may ask for at most this much memory (128 * N * r bytes), so a corrupt or hostile
+// row can't make one verification allocate gigabytes.
+const SCRYPT_VERIFY_MAXMEM = 128 * 1024 * 1024;
 
-function hashPassword(password) {
+/** Async scrypt: runs on the libuv threadpool, so a login never blocks other requests or streams. */
+function scrypt(password, salt, keylen, opts) {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, keylen, opts, (err, key) => (err ? reject(err) : resolve(key)));
+  });
+}
+
+/** Resolves to "scrypt$N$r$p$<salt b64>$<hash b64>". */
+async function hashPassword(password) {
   const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(String(password), salt, SCRYPT.keylen, SCRYPT);
+  const hash = await scrypt(String(password), salt, SCRYPT.keylen, SCRYPT);
   return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString("base64")}$${hash.toString("base64")}`;
 }
 
-function verifyPassword(password, stored) {
+function parseHash(stored) {
+  const [algo, N, r, p, saltB64, hashB64] = String(stored).split("$");
+  if (algo !== "scrypt" || !saltB64 || !hashB64) return null;
+  const params = { N: Number(N), r: Number(r), p: Number(p) };
+  if (![params.N, params.r, params.p].every((n) => Number.isSafeInteger(n) && n > 0)) return null;
+  return { ...params, salt: Buffer.from(saltB64, "base64"), expected: Buffer.from(hashB64, "base64") };
+}
+
+/** Resolves true or false; never rejects (a malformed stored hash is simply no match). */
+async function verifyPassword(password, stored) {
   try {
-    const [algo, N, r, p, saltB64, hashB64] = String(stored).split("$");
-    if (algo !== "scrypt") return false;
-    const expected = Buffer.from(hashB64, "base64");
-    const actual = crypto.scryptSync(String(password), Buffer.from(saltB64, "base64"), expected.length, {
-      N: Number(N),
-      r: Number(r),
-      p: Number(p),
-      maxmem: SCRYPT.maxmem,
-    });
-    return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+    const h = parseHash(stored);
+    if (!h || !h.expected.length) return false;
+    const actual = await scrypt(String(password), h.salt, h.expected.length, { N: h.N, r: h.r, p: h.p, maxmem: SCRYPT_VERIFY_MAXMEM });
+    return actual.length === h.expected.length && crypto.timingSafeEqual(actual, h.expected);
   } catch {
     return false;
   }
+}
+
+/** True when a stored hash uses weaker parameters than new hashes (upgrade it after a login). */
+function needsRehash(stored) {
+  const h = parseHash(stored);
+  return !h || h.N < SCRYPT.N || h.r < SCRYPT.r || h.p < SCRYPT.p;
 }
 
 /** URL-safe random token (session cookies, CSRF-free one-time values). */
@@ -92,6 +118,7 @@ function loadMasterKey(config) {
 function createKeyring(masterKey, { cacheSize = 500 } = {}) {
   if (!Buffer.isBuffer(masterKey) || masterKey.length !== 32) throw new Error("master key must be a 32-byte Buffer");
   const cache = new Map(); // wrappedDek -> dek Buffer (LRU by insertion order)
+  const hmacKeys = new Map(); // label -> HKDF-derived key
 
   function newWrappedDek() {
     return seal(masterKey, crypto.randomBytes(32));
@@ -126,7 +153,24 @@ function createKeyring(masterKey, { cacheSize = 500 } = {}) {
     cache.delete(wrappedDek);
   }
 
-  return { newWrappedDek, encrypt, decrypt, forget };
+  /**
+   * Keyed fingerprint of a value (hex HMAC-SHA256), e.g. of a normalized email for the one-bonus-
+   * per-address rule. The key is derived from the master key with HKDF, one key per label, so the
+   * master key itself is never used as an HMAC key and fingerprints made for different purposes
+   * can't be matched with each other. Unlike a plain sha256, a fingerprint can't be checked
+   * against guessed addresses without the master key.
+   */
+  function hmac(label, value) {
+    if (typeof label !== "string" || !label) throw new TypeError("hmac: label is required");
+    let key = hmacKeys.get(label);
+    if (!key) {
+      key = Buffer.from(crypto.hkdfSync("sha256", masterKey, Buffer.alloc(0), `gode-hmac:${label}`, 32));
+      hmacKeys.set(label, key);
+    }
+    return crypto.createHmac("sha256", key).update(String(value), "utf8").digest("hex");
+  }
+
+  return { newWrappedDek, encrypt, decrypt, forget, hmac };
 }
 
-module.exports = { hashPassword, verifyPassword, randomToken, sha256, seal, open, loadMasterKey, createKeyring };
+module.exports = { hashPassword, verifyPassword, needsRehash, SCRYPT, randomToken, sha256, seal, open, loadMasterKey, createKeyring };

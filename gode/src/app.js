@@ -25,20 +25,29 @@ const { createModelRoutes } = require("./routes/models");
 const { createBillingRoutes, createWebhookHandler } = require("./routes/billing");
 const { createAdminRoutes } = require("./routes/admin");
 const { createPublicRoutes } = require("./routes/public");
+const { createMediaRoutes } = require("./routes/media");
 
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const INDEX_HTML = path.join(PUBLIC_DIR, "index.html");
 const MINUTE = 60 * 1000;
 
-// Defaults per limiter; createApp's `rateLimits` option overrides them (tests).
+// Defaults per limiter; createApp's `rateLimits` option overrides them (tests). "Client network"
+// is ipKey() in src/auth.js: the IPv4 address, or the /64 of an IPv6 one (needs 'trust proxy'
+// behind a reverse proxy).
 const RATE_LIMITS = {
-  // Sign-up and log-in, per client IP (needs 'trust proxy' behind a reverse proxy).
+  // Sign-up and log-in requests, per client network.
   auth: { windowMs: 15 * MINUTE, max: 20 },
-  // Sign-up and log-in, per lower-cased email: stops password guessing spread over many IPs.
+  // FAILED log-ins per email + client network (counted by routes/auth.js after a 401). Only
+  // failures count, and only from that network, so a stranger can't lock the owner out.
   authEmail: { windowMs: 15 * MINUTE, max: 10 },
+  // FAILED log-ins per email from anywhere: a much higher ceiling against guessing spread over
+  // many networks.
+  authEmailGlobal: { windowMs: 60 * MINUTE, max: 100 },
+  // New accounts (and sign-ups for addresses that already have one) per client network per day.
+  signup: { windowMs: 24 * 60 * MINUTE, max: 10 },
   // Chat, regenerate and switch, per user.
   chat: { windowMs: MINUTE, max: 30 },
-  // Password confirmation for "delete everything", per user.
+  // Password confirmation ("delete everything", password change), per user.
   password: { windowMs: 15 * MINUTE, max: 10 },
 };
 
@@ -82,6 +91,7 @@ function clientError(err) {
  *   deps.picker, deps.credits, deps.stripe, deps.auth, deps.pipeline   (see docs/ARCHITECTURE.md)
  * @param {object} [deps.rateLimits]  per-limiter overrides, e.g. { chat: { max: 2 } } (tests)
  * @param {number} [deps.ssePingMs]   keepalive interval for event streams (default 15 s)
+ * @param {typeof fetch} [deps.mediaFetch]  fetch used by the media proxy (tests; default global fetch)
  * @param {{ error: Function, warn: Function }} [deps.logger]  default console
  * @returns {import('express').Express}  with app.locals.shutdown(): abort live streams, stop timers
  */
@@ -94,12 +104,9 @@ function createApp(deps = {}) {
   const limiters = {};
   for (const [name, dflt] of Object.entries(RATE_LIMITS)) {
     const opts = { ...dflt, ...(deps.rateLimits?.[name] || {}) };
-    if (name === "authEmail") {
-      opts.key = (req) => {
-        const email = req.body?.email;
-        return typeof email === "string" && email.trim() ? `email:${email.trim().toLowerCase().slice(0, 320)}` : null;
-      };
-    } else if (name === "chat" || name === "password") {
+    // authEmail, authEmailGlobal and signup are counted by routes/auth.js with explicit keys
+    // (peek/hit); `auth` uses the default client-network key.
+    if (name === "chat" || name === "password") {
       opts.key = (req) => (req.user ? `user:${req.user.id}` : null);
     }
     limiters[name] = rateLimit(opts);
@@ -140,6 +147,7 @@ function createApp(deps = {}) {
   app.use("/api", createAuthRoutes(ctx));
   app.use("/api", createMeRoutes(ctx));
   app.use("/api", createConversationRoutes(ctx));
+  app.use("/api", createMediaRoutes(ctx));
   app.use("/api", createChatRoutes(ctx));
   app.use("/api", createModelRoutes(ctx));
   app.use("/api", createBillingRoutes(ctx));

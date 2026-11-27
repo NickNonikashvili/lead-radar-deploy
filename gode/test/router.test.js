@@ -389,7 +389,7 @@ test("private + user pin: a private-safe pick is kept, an unsafe one is replaced
   assert.deepEqual(unsafe.pinsUpdate.chat, { model_id: M.self, tier: "private", source: "auto" });
 });
 
-test("rule 6: unavailable routes walk to the nearest tier (ties -> cheaper), then the cheapest model, then no_model", () => {
+test("rule 6: unavailable routes walk to the nearest tier (ties -> cheaper), then a fallback priced for the tier, then no_model", () => {
   assert.deepEqual(walkOrder("quality"), ["balanced", "budget"]);
   assert.deepEqual(walkOrder("balanced"), ["budget", "quality"]);
   assert.deepEqual(walkOrder("budget"), ["balanced", "quality"]);
@@ -402,9 +402,19 @@ test("rule 6: unavailable routes walk to the nearest tier (ties -> cheaper), the
   const c = setup({ down: [M.budget, M.balanced] }).picker.pick({ job: "code", difficulty: 1, user: {} });
   assert.equal(c.model.id, M.quality);
 
-  const cheapest = setup({ down: [M.quality, M.balanced, M.budget] }).picker.pick({ job: "chat", difficulty: 3, user: {} });
-  assert.equal(cheapest.model.id, M.self, "cheapest remaining eligible model");
-  assert.match(cheapest.reason, /cheapest available model/);
+  // No routed cell usable: the plan's column still matters. Remaining chat models by typical price:
+  // self 0.0005 < zdrAlt 0.00125 < plain 0.006 < alt 0.009.
+  const noCells = setup({ down: [M.quality, M.balanced, M.budget] }).picker;
+  const cheapest = noCells.pick({ job: "chat", difficulty: 1, user: { plan: "saver" } });
+  assert.equal(cheapest.model.id, M.self, "budget -> cheapest remaining eligible model");
+  assert.equal(cheapest.tier, "budget");
+  assert.match(cheapest.reason, /using the cheapest available model/);
+  const mid = noCells.pick({ job: "chat", difficulty: 3, user: {} });
+  assert.equal(mid.model.id, M.zdrAlt, "balanced -> the middle price");
+  assert.match(mid.reason, /using a mid-priced available model/);
+  const top = noCells.pick({ job: "chat", difficulty: 5, user: { plan: "best" } });
+  assert.equal(top.model.id, M.alt, "quality -> the dearest");
+  assert.match(top.reason, /using the highest-priced available model/);
 
   const none = setup({ down: ["openrouter", "openai", "selfhosted"] }).picker;
   assert.throws(() => none.pick({ job: "chat", difficulty: 3, user: {} }), { status: 503, code: "no_model" });
@@ -421,10 +431,10 @@ test("unknown jobs are a 400", () => {
   assert.throws(() => picker.pick({ job: "dance", difficulty: 1, user: {} }), { status: 400, code: "bad_request" });
 });
 
-test("candidates: routed picks first (quality, balanced, budget), then alternates by price desc", () => {
+test("candidates: routed picks first (quality, balanced, budget), then alternates by price, cheapest first", () => {
   const { picker } = setup({ down: [M.zdrAlt] });
   const ids = picker.candidates({ job: "chat", user: {} }).map((m) => m.id);
-  assert.deepEqual(ids, [M.quality, M.balanced, M.budget, M.alt, M.plain, M.self]);
+  assert.deepEqual(ids, [M.quality, M.balanced, M.budget, M.self, M.plain, M.alt]);
   assert.deepEqual(picker.candidates({ job: "action", user: {} }).map((m) => m.id), ids, "action lists chat models");
 
   const priv = picker.candidates({ job: "chat", user: {}, private: true }).map((m) => m.id);
@@ -601,7 +611,9 @@ test("classifier model choice: configured id, then CLASSIFIER_MODEL_CANDIDATES; 
   assert.equal((await make([CLASSIFIER_ID]).classifier.classify({ text: "fix the bug" })).classifierModel, first);
   assert.equal((await make([CLASSIFIER_ID, first]).classifier.classify({ text: "fix the bug" })).classifierModel, second);
   upsertModel(db, textModel(second, { slug: idOf(second)[1], gateway: idOf(second)[0], enabled: false }));
-  const none = make([CLASSIFIER_ID, first]);
+  // Every outside candidate gone: a self-hosted text model is the last resort (our own servers).
+  assert.equal((await make([CLASSIFIER_ID, first]).classifier.classify({ text: "fix the bug" })).classifierModel, M.self);
+  const none = make([CLASSIFIER_ID, first, "selfhosted"]);
   const r = await none.classifier.classify({ text: "fix the bug" });
   assert.equal(r.classifierModel, "heuristic");
   assert.equal(none.providers.calls.length, 0, "no model -> no upstream call");
@@ -716,4 +728,314 @@ test("heuristic output, title and keywords", () => {
   assert.equal(heuristicClassify("My doctor gave me a diagnosis of diabetes", {}).private, true);
   assert.equal(heuristicClassify("What's my salary after tax?", {}).private, true);
   assert.equal(heuristicClassify("Write a haiku about autumn", {}).private, false);
+});
+
+// ---------------------------------------------------------------------------------------------
+// review fixes: local-first classifier, EU-only classifier, media follow-ups, keyword precision
+
+const { _internal: classifyInternal } = require("../src/router/classify");
+
+/** A classifier whose LLM must never be called; records any call. */
+function guardedClassifier({ env = {}, down = [], classifierOver = {} } = {}) {
+  return classifierSetup({
+    env,
+    down,
+    classifierOver,
+    completeJSON: async ({ model }) => ({ json: { ...GOOD_REPLY, job: "chat", title: model.id }, usage: { inputTokens: 10, outputTokens: 5, costUsd: null } }),
+  });
+}
+
+test("a prompt the local signals call private never reaches an outside classifier", async () => {
+  const text = "My psychiatrist changed my medication and I feel worse, what should I ask her?";
+  // No self-hosted model: the heuristic classifies it, nothing is sent anywhere.
+  const off = guardedClassifier({ down: ["selfhosted"] });
+  const r = await off.classifier.classify({ text });
+  assert.equal(r.private, true);
+  assert.equal(r.classifierModel, "heuristic");
+  assert.equal(off.providers.calls.length, 0);
+  // Strict privacy changes nothing about that.
+  assert.equal((await off.classifier.classify({ text, zdrOnly: true })).classifierModel, "heuristic");
+  // A high-risk redaction (card number) is a local signal too.
+  const card = await off.classifier.classify({ text: "charge [CARD_1] for the order", redactionCounts: { CARD: 1 } });
+  assert.equal(card.private, true);
+  assert.equal(off.providers.calls.length, 0);
+
+  // With a self-hosted model available, that model classifies it, on our own servers.
+  const self = guardedClassifier();
+  const s = await self.classifier.classify({ text, history: [{ role: "user", content: "earlier" }] });
+  assert.equal(s.classifierModel, M.self);
+  assert.equal(s.private, true, "the local verdict holds whatever the model says");
+  assert.deepEqual(self.providers.calls.map((c) => c.model.id), [M.self]);
+});
+
+test("conversationPrivate: every turn is classified locally, even an innocent one", async () => {
+  const off = guardedClassifier({ down: ["selfhosted"] });
+  const r = await off.classifier.classify({ text: "Thanks, what should I ask at the next visit?", conversationPrivate: true });
+  assert.equal(r.classifierModel, "heuristic");
+  assert.equal(off.providers.calls.length, 0, "no history of a private conversation leaves for classification");
+  const self = guardedClassifier();
+  assert.equal((await self.classifier.classify({ text: "Thanks!", conversationPrivate: true })).classifierModel, M.self);
+  // Not private and not in a private conversation: the normal (outside) classifier.
+  const normal = guardedClassifier();
+  assert.equal((await normal.classifier.classify({ text: "What is the capital of France?" })).classifierModel, CLASSIFIER_ID);
+});
+
+test("euOnly: the classifier must be EU-hosted or self-hosted, else the heuristic", async () => {
+  // The configured classifier is region 'us' in the fixture.
+  const self = guardedClassifier();
+  assert.equal((await self.classifier.classify({ text: "Draft a reply to my landlord", euOnly: true })).classifierModel, M.self);
+  const none = guardedClassifier({ down: ["selfhosted"] });
+  const r = await none.classifier.classify({ text: "Draft a reply to my landlord", euOnly: true });
+  assert.equal(r.classifierModel, "heuristic");
+  assert.equal(none.providers.calls.length, 0);
+  const eu = guardedClassifier({ classifierOver: { region: "eu" } });
+  assert.equal((await eu.classifier.classify({ text: "Draft a reply to my landlord", euOnly: true })).classifierModel, CLASSIFIER_ID);
+  // EU-only and strict together need both: an EU model that is not zero-retention is skipped.
+  const euNoZdr = guardedClassifier({ classifierOver: { region: "eu", zdr: false }, down: ["selfhosted"] });
+  assert.equal((await euNoZdr.classifier.classify({ text: "hello there", euOnly: true, zdrOnly: true })).classifierModel, "heuristic");
+});
+
+test("media follow-ups get a self-contained media_prompt from the earlier request", async () => {
+  const history = [
+    { role: "user", content: "Draw a red fox in the snow at dawn" },
+    { role: "assistant", content: "[image]" },
+  ];
+  const h = heuristicClassify("now make a video of it", {}, { history });
+  assert.equal(h.job, "video");
+  assert.equal(h.output.media_prompt, "Draw a red fox in the snow at dawn. Now make a video of it");
+  // A request with its own subject, a chat job, or no history gets none.
+  assert.equal(heuristicClassify("Draw a cat and make it photorealistic", {}, { history }).output.media_prompt, undefined);
+  assert.equal(heuristicClassify("Make a 10 second video of waves crashing on rocks", {}, { history }).output.media_prompt, undefined);
+  assert.equal(heuristicClassify("explain it again", {}, { history }).output.media_prompt, undefined);
+  assert.equal(heuristicClassify("now make a video of it", {}).output.media_prompt, undefined);
+  // A chain of follow-ups walks back to the request; placeholders are kept.
+  const chain = [
+    { role: "user", content: "Draw [PERSON_1] as a knight" },
+    { role: "assistant", content: "[image]" },
+    { role: "user", content: "make it blue" },
+    { role: "assistant", content: "[image]" },
+  ];
+  assert.equal(classifyInternal.followUpMediaPrompt("now animate it", chain, "video"), "Draw [PERSON_1] as a knight. make it blue. Now animate it");
+  // Text to speech reads its prompt aloud: a voice follow-up takes the previous answer's text.
+  const said = [
+    { role: "user", content: "Write a welcome line for my dental office" },
+    { role: "assistant", content: "Welcome to Maple Street Dental!" },
+  ];
+  assert.equal(classifyInternal.followUpMediaPrompt("now read it aloud", said, "voice"), "Welcome to Maple Street Dental!");
+
+  // The LLM path adds it too, from the same history.
+  const { classifier } = classifierSetup({ completeJSON: async () => ({ json: { ...GOOD_REPLY, job: "video", output: { length: "short", format: "video" } }, usage: {} }) });
+  const r = await classifier.classify({ text: "now make a video of it", history });
+  assert.equal(r.output.media_prompt, "Draw a red fox in the snow at dawn. Now make a video of it");
+});
+
+test("a media follow-up in a private conversation is private; a standalone media prompt is not", async () => {
+  const off = guardedClassifier({ down: ["selfhosted"] });
+  const history = [{ role: "user", content: "Draw the floor plan of [PERSON_1]'s clinic" }];
+  const follow = await off.classifier.classify({ text: "now make a video of it", history, conversationPrivate: true });
+  assert.equal(follow.job, "video");
+  assert.equal(follow.private, true, "its prompt quotes the private conversation");
+  const alone = await off.classifier.classify({ text: "Draw a cat wearing a top hat, watercolor", history, conversationPrivate: true });
+  assert.equal(alone.job, "image");
+  assert.equal(alone.private, false, "only the latest message goes to the media model");
+});
+
+test("keyword privacy: personal disclosures are private, generic developer questions are not", () => {
+  const kp = classifyInternal.keywordPrivate;
+  const privateOnes = [
+    "how do I read my bank statement",
+    "My doctor gave me a diagnosis of diabetes",
+    "What's my salary after tax?",
+    "My psychiatrist changed my medication and I feel worse, what should I ask her?",
+    "My HIV diagnosis came back positive, which medications should I ask about?",
+    "My divorce lawyer says my custody case looks bad, what are my options?",
+    "I was diagnosed with depression last month",
+    "We are going through a divorce and need advice",
+    "[PERSON_1]'s custody hearing is next week",
+    "Mom's lab results came back high, should I worry?",
+    "Therapy has helped me a lot, how do I keep going?",
+    "What's my Netflix password?",
+    "Is this a good password for my bank: Hunter2!",
+    "Here is our seed phrase, is it safe to store in Notes?",
+  ];
+  const generic = [
+    "Write a Node.js function that hashes passwords with bcrypt and verifies a login",
+    "Add a confidential flag column to this Postgres table",
+    "Build a React form for a medical appointment booking app",
+    "Write a regex to validate a strong password",
+    "How do I calculate salary percentiles in SQL?",
+    "Explain how HIV attacks the immune system",
+    "What is a seed phrase?",
+    "I'm building a medical records app in Django",
+    "Design a database schema for storing patient prescriptions",
+    "Write unit tests for our password reset flow",
+    "Add a salary column to my employees table",
+    "Write a blog post about mental health awareness",
+    "I need to store my users' passwords securely",
+  ];
+  for (const t of privateOnes) assert.equal(kp(t), true, t);
+  for (const t of generic) assert.equal(kp(t), false, t);
+  // The LLM verdict is then what decides a developer question.
+  assert.equal(heuristicClassify("Write a regex to validate a strong password", {}).private, false);
+});
+
+test("keyword false positives no longer force a developer question private through the LLM path", async () => {
+  const { classifier, providers } = classifierSetup({ completeJSON: async () => ({ json: { ...GOOD_REPLY, private: false }, usage: {} }) });
+  const r = await classifier.classify({ text: "Write a Node.js function that hashes passwords with bcrypt and verifies a login" });
+  assert.equal(r.private, false);
+  assert.equal(r.classifierModel, CLASSIFIER_ID);
+  assert.equal(providers.calls.length, 1);
+});
+
+// ---------------------------------------------------------------------------------------------
+// review fixes: picker
+
+test("conversationPrivate keeps text jobs private like a private pin; media follows its own classification", () => {
+  const { picker } = setup();
+  const r = picker.pick({ job: "chat", difficulty: 5, user: { plan: "best" }, conversationPrivate: true });
+  assert.equal(r.private, true);
+  assert.equal(r.model.id, M.self);
+  assert.match(r.reason, /earlier in this conversation/);
+  assert.equal(picker.pick({ job: "code", difficulty: 2, user: {}, conversationPrivate: 1 }).private, true);
+  const img = picker.pick({ job: "image", difficulty: 2, user: { plan: "best" }, conversationPrivate: true });
+  assert.equal(img.private, false);
+  assert.equal(img.model.id, M.imgQ);
+  // Self-hosted down: a zero-retention model, never the public quality pick.
+  const { picker: p2 } = setup({ down: ["selfhosted"] });
+  const z = p2.pick({ job: "chat", difficulty: 5, user: { plan: "best" }, conversationPrivate: true });
+  assert.equal(z.private, true);
+  assert.equal(z.zdrRequired, true);
+  assert.notEqual(z.model.id, M.quality);
+  // The switch menu applies it too.
+  const menu = picker.candidates({ job: "chat", user: {}, conversationPrivate: true }).map((m) => m.id);
+  assert.ok(menu.length && !menu.includes(M.quality) && !menu.includes(M.alt), menu.join());
+});
+
+test("private zero-retention fallback keeps its model and only upgrades (no bounce between turns)", () => {
+  const { picker } = setup({ down: ["selfhosted"] });
+  let pins = {};
+  const used = [];
+  for (const d of [2, 4, 1, 5, 2]) {
+    const r = picker.pick({ job: "chat", difficulty: d, private: true, user: {}, pins });
+    assert.equal(r.tier, "private");
+    assert.equal(r.zdrRequired, true);
+    used.push(r.model.id);
+    if (r.pinsUpdate) pins = r.pinsUpdate;
+  }
+  assert.deepEqual(used, [M.budget, M.balanced, M.balanced, M.balanced, M.balanced]);
+  assert.deepEqual(pins.chat, { model_id: M.balanced, tier: "private", source: "auto", routed_from: "balanced" });
+  // A sticky-private follow-up (no classification) keeps it too.
+  assert.equal(picker.pick({ job: "chat", difficulty: 1, user: {}, pins }).model.id, M.balanced);
+  // The self-hosted model comes back: it wins over the fallback pin.
+  const { picker: up } = setup();
+  const back = up.pick({ job: "chat", difficulty: 1, private: true, user: {}, pins });
+  assert.equal(back.model.id, M.self);
+  assert.deepEqual(back.pinsUpdate.chat, { model_id: M.self, tier: "private", source: "auto" });
+  // A legacy fallback pin (no routed_from) is read from the cell that holds its model.
+  const legacy = { chat: { model_id: M.balanced, tier: "private", source: "auto" } };
+  const kept = picker.pick({ job: "chat", difficulty: 1, private: true, user: {}, pins: legacy });
+  assert.equal(kept.model.id, M.balanced);
+  assert.equal(kept.pinned, true);
+  assert.equal(kept.pinsUpdate, null);
+});
+
+test("private media never writes or replaces the job's pin", () => {
+  const { picker } = setup();
+  const r = picker.pick({ job: "image", difficulty: 2, private: true, user: { plan: "best" } });
+  assert.equal(r.model.id, M.imgC);
+  assert.equal(r.pinsUpdate, null);
+  // The next, non-private image in the chat is routed normally.
+  assert.equal(picker.pick({ job: "image", difficulty: 2, user: { plan: "best" }, pins: {} }).model.id, M.imgQ);
+  // A user's media pick survives a private request that can't use it.
+  const userPin = { image: { model_id: M.imgQ, tier: "quality", source: "user" } };
+  const p = picker.pick({ job: "image", difficulty: 2, private: true, user: { plan: "best" }, pins: userPin });
+  assert.equal(p.model.id, M.imgC);
+  assert.equal(p.pinsUpdate, null);
+  // A stuck auto pin left by an older private media request is ignored and replaced.
+  const stuck = { image: { model_id: M.imgC, tier: "private", source: "auto" } };
+  const next = picker.pick({ job: "image", difficulty: 2, user: { plan: "best" }, pins: stuck });
+  assert.equal(next.model.id, M.imgQ);
+  assert.deepEqual(next.pinsUpdate.image, { model_id: M.imgQ, tier: "quality", source: "auto" });
+});
+
+test("effort is what the model really runs at (the provider's mapping), in Gode's vocabulary", () => {
+  const { db, picker } = setup();
+  upsertModel(db, textModel(M.balanced, { label: "T Balanced", region: "eu", zdr: true, price_in: 1, price_out: 3, params: { reasoning: { mandatory: false, efforts: ["high", "none"] } } }));
+  upsertModel(db, textModel(M.budget, { label: "T Budget", region: "cn", zdr: true, price_in: 0.1, price_out: 0.3, params: { reasoning: { mandatory: false, efforts: ["max", "high", "low", "none"] } } }));
+  upsertModel(db, textModel(M.quality, { label: "T Quality", price_in: 5, price_out: 25, params: { reasoning: { mandatory: true, efforts: ["max", "xhigh", "high", "medium", "low"] } } }));
+  upsertModel(db, textModel(M.alt, { label: "T Alt", price_in: 3, price_out: 12, params: { reasoning: { mandatory: true, efforts: ["minimal", "low", "medium"] } } }));
+  assert.equal(picker.pick({ job: "chat", difficulty: 3, user: {} }).effort, "high", "[high, none] runs medium as high");
+  assert.equal(picker.pick({ job: "chat", difficulty: 3, user: { plan: "saver" } }).effort, "low", "[max, high, low, none]: medium -> low");
+  assert.equal(picker.pick({ job: "chat", difficulty: 1, user: {}, overrideModelId: M.quality }).effort, "low", "mandatory reasoning: none -> low");
+  assert.equal(picker.pick({ job: "chat", difficulty: 1, user: {}, overrideModelId: M.alt }).effort, "low", "minimal is shown as low");
+  assert.equal(picker.pick({ job: "chat", difficulty: 5, user: {}, overrideModelId: M.plain }).effort, "none", "no reasoning support");
+});
+
+test("for every seeded reasoning model the picked effort is exactly what the provider sends", () => {
+  const { seedCatalog, MODELS } = require("../src/seed/catalog");
+  const { resolveEffort } = require("../src/providers/effort-map");
+  const db = openDb(":memory:");
+  seedCatalog(db);
+  const picker = createPicker({ db, config: loadConfig({}), providers: { isAvailable: (m) => Boolean(m && m.enabled) } });
+  for (const m of MODELS.filter((x) => x.supports_reasoning && x.jobs.includes("chat"))) {
+    for (const d of [1, 2, 3, 4, 5]) {
+      const r = picker.pick({ job: "chat", difficulty: d, user: {}, overrideModelId: m.id });
+      assert.ok(["none", "low", "medium", "high"].includes(r.effort), `${m.id} d${d} ${r.effort}`);
+      assert.equal(resolveEffort(r.model, r.effort), r.effort, `${m.id} d${d}`);
+    }
+  }
+});
+
+test("no usable routing cell (OpenAI-only deployment): the plan still picks cheap or strong", () => {
+  const { db, picker } = setup({ down: ["openrouter", "selfhosted"] });
+  upsertModel(db, textModel("openai:t/strong", { label: "T Strong", price_in: 8, price_out: 40 }));
+  upsertModel(db, textModel("openai:t/cheap", { label: "T Cheap", price_in: 0.1, price_out: 0.5 }));
+  const best = picker.pick({ job: "code", difficulty: 5, user: { plan: "best" } });
+  assert.equal(best.model.id, "openai:t/strong");
+  assert.equal(best.tier, "quality");
+  const saver = picker.pick({ job: "chat", difficulty: 1, user: { plan: "saver" } });
+  assert.equal(saver.model.id, "openai:t/cheap");
+  // A conversation that started cheap upgrades to the strong fallback on a hard turn...
+  const up = picker.pick({ job: "chat", difficulty: 5, user: { plan: "best" }, pins: saver.pinsUpdate });
+  assert.equal(up.model.id, "openai:t/strong");
+  assert.match(up.reason, /upgraded from budget/);
+  // ...and never moves down again.
+  const down = picker.pick({ job: "chat", difficulty: 1, user: { plan: "saver" }, pins: up.pinsUpdate });
+  assert.equal(down.model.id, "openai:t/strong");
+  assert.equal(down.pinned, true);
+});
+
+test("switch menu: current model first, then the routed picks, then the rest cheapest first", () => {
+  const { picker } = setup({ down: [M.zdrAlt] });
+  const pins = { chat: { model_id: M.alt, tier: "budget", source: "user" } };
+  const ids = picker.candidates({ job: "chat", user: {}, pins }).map((m) => m.id);
+  assert.deepEqual(ids, [M.alt, M.quality, M.balanced, M.budget, M.self, M.plain]);
+  // The answer's own model wins over the pin when given.
+  assert.deepEqual(picker.candidates({ job: "chat", user: {}, pins, currentModelId: M.budget }).map((m) => m.id).slice(0, 4), [M.budget, M.quality, M.balanced, M.self]);
+  // An ineligible current model is simply left out.
+  assert.equal(picker.candidates({ job: "chat", user: { eu_only: true }, currentModelId: M.quality })[0].id, M.balanced);
+});
+
+test("switch menu for a private media answer lists only what the switch would accept", () => {
+  const { picker } = setup();
+  const menu = picker.candidates({ job: "image", user: {}, private: true }).map((m) => m.id);
+  assert.deepEqual(menu, [M.imgC]);
+  for (const id of [M.imgQ, M.imgB]) {
+    assert.throws(() => picker.pick({ job: "image", difficulty: 2, private: true, user: {}, overrideModelId: id }), { status: 400 });
+  }
+  assert.equal(picker.pick({ job: "image", difficulty: 2, private: true, user: {}, overrideModelId: M.imgC }).model.id, M.imgC);
+});
+
+test("pinSource says who chose the model", () => {
+  const { picker } = setup();
+  const auto = picker.pick({ job: "chat", difficulty: 3, user: {} });
+  assert.equal(auto.pinSource, "auto");
+  const mine = picker.pick({ job: "chat", difficulty: 1, user: {}, overrideModelId: M.alt });
+  assert.equal(mine.pinSource, "user");
+  assert.equal(mine.tier, "budget", "the request's column is unchanged");
+  const later = picker.pick({ job: "chat", difficulty: 5, user: { plan: "best" }, pins: mine.pinsUpdate });
+  assert.equal(later.model.id, M.alt);
+  assert.equal(later.pinSource, "user");
+  const media = picker.pick({ job: "image", difficulty: 1, private: true, user: {} });
+  assert.equal(media.pinSource, null);
 });

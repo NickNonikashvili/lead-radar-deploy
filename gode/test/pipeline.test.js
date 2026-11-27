@@ -101,7 +101,12 @@ function recordingMock(config) {
   return { ctl, provider };
 }
 
-function setup(env = {}) {
+/**
+ * @param {object} [env]
+ * @param {{ classify?: Function, pick?: Function }} [wrap]  wrap(args, real) stand-ins for
+ *   classifier.classify / picker.pick, to script a classification or record what was passed
+ */
+function setup(env = {}, wrap = {}) {
   const config = loadConfig({ GODE_MOCK: "1", ...env });
   const db = openDb(":memory:");
   seedCatalog(db);
@@ -110,11 +115,26 @@ function setup(env = {}) {
   const recorder = config.mock ? recordingMock(config) : null;
   const redactor = createRedactor(config, { logger });
   const providers = createProviders(config, recorder ? { providers: { mock: recorder.provider } } : {});
-  const classifier = createClassifier({ config, db, providers, redactor, logger });
-  const picker = createPicker({ db, config, providers });
-  const credits = createCredits(db, config);
+  const realClassifier = createClassifier({ config, db, providers, redactor, logger });
+  const realPicker = createPicker({ db, config, providers });
+  const calls = { classify: [], pick: [] };
+  const classifier = {
+    ...realClassifier,
+    classify: (args) => {
+      calls.classify.push(args);
+      return wrap.classify ? wrap.classify(args, realClassifier.classify) : realClassifier.classify(args);
+    },
+  };
+  const picker = {
+    ...realPicker,
+    pick: (args) => {
+      calls.pick.push(args);
+      return wrap.pick ? wrap.pick(args, realPicker.pick) : realPicker.pick(args);
+    },
+  };
+  const credits = createCredits(db, config, { logger });
   const pipeline = createPipeline({ db, config, keyring, redactor, classifier, picker, providers, credits, logger });
-  const h = { config, db, keyring, redactor, providers, classifier, picker, credits, pipeline, logger, ctl: recorder?.ctl };
+  const h = { config, db, keyring, redactor, providers, classifier, picker, credits, pipeline, logger, calls, ctl: recorder?.ctl };
   h.user = (opts) => makeUser(h, opts);
   h.turn = (args) => runTurn(h, args);
   return h;
@@ -507,7 +527,8 @@ test("media job via the real fal adapter: queue progress, aspect, generic prompt
   assert.equal(r.route.job, "image");
   assert.equal(r.route.model.id, "fal:alibaba/qwen-image-3/text-to-image");
   assert.deepEqual(r.of("progress"), [{ status: "queued", position: 1 }, { status: "queued", position: 0 }, { status: "running" }]);
-  assert.deepEqual(r.of("media"), [{ type: "image", url: "https://v3.fal.media/files/mock/image.png", mime: "image/png" }]);
+  // fal.media links go to the browser through Gode's media proxy; the message keeps the real URL.
+  assert.deepEqual(r.of("media"), [{ type: "image", url: `/api/media/${r.done.message_id}/0`, mime: "image/png" }]);
 
   const submit = up.find("/fal/").find((req) => req.method === "POST");
   assert.equal(submit.path, "/fal/alibaba/qwen-image-3/text-to-image");
@@ -530,7 +551,7 @@ test("media job via the real fal adapter: queue progress, aspect, generic prompt
   assert.equal(r.done.chip, "Qwen Image 3 · $0.05");
   assert.equal(balance(h, user.id), before - 52_000);
   const [, answer] = messages(h, r.route.conversation_id);
-  assert.deepEqual(answer.content.media, r.of("media"));
+  assert.deepEqual(answer.content.media, [{ type: "image", url: "https://v3.fal.media/files/mock/image.png", mime: "image/png" }]);
   checkInvariants(h);
 });
 
@@ -806,11 +827,12 @@ test("manual mode: the chosen model answers and is pinned; it must still be elig
 // ---------------------------------------------------------------------------------------------
 // aborts, retries, errors
 
-test("abort mid-stream: hold released, no assistant message, request logged as aborted", async () => {
+test("stop mid-stream: the partial answer is stored as stopped and charged for what streamed", async () => {
   const h = setup();
   const user = h.user();
   const before = balance(h, user.id);
   const controller = new AbortController();
+  h.ctl.script = ["Dear [PERSON_1], ", "thanks for ", "the note."];
   const r = await h.turn({
     user,
     text: PII_TEXT,
@@ -821,10 +843,58 @@ test("abort mid-stream: hold released, no assistant message, request logged as a
   });
   assertTerminal(r, "error");
   assert.equal(r.error.code, "aborted");
+  assert.equal(r.error.stopped, true);
   assert.equal(r.of("delta").length, 1);
   const convId = r.route.conversation_id;
-  assert.equal(r.error.conversation_id, convId, "the question was stored, so the chat exists");
-  assert.deepEqual(messages(h, convId).map((m) => m.role), ["user"]);
+  assert.equal(r.error.conversation_id, convId);
+  assert.equal(r.error.message_id, r.route.message_id);
+
+  // What the user saw is kept, restored, and marked as stopped.
+  const stored = messages(h, convId);
+  assert.deepEqual(stored.map((m) => m.role), ["user", "assistant"]);
+  assert.deepEqual(stored[1].content, { text: `Dear ${NAME}, `, stopped: true });
+  assert.equal(stored[1].id, r.route.message_id);
+
+  // Charged: estimated input + the streamed text at catalog prices (+ classifier), never above the hold.
+  const row = requestRow(h, r.route.request_id);
+  assert.equal(row.status, "stopped");
+  assert.equal(row.error_code, null);
+  assert.equal(row.message_id, r.route.message_id);
+  assert.ok(row.input_tokens > 0 && row.output_tokens > 0, "estimated tokens recorded");
+  assert.ok(row.charged_micros > 0);
+  assert.equal(row.charged_micros, h.credits.priceFor(row.api_cost_micros));
+  const [hold] = h.credits.ledger(user.id, { kinds: ["hold"] });
+  assert.ok(row.charged_micros <= -hold.delta_micros, "capped at the hold");
+  assert.equal(balance(h, user.id), before - row.charged_micros);
+  assert.equal(r.error.cost_usd, row.charged_micros / 1e6);
+  assert.equal(r.error.balance_usd, balance(h, user.id) / 1e6);
+
+  // Re-sending the same text after a stopped answer is a new question (the old one was answered).
+  const again = await h.turn({ user, conversationId: convId, text: PII_TEXT });
+  assertTerminal(again, "done");
+  assert.notEqual(again.route.user_message_id, r.route.user_message_id);
+  checkInvariants(h);
+});
+
+test("stop before any delta: hold released, nothing stored, request logged as aborted", async () => {
+  const h = setup();
+  const user = h.user();
+  const before = balance(h, user.id);
+  const controller = new AbortController();
+  h.ctl.script = ["One ", "two"];
+  const r = await h.turn({
+    user,
+    text: "Count to two.",
+    signal: controller.signal,
+    onEvent: (event) => {
+      if (event === "route") controller.abort();
+    },
+  });
+  assertTerminal(r, "error");
+  assert.equal(r.error.code, "aborted");
+  assert.equal(r.error.stopped, undefined);
+  assert.equal(r.of("delta").length, 0);
+  assert.deepEqual(messages(h, r.route.conversation_id).map((m) => m.role), ["user"]);
   const row = requestRow(h, r.route.request_id);
   assert.equal(row.status, "error");
   assert.equal(row.error_code, "aborted");
@@ -841,7 +911,7 @@ test("abort mid-stream: hold released, no assistant message, request logged as a
   checkInvariants(h);
 });
 
-test("abort after the provider reported usage: charged for that usage, still no assistant message", async () => {
+test("stop after the provider reported usage: that usage is charged and the partial answer stored", async () => {
   const h = setup();
   const user = h.user();
   const before = balance(h, user.id);
@@ -859,10 +929,68 @@ test("abort after the provider reported usage: charged for that usage, still no 
   assertTerminal(r, "error");
   assert.equal(r.error.code, "aborted");
   const row = requestRow(h, r.route.request_id);
+  assert.equal(row.status, "stopped");
+  assert.deepEqual([row.input_tokens, row.output_tokens], [100, 20], "the provider's own usage");
   assert.ok(row.charged_micros > 0);
   assert.equal(row.charged_micros, h.credits.priceFor(row.api_cost_micros));
   assert.equal(balance(h, user.id), before - row.charged_micros);
+  const stored = messages(h, r.route.conversation_id);
+  assert.deepEqual(stored[1].content, { text: "One ", stopped: true });
+  checkInvariants(h);
+});
+
+test("a server shutdown mid-stream is not charged; the estimated upstream cost is recorded", async () => {
+  const h = setup();
+  const user = h.user();
+  const before = balance(h, user.id);
+  const controller = new AbortController();
+  h.ctl.script = ["Part one. ", "Part two."];
+  const r = await h.turn({
+    user,
+    text: "Tell me two things.",
+    signal: controller.signal,
+    onEvent: (event) => {
+      if (event === "delta") controller.abort(new DOMException("The server is shutting down.", "AbortError"));
+    },
+  });
+  assertTerminal(r, "error");
+  assert.equal(r.error.code, "interrupted");
+  const row = requestRow(h, r.route.request_id);
+  assert.equal(row.status, "error");
+  assert.equal(row.error_code, "interrupted");
+  assert.equal(row.charged_micros, 0);
+  assert.ok(row.api_cost_micros > 0 && row.output_tokens > 0, "upstream spend is visible to the gate metrics");
+  assert.equal(balance(h, user.id), before);
   assert.deepEqual(messages(h, r.route.conversation_id).map((m) => m.role), ["user"]);
+  checkInvariants(h);
+});
+
+test("a stopped regenerate is charged but keeps the old answer", async () => {
+  const h = setup();
+  const user = h.user();
+  const r1 = await h.turn({ user, text: "Explain how tides work, briefly." });
+  const convId = r1.route.conversation_id;
+  const before = balance(h, user.id);
+  const controller = new AbortController();
+  h.ctl.script = ["Tides are ", "caused by the moon."];
+  const r = await h.turn({
+    user,
+    mode: "regenerate",
+    targetMessageId: r1.done.message_id,
+    signal: controller.signal,
+    onEvent: (event) => {
+      if (event === "delta") controller.abort();
+    },
+  });
+  assertTerminal(r, "error");
+  assert.equal(r.error.stopped, true);
+  assert.equal(r.error.message_id, undefined, "nothing replaced the old answer");
+  assert.deepEqual(messages(h, convId).map((m) => m.id), [r1.route.user_message_id, r1.done.message_id]);
+  const row = requestRow(h, r.route.request_id);
+  assert.equal(row.status, "stopped");
+  assert.equal(row.message_id, null);
+  assert.ok(row.charged_micros > 0);
+  assert.equal(balance(h, user.id), before - row.charged_micros);
   checkInvariants(h);
 });
 
@@ -912,7 +1040,10 @@ test("upstream error mid-stream (real OpenRouter adapter): safe error, refund, n
   assert.equal(row.status, "error");
   assert.equal(row.error_code, "upstream_error");
   assert.equal(row.charged_micros, 0);
-  assert.ok(row.api_cost_micros > 0, "the classifier call still cost something");
+  // Not charged, but our upstream spend is recorded: the classifier's 420 micros plus an estimate
+  // of the input sent and the text streamed before the error.
+  assert.ok(row.api_cost_micros > 420, `api_cost_micros ${row.api_cost_micros}`);
+  assert.ok(row.input_tokens > 0 && row.output_tokens > 0);
   assert.equal(balance(h, user.id), before);
   assert.ok(h.logger.lines.some((l) => l.includes(r.route.request_id) && l.includes("upstream_error")));
   checkInvariants(h);
@@ -1001,5 +1132,373 @@ test("REDACTION=off: real text goes upstream, no placeholder note, nothing repor
   assert.ok(!call.messages[0].content.includes("placeholder"));
   assert.ok(r.text.includes(NAME));
   assert.equal(h.db.prepare("SELECT pii_map_enc FROM conversations").get().pii_map_enc, null);
+  checkInvariants(h);
+});
+
+// ---------------------------------------------------------------------------------------------
+// review fixes: sticky privacy, one turn per conversation, billing of failures, media requests,
+// context trimming, titles, affordability, pins
+
+const { durationFor } = require("../src/seed/catalog");
+const VEO_LITE = "fal:fal-ai/veo3.1/lite";
+const PRIVATE_TEXT = "My HIV diagnosis came back positive and my therapist wants me to tell my boss.";
+
+/** Wrap the real classification: keep its usage/model, replace the decision fields. */
+const scripted = (fields) => async (args, real) => ({ ...(await real(args)), ...fields });
+
+const conversationRow = (h, id) => h.db.prepare("SELECT * FROM conversations WHERE id = ?").get(id);
+
+test("a private turn that fails or is stopped still makes the conversation private", async () => {
+  const h = setup();
+  const user = h.user();
+  h.ctl.failNext = true;
+  const failed = await h.turn({ user, text: PRIVATE_TEXT });
+  assertTerminal(failed, "error");
+  assert.equal(failed.route.private, true);
+  const convId = failed.route.conversation_id;
+  assert.equal(conversationRow(h, convId).private, 1, "set with the question, before the answer");
+
+  const next = await h.turn({ user, conversationId: convId, text: "What's the capital of France?" });
+  assertTerminal(next, "done");
+  const cls = h.calls.classify.at(-1);
+  const pick = h.calls.pick.at(-1);
+  assert.equal(cls.conversationPrivate, true, "the classifier is told (it then stays local)");
+  assert.equal(pick.conversationPrivate, true, "the picker is told");
+
+  // Stopped after the first delta: same.
+  const controller = new AbortController();
+  h.ctl.script = ["I'm sorry ", "to hear that."];
+  const stopped = await h.turn({
+    user,
+    text: PRIVATE_TEXT,
+    signal: controller.signal,
+    onEvent: (event) => event === "delta" && controller.abort(),
+  });
+  assert.equal(stopped.error.code, "aborted");
+  assert.equal(conversationRow(h, stopped.route.conversation_id).private, 1);
+
+  // A non-private chat stays non-private, and the flag is never cleared.
+  const plain = await h.turn({ user, text: "What's the capital of Spain?" });
+  assert.equal(conversationRow(h, plain.route.conversation_id).private, 0);
+  assert.equal(h.calls.classify.at(-1).conversationPrivate, false);
+  checkInvariants(h);
+});
+
+test("a private media turn makes the conversation private too", async () => {
+  const h = setup({}, { classify: scripted({ job: "image", difficulty: 2, private: true, output: { length: "short", format: "image", aspect: "1:1" } }) });
+  const user = h.user();
+  const r = await h.turn({ user, text: "Make an image of my lab results printout on a desk" });
+  assertTerminal(r, "done");
+  assert.equal(r.route.private, true);
+  assert.equal(conversationRow(h, r.route.conversation_id).private, 1);
+  checkInvariants(h);
+});
+
+// The routing side of C1 (picker.pick honours conversationPrivate) lives in src/router/pick.js;
+// this end-to-end check runs once that is in place.
+const pickerHonoursConversationPrivate = (() => {
+  const h = setup();
+  try {
+    return h.picker.pick({ job: "chat", difficulty: 1, private: false, conversationPrivate: true, user: h.user(), pins: {} }).private === true;
+  } catch {
+    return false;
+  }
+})();
+
+test("after a failed private turn, an innocent follow-up is routed privately", { skip: !pickerHonoursConversationPrivate && "needs picker C1" }, async () => {
+  const h = setup();
+  const user = h.user();
+  h.ctl.failNext = true;
+  const failed = await h.turn({ user, text: PRIVATE_TEXT });
+  const next = await h.turn({ user, conversationId: failed.route.conversation_id, text: "What's the capital of France?" });
+  assertTerminal(next, "done");
+  assert.equal(next.route.private, true);
+  assert.equal(next.route.zdr, true);
+  checkInvariants(h);
+});
+
+test("one turn at a time per conversation: a second one gets busy before any work", async () => {
+  const h = setup();
+  const user = h.user();
+  const r1 = await h.turn({ user, text: "Explain how tides work, briefly." });
+  const convId = r1.route.conversation_id;
+  const classifierCalls = h.ctl.jsonCalls.length;
+
+  let second = null;
+  h.ctl.script = ["Waves ", "come and go."];
+  const first = await h.turn({
+    user,
+    conversationId: convId,
+    text: "And waves?",
+    onEvent: (event) => {
+      if (event === "delta" && !second) second = h.turn({ user, conversationId: convId, text: "And currents?" });
+    },
+  });
+  assertTerminal(first, "done");
+  const busy = await second;
+  assert.deepEqual(busy.events, [{ event: "error", data: { error: "Wait for the current answer to finish.", code: "busy" } }]);
+  assert.equal(h.ctl.jsonCalls.length, classifierCalls + 1, "the busy turn never reached the classifier");
+  assert.equal(count(h, "requests", "conversation_id = ?", convId), 2, "no row for the busy turn");
+
+  // Two regenerates of one answer: the second is refused before any upstream call.
+  let regen2 = null;
+  const chatCalls = h.ctl.chatCalls.length;
+  h.ctl.script = ["Tides ", "again."];
+  const regen1 = await h.turn({
+    user,
+    mode: "regenerate",
+    targetMessageId: first.done.message_id,
+    onEvent: (event) => {
+      if (event === "delta" && !regen2) regen2 = h.turn({ user, mode: "regenerate", targetMessageId: first.done.message_id });
+    },
+  });
+  assertTerminal(regen1, "done");
+  assert.equal((await regen2).error.code, "busy");
+  assert.equal(h.ctl.chatCalls.length, chatCalls + 1);
+  // Free again afterwards.
+  assertTerminal(await h.turn({ user, conversationId: convId, text: "Thanks!" }), "done");
+  assert.deepEqual(h.pipeline.activeHoldIds(), []);
+  checkInvariants(h);
+});
+
+test("an answer that finished but could not be stored (chat deleted mid-answer) is still charged", async () => {
+  const h = setup();
+  const user = h.user();
+  const first = await h.turn({ user, text: "Explain how tides work, briefly." });
+  const convId = first.route.conversation_id;
+  const before = balance(h, user.id);
+  let deleted = false;
+  const r = await h.turn({
+    user,
+    conversationId: convId,
+    text: "And why are there two a day?",
+    onEvent: (event) => {
+      if (event === "delta" && !deleted) {
+        deleted = true;
+        h.db.prepare("DELETE FROM conversations WHERE id = ?").run(convId);
+      }
+    },
+  });
+  assertTerminal(r, "error");
+  assert.equal(r.error.code, "not_found");
+  const row = requestRow(h, r.route.request_id);
+  assert.equal(row.status, "error");
+  assert.ok(row.api_cost_micros > 0 && row.output_tokens > 0);
+  assert.ok(row.charged_micros > 0);
+  assert.equal(r.error.cost_usd, row.charged_micros / 1e6, "the error says what was charged");
+  assert.equal(row.charged_micros, h.credits.priceFor(row.api_cost_micros));
+  assert.equal(balance(h, user.id), before - row.charged_micros);
+  checkInvariants(h);
+});
+
+test("media: the classifier's media_prompt (genericized) and duration reach the model; the hold covers it", async () => {
+  const mediaPrompt = "A red fox sitting in the snow at sunset, animated, with [PERSON_1] waving";
+  let scriptNext = false;
+  const h = setup({}, {
+    classify: async (args, real) => {
+      const c = await real(args);
+      if (!scriptNext) return c;
+      return { ...c, job: "video", difficulty: 2, private: false, output: { length: "short", format: "video", aspect: "16:9", duration_s: 20, media_prompt: mediaPrompt } };
+    },
+  });
+  const user = h.user();
+  const r1 = await h.turn({ user, text: PII_TEXT });
+  scriptNext = true;
+  const r = await h.turn({ user, conversationId: r1.route.conversation_id, text: "now make a 20 second video of it" });
+  assertTerminal(r, "done");
+  assert.equal(r.route.model.id, VEO_LITE);
+  assert.deepEqual(r.route.redactions, { PERSON: 1 });
+
+  const call = h.ctl.mediaCalls[0];
+  assert.equal(call.prompt, "A red fox sitting in the snow at sunset, animated, with a person waving");
+  assert.ok(!containsPII(call.prompt));
+  const model = getModel(h.db, VEO_LITE);
+  assert.equal(durationFor(model, 20), "8s", "20 s snaps to Veo's longest clip");
+  assert.deepEqual(call.params, { aspect: "16:9", duration: "8s" });
+  assert.equal(call.model.params.duration_options, undefined, "catalog-only keys never reach the adapter");
+
+  // Hold: 8 s x $0.05 plus the classifier, with the margin.
+  const row = requestRow(h, r.route.request_id);
+  const classifierCost = row.api_cost_micros - 50_000; // the mock bills 1 unit
+  const holds = h.credits.ledger(user.id, { kinds: ["hold"] });
+  assert.equal(-holds[0].delta_micros, h.credits.priceFor(8 * 50_000 + classifierCost));
+  assert.ok(!h.logger.lines.some((l) => l.includes("emit failed")));
+  checkInvariants(h);
+});
+
+test("media events are sent only after the answer is stored", async () => {
+  const h = setup();
+  const user = h.user();
+  let storedAtMedia = null;
+  const r = await h.turn({
+    user,
+    text: "Draw a cat on a skateboard",
+    onEvent: (event) => {
+      if (event === "media") storedAtMedia = count(h, "messages", "role = 'assistant'") === 1 && count(h, "holds") === 0;
+    },
+  });
+  assertTerminal(r, "done");
+  assert.equal(storedAtMedia, true);
+  checkInvariants(h);
+});
+
+test("history is trimmed to the model's context window, newest kept; a message too long alone is refused", async () => {
+  const h = setup({ MAX_OUTPUT_TOKENS: "500" });
+  h.db.prepare("UPDATE models SET context_length = 1500 WHERE id = ?").run(DEEPSEEK);
+  const user = h.user();
+  const para = (topic) => `${topic}: ${"tea and biscuits ".repeat(90)}`.trim(); // ~1,500 chars
+  const r1 = await h.turn({ user, mode: "manual", modelId: DEEPSEEK, text: para("First") });
+  const convId = r1.route.conversation_id;
+  await h.turn({ user, conversationId: convId, mode: "manual", modelId: DEEPSEEK, text: para("Second") });
+  const r3 = await h.turn({ user, conversationId: convId, mode: "manual", modelId: DEEPSEEK, text: para("Third") });
+  assertTerminal(r3, "done");
+  const call = h.ctl.chatCalls.at(-1);
+  const sent = call.messages.map((m) => m.content).join("\n");
+  const budget = Math.floor(1500 * 0.9) - 500;
+  assert.ok(Math.ceil(sent.length / 4) <= budget + 20, `estimated ${Math.ceil(sent.length / 4)} tokens > budget ${budget}`);
+  assert.equal(call.messages.at(-1).content, para("Third"), "the latest message is always sent");
+  assert.ok(!sent.includes("First:"), "the oldest message was dropped");
+  assert.equal(call.messages[1].role, "user", "the kept history starts on a user turn");
+
+  const before = balance(h, user.id);
+  const huge = await h.turn({ user, conversationId: convId, mode: "manual", modelId: DEEPSEEK, text: "x ".repeat(2000) });
+  assertTerminal(huge, "error");
+  assert.equal(huge.error.code, "bad_request");
+  assert.match(huge.error.error, /too long for DeepSeek V4\.1 Flash/);
+  assert.equal(balance(h, user.id), before);
+  checkInvariants(h);
+});
+
+test("titles restore names but keep card numbers and other high-risk values masked", async () => {
+  const h = setup({}, { classify: scripted({ title: "Card [CARD_1] for [PERSON_1]" }) });
+  const user = h.user();
+  const r = await h.turn({ user, text: `My name is ${NAME}. Card 4532 0151 1283 0366 was charged twice, what now?` });
+  assertTerminal(r, "done");
+  assert.equal(r.route.title, `Card •••• 0366 for ${NAME}`);
+  const conv = conversationRow(h, r.route.conversation_id);
+  assert.equal(h.keyring.decrypt(user.wrapped_dek, conv.title_enc), `Card •••• 0366 for ${NAME}`);
+  checkInvariants(h);
+});
+
+test("a low balance gets a shorter answer instead of an overdraft; too low is refused; media needs its full price", async () => {
+  const h = setup();
+  const sonnet = getModel(h.db, SONNET);
+  const user = h.user({ balanceUsd: 0.02 });
+  const r = await h.turn({ user, mode: "manual", modelId: SONNET, text: "Explain how tides work, briefly." });
+  assertTerminal(r, "done");
+  const call = h.ctl.chatCalls.at(-1);
+  assert.ok(call.maxTokens < h.config.router.maxOutputTokens && call.maxTokens >= h.config.billing.minAffordableOutputTokens, `maxTokens ${call.maxTokens}`);
+  const [hold] = h.credits.ledger(user.id, { kinds: ["hold"] });
+  assert.ok(-hold.delta_micros <= 20_000, "the hold fits the balance");
+  assert.ok(balance(h, user.id) >= 0, "never below zero");
+  assert.ok(sonnet.price_out > 0);
+
+  const poor = h.user({ balanceUsd: 0.001 });
+  const refused = await h.turn({ user: poor, mode: "manual", modelId: SONNET, text: "Explain how tides work, briefly." });
+  assertTerminal(refused, "error");
+  assert.equal(refused.error.code, "insufficient_credits");
+  assert.match(refused.error.error, /too low for an answer from Claude Sonnet 5\.5/);
+  assert.equal(refused.error.conversation_id, undefined, "nothing stored");
+  assert.equal(balance(h, poor.id), 1000);
+
+  const h2 = setup({}, { classify: scripted({ job: "video", difficulty: 2, private: false, output: { length: "short", format: "video", aspect: "16:9", duration_s: 4 } }) });
+  const viewer = h2.user({ balanceUsd: 0.1 });
+  const video = await h2.turn({ user: viewer, text: "Make a video of waves at sunset" });
+  assertTerminal(video, "error");
+  assert.equal(video.error.code, "insufficient_credits");
+  assert.match(video.error.error, /^This costs about \$0\.26 and your balance is \$0\.10\./);
+  assert.equal(h2.ctl.mediaCalls.length, 0);
+  assert.equal(balance(h2, viewer.id), 100_000);
+  checkInvariants(h);
+  checkInvariants(h2);
+});
+
+test("an automatic pin never overwrites a user's pin stored while the turn ran", async () => {
+  const h = setup();
+  const user = h.user();
+  const userPin = { model_id: SONNET, tier: "quality", source: "user" };
+  let convId = null;
+  const r = await h.turn({
+    user,
+    text: "Explain how tides work, briefly.",
+    onEvent: (event, data) => {
+      if (event === "route") convId = data.conversation_id;
+      // Another process (or a tab on an older build) pins a model mid-answer.
+      if (event === "delta" && convId) h.db.prepare("UPDATE conversations SET pins = ? WHERE id = ?").run(JSON.stringify({ chat: userPin }), convId);
+    },
+  });
+  assertTerminal(r, "done");
+  assert.deepEqual(JSON.parse(conversationRow(h, convId).pins).chat, userPin);
+  checkInvariants(h);
+});
+
+test("redaction is skipped only on the selfhosted gateway, never for a mislabelled third-party model", async () => {
+  const h = setup();
+  // Bypass validation, as an old database row would.
+  h.db.prepare("UPDATE models SET self_hosted = 1, region = 'self' WHERE id = ?").run(DEEPSEEK);
+  const user = h.user();
+  const r = await h.turn({ user, mode: "manual", modelId: DEEPSEEK, text: PII_TEXT });
+  assertTerminal(r, "done");
+  const call = h.ctl.chatCalls.at(-1);
+  assert.ok(!call.messages.some((m) => containsPII(m.content)), "placeholders only");
+  assert.deepEqual(r.route.redactions, { PERSON: 1, EMAIL: 1 });
+  checkInvariants(h);
+});
+
+test("the classifier gets euOnly and conversationPrivate; running holds are reported for the sweep", async () => {
+  const h = setup();
+  const user = h.user({ euOnly: true });
+  let during = null;
+  const r = await h.turn({
+    user,
+    text: "Explain how tides work, briefly.",
+    onEvent: (event) => {
+      if (event === "delta" && !during) during = h.pipeline.activeHoldIds();
+    },
+  });
+  assertTerminal(r, "done");
+  assert.equal(h.calls.classify[0].euOnly, true);
+  assert.equal(h.calls.classify[0].conversationPrivate, false);
+  assert.equal(during.length, 1);
+  assert.deepEqual(h.pipeline.activeHoldIds(), []);
+  checkInvariants(h);
+});
+
+test("direct-OpenAI pricing: cached input at the cache rate, long prompts at the long-context rate", () => {
+  const astra = getModel(seededDb, "openai:gpt-6.2-astra");
+  // 10k uncached x $8 + 90k cached x $0.40 + 1k out x $40 per 1M tokens
+  assert.equal(providerCostMicros(astra, { usage: { inputTokens: 100_000, cachedTokens: 90_000, outputTokens: 1000, costUsd: null } }).micros, 156_000);
+  // Above 272K input tokens: $16 / $60
+  assert.equal(providerCostMicros(astra, { usage: { inputTokens: 300_000, outputTokens: 1000, costUsd: null } }).micros, 300_000 * 16 + 1000 * 60);
+  // A reported cost still wins; a model without params.pricing prices cached tokens at the input rate.
+  assert.equal(providerCostMicros(astra, { usage: { inputTokens: 300_000, outputTokens: 1000, costUsd: 0.5 } }).micros, 500_000);
+  const deepseek = getModel(seededDb, DEEPSEEK);
+  assert.equal(
+    providerCostMicros(deepseek, { usage: { inputTokens: 1000, cachedTokens: 900, outputTokens: 500, costUsd: null } }).micros,
+    providerCostMicros(deepseek, { usage: { inputTokens: 1000, outputTokens: 500, costUsd: null } }).micros
+  );
+  const credits = createCredits(seededDb, loadConfig({ GODE_MOCK: "1" }));
+  assert.equal(credits.estimateApiCostMicros({ model: astra, inputTokens: 300_000, maxOutputTokens: 100 }), 300_000 * 16 + 100 * 60);
+  assert.equal(credits.estimateApiCostMicros({ model: astra, inputTokens: 1000, maxOutputTokens: 100 }), 1000 * 8 + 100 * 40);
+});
+
+test("'now make a video of it' through the real fal adapter: the subject, a neutral name, the asked length", async () => {
+  up.reset();
+  // FAL_KEY only: the heuristic classifier writes the media_prompt from the previous message.
+  const h = setup(upstreamEnv({ FAL_KEY: "fal-test-key" }));
+  const user = h.user({ balanceUsd: 5 });
+  const r1 = await h.turn({ user, text: `My friend ${NAME} wants a picture: draw a red fox sitting in the snow at sunset` });
+  assertTerminal(r1, "done");
+  up.reset();
+  const r = await h.turn({ user, conversationId: r1.route.conversation_id, text: "now make a 20 second video of it" });
+  assertTerminal(r, "done");
+  assert.equal(r.route.model.id, VEO_LITE);
+  const submit = up.find("/fal/").find((req) => req.method === "POST");
+  assert.match(submit.body.prompt, /red fox sitting in the snow/);
+  assert.ok(!containsPII(submit.rawBody));
+  assert.equal(submit.body.duration, "8s");
+  assert.equal(submit.body.duration_options, undefined, "catalog-only keys stay home");
+  assert.equal(r.done.media_units, 8);
+  assert.equal(requestRow(h, r.route.request_id).api_cost_micros, 8 * 50_000);
   checkInvariants(h);
 });

@@ -166,7 +166,15 @@ describe("bench/judge: judgePair", () => {
       assert.equal(seen.schema, judge.JUDGE_SCHEMA);
       assert.equal(seen.system, judge.JUDGE_SYSTEM_PROMPT);
       assert.ok(seen.maxTokens >= 300);
+      assert.equal(seen.zdr, false, "no zero-retention restriction unless asked");
     }
+  });
+
+  test("zdr: true restricts the judge call to zero-retention endpoints", async () => {
+    let seen;
+    const provider = { completeJSON: async (args) => ((seen = args), { json: { winner: "tie" }, text: "", usage: null }) };
+    await judge.judgePair({ provider, model, id: "p001", prompt: "Q", godeAnswer: "g", autoAnswer: "a", zdr: true });
+    assert.equal(seen.zdr, true);
   });
 
   test("falls back to the raw text when the parsed object has no winner", async () => {
@@ -407,13 +415,23 @@ describe("bench/run: CLI and prompts", () => {
     for (const [text, re] of bad) assert.throws(() => run.parsePromptsJsonl(text), (e) => e instanceof run.ConfigError && re.test(e.message));
   });
 
-  test("the shipped prompts file has 200 varied prompts", () => {
+  test("the shipped prompts file has 200 varied text prompts, all comparable with openrouter/auto", () => {
     const prompts = run.loadPrompts(path.join(ROOT, "bench", "prompts.jsonl"));
     assert.equal(prompts.length, 200);
     const by = Object.fromEntries(stats.tally(prompts.map((p) => p.job_hint)));
-    assert.ok(by.chat >= 100 && by.chat <= 120, `chat ${by.chat}`);
-    assert.ok(by.code >= 50 && by.code <= 70, `code ${by.code}`);
-    for (const job of ["image", "video", "music", "voice", "action"]) assert.ok(by[job] >= 3, `${job} ${by[job]}`);
+    assert.ok(by.chat >= 115 && by.chat <= 135, `chat ${by.chat}`);
+    assert.ok(by.code >= 55 && by.code <= 75, `code ${by.code}`);
+    assert.ok(by.action >= 5, `action ${by.action}`);
+    // openrouter/auto only makes text: a media prompt could never be compared.
+    for (const job of ["image", "video", "music", "voice"]) assert.equal(by[job], undefined, job);
+    // ...and no text prompt reads as a media request to the classifier (it would be skipped too).
+    const { mockClassify } = require("../src/providers/mock");
+    const { heuristicClassify } = require("../src/router/classify");
+    for (const p of prompts) {
+      for (const job of [mockClassify(p.prompt).job, heuristicClassify(p.prompt, {}).job]) {
+        assert.ok(!stats.MEDIA_JOBS.includes(job), `${p.id} classifies as ${job}`);
+      }
+    }
     assert.equal(new Set(prompts.map((p) => p.prompt)).size, 200, "no duplicate prompts");
     // --limit 20 should still exercise more than one kind of job.
     assert.ok(new Set(prompts.slice(0, 20).map((p) => p.job_hint)).size >= 3);
@@ -594,20 +612,28 @@ describe("bench/run: the per-prompt loop (fakes)", () => {
     assert.equal(calls.judge.length, 0);
   });
 
-  test("private prompts: the baseline gets the same zero-retention constraint; self-hosted gets the original text", async () => {
+  test("private prompts: both sides get the same redacted input and zero retention, and so does the judge", async () => {
     const { deps, calls } = fakeDeps();
     const [r] = await run.runBenchmark({ deps, judgeModel, prompts: [{ id: "s1", prompt: "SELF: Jane Doe's diagnosis", job_hint: "chat" }] });
     assert.equal(r.gode.zdr, true);
     assert.equal(r.auto.zdr, true);
     const self = calls.streams.find((s) => s.model === "selfhosted:qwen");
     const auto = calls.streams.find((s) => s.model === "openrouter:openrouter/auto");
-    assert.equal(self.content, "SELF: Jane Doe's diagnosis");
+    // Even with REDACT_SELF_HOSTED off: the bench compares models on the same input.
+    assert.equal(self.content, "SELF: [PERSON_1]'s diagnosis");
     assert.equal(auto.content, "SELF: [PERSON_1]'s diagnosis");
     assert.equal(auto.zdr, true);
+    assert.equal(calls.judge.length, 1);
+    assert.equal(calls.judge[0].zdr, true, "the judge sees the prompt and both answers");
+    assert.ok(!calls.judge[0].user.includes("Jane Doe"));
+    assert.equal(r.verdict.judge_zdr, true);
+    assert.equal(stats.summarize([r]).judge.zdr, 1);
+    assert.match(stats.renderMarkdown(stats.summarize([r])), /same redacted prompt, also when Gode picked a self-hosted model/);
 
-    const { deps: deps2, calls: calls2 } = fakeDeps({ redactSelfHosted: true });
-    await run.runBenchmark({ deps: deps2, judgeModel, prompts: [{ id: "s1", prompt: "SELF: Jane Doe", job_hint: "chat" }] });
-    assert.equal(calls2.streams.find((s) => s.model === "selfhosted:qwen").content, "SELF: [PERSON_1]");
+    // A normal prompt: no restriction on the judge.
+    const { deps: deps2, calls: calls2 } = fakeDeps();
+    await run.runBenchmark({ deps: deps2, judgeModel, prompts: [{ id: "n1", prompt: "Plan my week", job_hint: "chat" }] });
+    assert.equal(calls2.judge[0].zdr, false);
   });
 
   test("a failed side loses without a judge call; both failing gives no verdict", async () => {
@@ -711,14 +737,13 @@ describe("bench/run: dry run through the real router (mock mode)", { skip: !real
     assert.equal(saved.meta.mock, true);
     assert.equal(saved.results.length, 10);
     const compared = saved.results.filter((r) => r.status === "compared");
-    assert.ok(compared.length >= 5, `compared ${compared.length}`);
     for (const r of compared) {
       assert.equal(r.gode.ok, true, JSON.stringify(r.gode.error));
       assert.equal(r.auto.ok, true, JSON.stringify(r.auto.error));
       assert.equal(r.auto.model_reported, "openrouter/auto");
       assert.ok(r.gode.model_id);
     }
-    assert.ok(saved.results.some((r) => r.status === "skipped"), "the first 10 seed prompts include a media prompt");
+    assert.equal(compared.length, 10, "every seed prompt is a comparable text prompt");
     assert.match(fs.readFileSync(path.join(dir, summaryFile), "utf8"), /Dry run \(mock mode\)/);
   });
 
@@ -747,25 +772,37 @@ describe("scripts/learn.js", { skip: !realModulesPresent() && "router modules no
     assert.throws(() => learn.parseArgs(["--nope"]), learn.ConfigError);
   });
 
-  test("--help includes a weekly cron line", () => {
+  test("--help includes a weekly cron line (a reviewable dry run) and the in-process schedule", () => {
     const c = captureIo();
     assert.equal(learn.main(["--help"], {}, c.io), 0);
-    assert.match(c.out.join("\n"), /\n\s+\d+ \d+ \* \* 1 .*scripts\/learn\.js --apply/);
+    const help = c.out.join("\n");
+    assert.match(help, /\n\s+\d+ \d+ \* \* 1 .*scripts\/learn\.js >>/);
+    assert.doesNotMatch(help, /\* \* 1 .*--apply/, "unattended weekly apply is not the suggested default");
+    assert.match(help, /LEARN_SCHEDULE=weekly/);
+    assert.match(help, /ratings .* in a routing cell/s);
   });
 
   test("formatGate and formatProposals", () => {
     const lines = learn.formatGate(
-      { users: 3, total_users: 5, auto_pick_on_pct: 66.7, override_rate: 0.05, requests: 1200, api_cost_usd: 1.5, charged_usd: 1.95, gross_margin_pct: 23.1, thumbs_up_rate: 0.8, since_ms: Date.parse("2026-10-29T00:00:00Z") },
+      {
+        users: 3, total_users: 5, auto_pick_kept_pct: 33.3, auto_pick_on_pct: 66.7, auto_requests_pct: 90, override_rate: 0.05, requests: 1200,
+        api_cost_usd: 1.5, failed_api_cost_usd: 0.1, charged_usd: 1.95, gross_margin_pct: 23.1, thumbs_up_rate: 0.8,
+        purchases_usd: 0, free_credit_usd: 1.25, free_credit_share_pct: 100, cash_covers_api_costs: false,
+        since_ms: Date.parse("2026-10-29T00:00:00Z"),
+      },
       { days: 28 }
     ).join("\n");
     assert.match(lines, /last 28 days \(since 2026-10-29\)/);
-    assert.match(lines, /Auto-pick on \(active users\)\s+66\.7%/);
+    assert.match(lines, /Auto-pick kept \(active users, from their requests\)\s+33\.3%/);
+    assert.match(lines, /Auto-pick on now \(same users\)\s+66\.7%/);
     assert.match(lines, /Override rate.*5\.0%/);
     assert.match(lines, /Requests\s+1,200/);
-    assert.match(lines, /credits cover API costs: yes/);
+    assert.match(lines, /API cost \(what we paid\)\s+\$1\.5000 \(\$0\.1000 on failed or stopped requests\)/);
+    assert.match(lines, /Free credit granted.*\$1\.2500 \(100\.0% of credit granted\)/);
+    assert.match(lines, /auto-pick kept on by 33\.3% of active users; credits cover API costs: yes; purchases cover API costs: NO\./);
     assert.match(learn.formatGate({ users: 0, requests: 0, api_cost_usd: 0, charged_usd: 0 }, { days: 7 }).join("\n"), /n\/a \(no requests\)/);
 
-    assert.match(learn.formatProposals([], { minSamples: 20 }).join("\n"), /No routing changes proposed/);
+    assert.match(learn.formatProposals([], { minSamples: 20 }).join("\n"), /No routing changes proposed \(a routing cell changes only when .* at least 20 ratings in that cell\)/);
     const p = learn
       .formatProposals(
         [{ job: "chat", tier: "budget", current_model_id: "a", proposed_model_id: "b", current_score: 0.5, proposed_score: 0.71234, current_n: 0, proposed_n: 30, reason: "cheaper" }],
@@ -801,22 +838,25 @@ describe("scripts/learn.js", { skip: !realModulesPresent() && "router modules no
     const text = dry.out.join("\n");
     assert.match(text, /Gate metrics, last 28 days/);
     assert.match(text, /Requests\s+8/);
+    assert.match(text, /proposed routing change/, "the budget cell has ratings for both models");
+    assert.match(text, /Stored as learner run \d+/);
     const before = openDb(dbPath);
     const budgetBefore = before.prepare("SELECT model_id FROM routes WHERE job = 'chat' AND tier = 'budget'").get().model_id;
+    const runs = before.prepare("SELECT source, applied, proposals FROM learn_runs").all();
     before.close();
-    assert.equal(budgetBefore, "openrouter:deepseek/deepseek-v4.1-flash", "a run without --apply writes nothing");
+    assert.equal(budgetBefore, "openrouter:deepseek/deepseek-v4.1-flash", "a run without --apply changes no route");
+    assert.deepEqual(runs.map((r) => [r.source, r.applied]), [["cli", 0]]);
+    assert.equal(JSON.parse(runs[0].proposals)[0].proposed_model_id, "openrouter:openai/gpt-oss-120b");
 
     const applied = captureIo();
     assert.equal(learn.main(["--min-samples", "2", "--apply"], env, applied.io), 0);
     const after = openDb(dbPath);
     const changed = after.prepare("SELECT COUNT(*) AS n FROM route_history WHERE source = 'learn'").get().n;
+    const lastRun = after.prepare("SELECT source, applied FROM learn_runs ORDER BY id DESC LIMIT 1").get();
     after.close();
-    if (/proposed routing change/.test(text)) {
-      assert.match(applied.out.join("\n"), /Applied \d+ of \d+/);
-      assert.ok(changed >= 1);
-    } else {
-      assert.equal(changed, 0);
-    }
+    assert.match(applied.out.join("\n"), /Applied \d+ of \d+/);
+    assert.ok(changed >= 1);
+    assert.deepEqual({ ...lastRun }, { source: "cli", applied: changed });
   });
 
   test("a missing database is a config error (no empty database is created)", () => {
@@ -845,8 +885,11 @@ describe("scripts/export-bench-prompts.js", { skip: !realModulesPresent() && "re
     assert.notEqual(exp.exportId("abc"), "abc");
   });
 
-  /** Temp database with two users; only one shares prompts. Returns { env, dir, ids }. */
-  function seedExportDb() {
+  /**
+   * Temp database with two users; only one shares prompts. Each message gets its own conversation
+   * unless `conversation` names one. Returns { env, dir, db helpers }.
+   */
+  function seedExportDb({ extra } = {}) {
     const { openDb } = require("../src/db");
     const { createKeyring } = require("../src/crypto");
     const dir = tmpDir("export");
@@ -857,35 +900,103 @@ describe("scripts/export-bench-prompts.js", { skip: !realModulesPresent() && "re
     const users = { sharer: keyring.newWrappedDek(), private: keyring.newWrappedDek() };
     db.prepare("INSERT INTO users (id, email, password_hash, wrapped_dek, share_prompts, created_at) VALUES ('sharer', 's@example.com', 'x', ?, 1, ?)").run(users.sharer, t);
     db.prepare("INSERT INTO users (id, email, password_hash, wrapped_dek, share_prompts, created_at) VALUES ('other', 'o@example.com', 'x', ?, 0, ?)").run(users.private, t);
-    for (const [uid, dek] of [["sharer", users.sharer], ["other", users.private]]) {
-      db.prepare("INSERT INTO conversations (id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?)").run(`c-${uid}`, uid, t, t);
-    }
+    const dekOf = { sharer: users.sharer, other: users.private };
     let n = 0;
-    function message(uid, dek, text, { job = null, isPrivate = 0, superseded = 0, role = "user" } = {}) {
+    let convN = 0;
+    function conversation(uid, { id = `c-${++convN}`, isPrivate = 0, map = null } = {}) {
+      const mapEnc = map ? keyring.encrypt(dekOf[uid], map, { json: true }) : null;
+      db.prepare("INSERT OR IGNORE INTO conversations (id, user_id, private, pii_map_enc, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").run(id, uid, isPrivate, mapEnc, t, t);
+      return id;
+    }
+    /** A user message; `job` adds an answered request, `failed` a request with no answer (error/stopped). */
+    function message(uid, text, { job = null, isPrivate = 0, superseded = 0, conversation: conv = null, failed = null } = {}) {
       n += 1;
+      const convId = conv || conversation(uid);
       const id = `msg-${n}`;
-      db.prepare("INSERT INTO messages (id, conversation_id, user_id, role, content_enc, superseded, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
-        id, `c-${uid}`, uid, role, keyring.encrypt(dek, { text }, { json: true }), superseded, t + n
+      db.prepare("INSERT INTO messages (id, conversation_id, user_id, role, content_enc, superseded, created_at) VALUES (?, ?, ?, 'user', ?, ?, ?)").run(
+        id, convId, uid, keyring.encrypt(dekOf[uid], { text }, { json: true }), superseded, t + n
       );
       if (job) {
         const reqId = `req-${n}`;
         const aId = `ans-${n}`;
-        db.prepare("INSERT INTO requests (id, user_id, kind, job, private, message_id, created_at) VALUES (?, ?, 'auto', ?, ?, ?, ?)").run(reqId, uid, job, isPrivate, aId, t + n);
+        db.prepare("INSERT INTO requests (id, user_id, conversation_id, kind, job, private, message_id, created_at) VALUES (?, ?, ?, 'auto', ?, ?, ?, ?)").run(reqId, uid, convId, job, isPrivate, aId, t + n);
         db.prepare("INSERT INTO messages (id, conversation_id, user_id, role, content_enc, parent_id, request_id, created_at) VALUES (?, ?, ?, 'assistant', ?, ?, ?, ?)").run(
-          aId, `c-${uid}`, uid, keyring.encrypt(dek, { text: "an answer" }, { json: true }), id, reqId, t + n
+          aId, convId, uid, keyring.encrypt(dekOf[uid], { text: "an answer" }, { json: true }), id, reqId, t + n
+        );
+      }
+      if (failed) {
+        // A turn whose answer failed or was stopped: the request row has no message_id.
+        db.prepare("INSERT INTO requests (id, user_id, conversation_id, kind, job, private, status, error_code, message_id, created_at) VALUES (?, ?, ?, 'auto', 'chat', ?, ?, ?, NULL, ?)").run(
+          `req-f-${n}`, uid, convId, isPrivate, failed, failed === "error" ? "upstream_error" : "aborted", t + n
         );
       }
       return id;
     }
-    message("sharer", users.sharer, "Email jane.doe@example.com about the Friday launch", { job: "chat" });
-    message("sharer", users.sharer, "Write a regex for ZIP codes", { job: "code" });
-    message("sharer", users.sharer, "My diagnosis came back, what now?", { job: "chat", isPrivate: 1 });
-    message("sharer", users.sharer, "old version of a prompt", { superseded: 1 });
-    message("sharer", users.sharer, "No answer was logged for this one");
-    message("other", users.private, "This user never opted in", { job: "chat" });
+    message("sharer", "Email jane.doe@example.com about the Friday launch", { job: "chat" });
+    message("sharer", "Write a regex for ZIP codes", { job: "code" });
+    message("sharer", "My diagnosis came back, what now?", { job: "chat", isPrivate: 1 });
+    message("sharer", "old version of a prompt", { superseded: 1 });
+    message("sharer", "No answer was logged for this one");
+    message("other", "This user never opted in", { job: "chat" });
+    if (extra) extra({ db, keyring, conversation, message, dek: users.sharer });
     db.close();
     return { dir, env: { NODE_ENV: "test", DATA_DIR: dir, DATABASE_PATH: path.join(dir, "gode.db"), GODE_MASTER_KEY: masterKey.toString("base64") } };
   }
+
+  async function exportRows(env, dir, name = "out.jsonl") {
+    const out = path.join(dir, name);
+    const c = captureIo();
+    assert.equal(await exp.main(["--out", out], env, c.io), 0, c.err.join("\n"));
+    const text = fs.readFileSync(out, "utf8").trim();
+    return { rows: text ? text.split("\n").map((l) => JSON.parse(l)) : [], log: c.out.join("\n") };
+  }
+
+  test("private turns whose answer failed or was stopped, and conversations flagged private, are never exported", async () => {
+    const { dir, env } = seedExportDb({
+      extra({ message, conversation }) {
+        message("sharer", "My divorce lawyer says my custody case looks bad, what are my options? GODE_MOCK_FAIL", { isPrivate: 1, failed: "error" });
+        message("sharer", "My salary is 85k and my bank statement shows debt, help", { isPrivate: 1, failed: "stopped" });
+        // A private first turn, then an innocent follow-up that was answered: the whole conversation stays out.
+        const conv = conversation("sharer");
+        message("sharer", "I was diagnosed with something serious", { isPrivate: 1, failed: "error", conversation: conv });
+        message("sharer", "What should I ask at the next visit?", { job: "chat", conversation: conv });
+        // Flagged private by the pipeline, nothing else known.
+        message("sharer", "Can you keep this between us: the thing from before", { conversation: conversation("sharer", { isPrivate: 1 }) });
+      },
+    });
+    const { rows, log } = await exportRows(env, dir);
+    const all = JSON.stringify(rows);
+    for (const leaked of ["divorce", "custody", "salary", "diagnosed", "next visit", "between us"]) assert.ok(!all.includes(leaked), leaked);
+    assert.equal(rows.length, 3);
+    assert.match(log, /skipped 6 private/);
+  });
+
+  test("each conversation is redacted with its stored placeholder map, in order", async () => {
+    const { createRedactor } = require("../src/redact");
+    const { loadConfig } = require("../src/config");
+    const redactor = createRedactor(loadConfig({}));
+    const first = await redactor.redactMessages([{ role: "user", content: "Hi, my name is Jane Doe." }], null);
+    const { dir, env } = seedExportDb({
+      extra({ message, conversation }) {
+        const conv = conversation("sharer", { map: first.map });
+        message("sharer", "Hi, my name is Jane Doe.", { job: "chat", conversation: conv });
+        message("sharer", "Write a short birthday card for my mother, signed by Jane Doe", { job: "chat", conversation: conv });
+        // A map that does not decrypt: those prompts are skipped, never redacted without it.
+        const broken = conversation("sharer", { id: "c-broken" });
+        message("sharer", "Signed, Ada Lovelace", { job: "chat", conversation: broken });
+      },
+    });
+    const { openDb } = require("../src/db");
+    const db = openDb(env.DATABASE_PATH);
+    db.prepare("UPDATE conversations SET pii_map_enc = 'v1.not.a.map' WHERE id = 'c-broken'").run();
+    db.close();
+    const { rows, log } = await exportRows(env, dir);
+    const prompts = rows.map((r) => r.prompt);
+    assert.ok(prompts.includes("Write a short birthday card for my mother, signed by [PERSON_1]"), prompts.join(" | "));
+    assert.ok(prompts.includes("Hi, my name is [PERSON_1]."));
+    assert.ok(!JSON.stringify(rows).includes("Doe") && !JSON.stringify(rows).includes("Lovelace"));
+    assert.match(log, /1 undecryptable/);
+  });
 
   test("exports only opted-in, non-private, current prompts, redacted, with job hints", async () => {
     const { dir, env } = seedExportDb();

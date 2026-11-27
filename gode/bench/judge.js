@@ -172,10 +172,11 @@ function describeError(err) {
  * @param {object} args
  * @param {{ completeJSON: Function }} args.provider
  * @param {object} args.model   Model object for the judge
+ * @param {boolean} [args.zdr]  restrict the judge call to zero-retention endpoints
  * @returns {Promise<{ winner: 'gode'|'auto'|'tie'|null, raw: 'A'|'B'|'tie'|null, gode_position: 'A'|'B',
  *                     reason: string, error: string|null, usage: object|null, truncated: object }>}
  */
-async function judgePair({ provider, model, id, prompt, godeAnswer, autoAnswer, maxAnswerChars, signal } = {}) {
+async function judgePair({ provider, model, id, prompt, godeAnswer, autoAnswer, maxAnswerChars, zdr = false, signal } = {}) {
   const built = buildJudgePrompt({ id, prompt, godeAnswer, autoAnswer, maxAnswerChars });
   const base = { gode_position: built.positions.A === "gode" ? "A" : "B", truncated: built.truncated };
   let res;
@@ -186,6 +187,8 @@ async function judgePair({ provider, model, id, prompt, godeAnswer, autoAnswer, 
       user: built.user,
       maxTokens: JUDGE_MAX_TOKENS,
       schema: JUDGE_SCHEMA,
+      // Zero-retention endpoints only (OpenRouter: provider.zdr) when the compared answers ran so.
+      zdr: Boolean(zdr),
       signal,
     });
   } catch (err) {

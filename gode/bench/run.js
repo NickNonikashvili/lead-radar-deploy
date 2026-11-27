@@ -6,9 +6,12 @@
 //                     [--catalog <admin export .json>] [--dry]
 //
 // For each text prompt: redact -> classify -> pick (plan, no pins) -> stream the answer from the
-// picked model; in parallel, the same redacted prompt goes to openrouter/auto. A judge model then
-// compares the two answers with a randomised A/B order. Media prompts are classified, then skipped
-// (openrouter/auto only does text) and counted. Writes results-<ts>.json and summary-<ts>.md.
+// picked model; in parallel, the same redacted prompt goes to openrouter/auto. Both sides always get
+// the same redacted input, also when Gode picks a self-hosted model (the chat would send that one
+// the original text): the comparison is between models, not between inputs. A judge model then
+// compares the two answers with a randomised A/B order, under zero retention whenever either side
+// ran under it. Media prompts are classified, then skipped (openrouter/auto only does text) and
+// counted. Writes results-<ts>.json and summary-<ts>.md.
 //
 // No billing, no users, no database file: the routing table is the seed catalog (or --catalog) in
 // an in-memory SQLite database. Exit code 2 = configuration problem; per-prompt failures are
@@ -174,7 +177,7 @@ function loadPrompts(file, limit = null) {
 // Real modules (built lazily so the pure helpers above can be required without them)
 
 /** Import an admin catalog export ({models, routes}) into the in-memory routing table. */
-function importCatalogFile(catalog, db, file) {
+function importCatalogFile(catalog, db, file, { openaiZdrApproved = false } = {}) {
   let data;
   try {
     data = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -185,7 +188,7 @@ function importCatalogFile(catalog, db, file) {
     throw new ConfigError(`${file} is not a catalog export: expected {"models": [...], "routes": [...]}`);
   }
   try {
-    catalog.importCatalog(db, { models: data.models, routes: data.routes }, { source: "admin" });
+    catalog.importCatalog(db, { models: data.models, routes: data.routes }, { source: "admin", openaiZdrApproved });
   } catch (e) {
     throw new ConfigError(`catalog ${file} was rejected: ${e.message}`);
   }
@@ -208,7 +211,7 @@ function buildDeps({ env = process.env, dry = false, catalogFile = null } = {}) 
   const db = openDb(":memory:");
   try {
     catalog.seedCatalog(db);
-    if (catalogFile) importCatalogFile(catalog, db, catalogFile);
+    if (catalogFile) importCatalogFile(catalog, db, catalogFile, { openaiZdrApproved: Boolean(config.gateways?.openai?.zdrApproved) });
   } catch (e) {
     db.close();
     throw e;
@@ -364,7 +367,7 @@ async function pickGode(deps, ctx, classification) {
 }
 
 /** Gode's answer from the picked model. Latency includes classification + pick (routing_ms). */
-async function answerGode(deps, ctx, { picked, rawMessages, redactedMessages, classification }) {
+async function answerGode(deps, ctx, { picked, redactedMessages, classification }) {
   const routingMs = classification.ms + picked.ms;
   const base = { model_id: null, label: null, tier: null, effort: null, zdr: false, reason: null, routing_ms: routingMs };
   if (!picked.ok) return { ...base, ok: false, error: picked.error };
@@ -379,13 +382,13 @@ async function answerGode(deps, ctx, { picked, rawMessages, redactedMessages, cl
     zdr: Boolean(pick.zdrRequired),
     reason: pick.reason || null,
   };
-  // Same rule as the chat pipeline: self-hosted models get the original text unless configured otherwise.
-  const messages = model.self_hosted && !deps.config.privacy.redactSelfHosted ? rawMessages : redactedMessages;
+  // The same redacted input as the baseline, whatever model was picked (see the header): the judge
+  // sees that redacted prompt, and an answer that echoes original values must not reach it.
   try {
     const answer = await streamAnswer({
       provider: deps.providers.get(model.gateway),
       model,
-      messages,
+      messages: redactedMessages,
       effort: pick.effort,
       maxTokens: deps.config.router.maxOutputTokens,
       zdr: Boolean(pick.zdrRequired),
@@ -429,8 +432,12 @@ async function answerAuto(deps, ctx, { redactedMessages, zdr }) {
   }
 }
 
-/** Decide the prompt: judge when both answered, otherwise the side that answered wins. */
-async function decide(deps, ctx, { id, redactedPrompt, gode, auto }) {
+/**
+ * Decide the prompt: judge when both answered, otherwise the side that answered wins. The judge
+ * runs on zero-retention endpoints when either side did (a private prompt and both answers would
+ * otherwise reach a judge host that may keep them).
+ */
+async function decide(deps, ctx, { id, redactedPrompt, gode, auto, zdr = false }) {
   if (gode.ok && auto.ok) {
     const v = await judgePair({
       provider: deps.providers.get(ctx.judgeModel.gateway),
@@ -439,6 +446,7 @@ async function decide(deps, ctx, { id, redactedPrompt, gode, auto }) {
       prompt: redactedPrompt,
       godeAnswer: gode.text,
       autoAnswer: auto.text,
+      zdr: Boolean(zdr || gode.zdr || auto.zdr),
       signal: AbortSignal.timeout(ctx.judgeTimeoutMs),
     });
     return {
@@ -450,6 +458,7 @@ async function decide(deps, ctx, { id, redactedPrompt, gode, auto }) {
       by_error: false,
       truncated: v.truncated,
       judge_cost_usd: v.usage ? costFromUsage(v.usage, ctx.judgeModel).costUsd : null,
+      judge_zdr: Boolean(zdr || gode.zdr || auto.zdr),
     };
   }
   const base = { raw: null, gode_position: null, error: null, by_error: true, judge_cost_usd: null };
@@ -510,10 +519,10 @@ async function runPrompt(deps, ctx, item) {
   // Apples to apples: when Gode must use zero-retention endpoints, so must the baseline.
   const zdr = picked.ok ? Boolean(picked.pick.zdrRequired) : cls.private;
   const [gode, auto] = await Promise.all([
-    answerGode(deps, ctx, { picked, rawMessages, redactedMessages, classification: cls }),
+    answerGode(deps, ctx, { picked, redactedMessages, classification: cls }),
     answerAuto(deps, ctx, { redactedMessages, zdr }),
   ]);
-  const verdict = await decide(deps, ctx, { id: item.id, redactedPrompt: redactedMessages[0].content, gode, auto });
+  const verdict = await decide(deps, ctx, { id: item.id, redactedPrompt: redactedMessages[0].content, gode, auto, zdr: zdr || cls.private });
   return { ...row, gode, auto, verdict };
 }
 
@@ -614,6 +623,10 @@ async function main(argv = process.argv.slice(2), env = process.env, io = consol
     deps = buildDeps({ env, dry: opts.dry, catalogFile: opts.catalog });
     const judgeModel = resolveJudgeModel(deps, opts.judge);
     checkLiveConfig(deps, judgeModel);
+    // Private prompts are judged on zero-retention endpoints only; a judge without them fails there.
+    if (!deps.config.mock && !judgeModel.zdr) {
+      io.error(`bench: note: judge ${judgeModel.id} is not flagged zero-retention; comparisons of private prompts will have no verdict.`);
+    }
 
     const mode = deps.config.mock ? (opts.dry ? "dry run (mock mode)" : "mock mode: no gateway keys found, so this is a dry run") : "live";
     io.error(`Benchmarking ${prompts.length} prompts, ${mode}. Judge: ${judgeModel.id}. Plan: ${opts.plan}.`);

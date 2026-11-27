@@ -11,6 +11,9 @@ const CANCEL_TIMEOUT_MS = 5000;
 const DEFAULT_SECONDS = 5; // fal's usual clip length when neither input nor output says otherwise
 const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
 const MIN_POLL_MS = 50;
+// Backoff for transient failures while polling or fetching the result: poll interval x 2^n, capped.
+const MAX_RETRY_DELAY_MS = 10_000;
+const MAX_RETRY_AFTER_MS = 30_000;
 // Catalog-only keys and generic hints that must never reach a model's input schema: fal answers
 // 422 to unknown fields on strict endpoints, and the rest are ours (see src/seed/catalog.js).
 const META_KEYS = new Set(["prompt_field", "max_chars", "openrouter_provider", "aspect", "duration_s", "reasoning"]);
@@ -168,10 +171,49 @@ function computeUnits(model, { input, result, media, prompt }) {
 
 // ---- queue ----
 
+/**
+ * Failures worth retrying on an idempotent GET (status poll, result): the network, a body cut off
+ * mid-way, 408, 429 and 5xx (fal's edge answers 502/503 now and then). Other 4xx are final.
+ */
+function isTransient(err) {
+  if (!(err instanceof AppError) || err.code !== "upstream_error" || !err.extra) return false;
+  const { upstreamStatus: s, interrupted } = err.extra;
+  if ("networkCode" in err.extra || interrupted) return true;
+  return s === 408 || s === 429 || (Number.isInteger(s) && s >= 500 && s <= 599);
+}
+
+/** Retry-After as milliseconds (delta-seconds or an HTTP date), or 0. */
+function retryAfterMs(value) {
+  if (typeof value !== "string" || !value.trim()) return 0;
+  const v = value.trim();
+  if (/^\d+(?:\.\d+)?$/.test(v)) return Math.round(Number(v) * 1000);
+  const at = Date.parse(v);
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : 0;
+}
+
 function createFalProvider(config) {
   const gw = config.gateways.fal;
   const base = () => gw.queueBaseUrl;
   const headers = () => ({ Authorization: `Key ${gw.apiKey}` });
+  const pollMs = () => Math.max(MIN_POLL_MS, Number(gw.pollIntervalMs) || 0);
+
+  /**
+   * GET with retries for transient failures (isTransient), with capped exponential backoff that
+   * honours Retry-After. There is no attempt limit: the job's overall deadline (in `signal`) ends
+   * the retries, so a fal edge hiccup never loses a generation that is running and billed.
+   */
+  async function getWithRetry(url, signal, okStatuses) {
+    for (let failures = 0; ; failures++) {
+      try {
+        return await requestJSON("fal", url, { headers: headers(), signal, okStatuses });
+      } catch (err) {
+        if (signal?.aborted || !isTransient(err)) throw err;
+        const backoff = Math.min(MAX_RETRY_DELAY_MS, pollMs() * 2 ** Math.min(failures, 16));
+        const hinted = Math.min(MAX_RETRY_AFTER_MS, retryAfterMs(err.extra.retryAfter));
+        await sleep(Math.max(backoff, hinted), signal);
+      }
+    }
+  }
 
   /** Use fal's returned URLs, but only on our queue origin: they receive the API key. */
   function queueUrls(submit, slug) {
@@ -199,13 +241,13 @@ function createFalProvider(config) {
   /** Poll until COMPLETED; returns the final status body (which may carry error/error_type). */
   async function waitForCompletion(statusUrl, signal, report) {
     for (;;) {
-      const { json } = await requestJSON("fal", statusUrl, { headers: headers(), signal, okStatuses: [200, 202] });
+      const { json } = await getWithRetry(statusUrl, signal, [200, 202]);
       const status = json?.status;
       if (status === "COMPLETED") return json;
       if (status !== "IN_QUEUE" && status !== "IN_PROGRESS") throw upstreamError("fal", { message: "unexpected queue status" });
       report(status, json.queue_position);
       // util.sleep detaches its abort listener after each wait, so a long poll on one signal is fine.
-      await sleep(Math.max(MIN_POLL_MS, Number(gw.pollIntervalMs) || 0), signal);
+      await sleep(pollMs(), signal);
     }
   }
 
@@ -254,11 +296,15 @@ function createFalProvider(config) {
       completed = true;
       // Failed requests are COMPLETED too; the status body then carries error/error_type.
       if (final.error) throw upstreamError("fal", { message: String(final.error), type: final.error_type });
-      const { json: result } = await requestJSON("fal", urls.response, { headers: headers(), signal: combined });
+      // The result is paid for once COMPLETED: a transient failure here is retried, never dropped.
+      const { json: result } = await getWithRetry(urls.response, combined);
       const media = extractMedia(result);
       if (!media.length) throw resultError(result);
       return { media, units: computeUnits(model, { input, result, media, prompt }), costUsd: null };
     } catch (err) {
+      // Reached only by the caller's abort, our deadline or a final (non-transient) failure: the
+      // job can no longer be followed, so stop it rather than let it run and bill. Transient
+      // polling errors never get here; getWithRetry keeps polling until the deadline.
       if (!completed) await cancelQuietly(urls.cancel);
       throw mapTimeout(err, signal, timeout);
     }
@@ -304,4 +350,4 @@ function mapTimeout(err, callerSignal, timeout) {
   return err;
 }
 
-module.exports = { createFalProvider, buildInput, extractMedia, computeUnits, checkMaxChars };
+module.exports = { createFalProvider, buildInput, extractMedia, computeUnits, checkMaxChars, isTransient, retryAfterMs };

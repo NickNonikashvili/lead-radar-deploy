@@ -6,11 +6,13 @@
 //
 //   users.balance_micros == SUM(ledger.delta_micros WHERE user_id = ?)
 //
-// A request first reserves a hold (so two concurrent requests cannot both spend the same credit),
-// then settles the hold against the real charge, or releases it on error. Zero-amount movements
-// write no ledger row: they would only add noise to the user's statement, and the invariant holds
-// either way.
-const { newId, now, AppError } = require("../util");
+// A request first reserves a hold for its FULL estimate (so two concurrent requests cannot both
+// spend the same credit, and no request starts that the balance can't pay for), then settles the
+// hold against the real charge, capped at the hold, or releases it on error. Balances therefore
+// never go below zero through spending. Zero-amount movements write no ledger row: they would only
+// add noise to the user's statement, and the invariant holds either way.
+const { newId, now, AppError, microsToUsd } = require("../util");
+const { textRates } = require("../seed/catalog");
 
 const GRANT_KINDS = new Set(["signup_bonus", "purchase", "dev_topup", "admin_adjust"]);
 const LEDGER_KINDS = new Set([...GRANT_KINDS, "hold", "release", "charge"]);
@@ -27,6 +29,7 @@ const DEFAULT_PRICES = Object.freeze({
 // When the caller gives no output cap, assume a full default-length answer (MAX_OUTPUT_TOKENS default).
 const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
 const DEFAULT_STALE_HOLD_MS = 15 * 60 * 1000;
+const OUT_OF_CREDITS = "You're out of credits. Buy credits to continue.";
 const MAX_LEDGER_LIMIT = 500;
 
 /**
@@ -71,8 +74,9 @@ function isMediaEstimate(model, units) {
 /**
  * @param {ReturnType<import('../db').openDb>} db
  * @param {{ billing: { margin: number } }} config
+ * @param {{ logger?: { warn: Function } }} [options]  where capped charges are reported (ids only)
  */
-function createCredits(db, config) {
+function createCredits(db, config, { logger = console } = {}) {
   const margin = Number(config?.billing?.margin);
   if (!Number.isFinite(margin) || margin < 0) {
     // Fail at boot: a negative or missing margin would sell below cost on every request.
@@ -90,6 +94,7 @@ function createCredits(db, config) {
     getHold: db.prepare("SELECT id, user_id, amount_micros, created_at FROM holds WHERE id = ?"),
     deleteHold: db.prepare("DELETE FROM holds WHERE id = ?"),
     staleHolds: db.prepare("SELECT id, user_id, amount_micros FROM holds WHERE created_at <= ? ORDER BY created_at"),
+    heldTotal: db.prepare("SELECT COALESCE(SUM(amount_micros), 0) AS n FROM holds WHERE user_id = ?"),
   };
 
   function readBalance(userId) {
@@ -124,7 +129,8 @@ function createCredits(db, config) {
   /**
    * Upstream cost estimate in micro-USD (what WE pay), used to size the hold before a request.
    * Text: inputTokens x price_in + maxOutputTokens x price_out, prices in USD per 1M tokens (which is
-   * exactly micro-USD per token). Media: units x price_per_unit (USD per price_unit).
+   * exactly micro-USD per token), at the long-prompt rate of params.pricing when the input is above
+   * its threshold. Media: units x price_per_unit (USD per price_unit).
    */
   function estimateApiCostMicros({ model, inputTokens, maxOutputTokens, units } = {}) {
     if (isMediaEstimate(model, units)) {
@@ -134,40 +140,79 @@ function createCredits(db, config) {
     }
     const inTok = optionalCount(inputTokens, "inputTokens", 0);
     const outTok = optionalCount(maxOutputTokens, "maxOutputTokens", DEFAULT_MAX_OUTPUT_TOKENS);
-    const priceIn = knownPrice(model?.price_in) ?? DEFAULT_PRICES.textInUsdPerMTok;
-    const priceOut = knownPrice(model?.price_out) ?? DEFAULT_PRICES.textOutUsdPerMTok;
+    const rates = textRates(model, inTok);
+    const priceIn = rates.in ?? DEFAULT_PRICES.textInUsdPerMTok;
+    const priceOut = rates.out ?? DEFAULT_PRICES.textOutUsdPerMTok;
     return ceilMicros(inTok * priceIn + outTok * priceOut);
   }
 
-  function reserve(userId, estimateChargedMicros) {
+  /**
+   * The largest output cap (0..maxOutputTokens) whose full hold, priceFor(estimate + extra), fits
+   * in `balanceMicros`, or -1 when not even the input fits. Lets a low balance still buy a shorter
+   * answer instead of an overdraft. Binary search: the hold only grows with the cap.
+   */
+  function affordableOutputTokens({ model, inputTokens = 0, maxOutputTokens = DEFAULT_MAX_OUTPUT_TOKENS, extraApiMicros = 0, balanceMicros }) {
+    const holdFor = (n) => priceFor(estimateApiCostMicros({ model, inputTokens, maxOutputTokens: n }) + extraApiMicros);
+    const max = Math.max(0, Math.floor(maxOutputTokens));
+    if (holdFor(max) <= balanceMicros) return max;
+    if (holdFor(0) > balanceMicros) return -1;
+    let lo = 0;
+    let hi = max;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (holdFor(mid) <= balanceMicros) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo;
+  }
+
+  /**
+   * Hold the full estimate. Refused (402) when the balance is empty or smaller than the estimate:
+   * callers shrink text requests to what the balance affords first (affordableOutputTokens), and
+   * media must be paid in full. `message` replaces the generic refusal text.
+   */
+  function reserve(userId, estimateChargedMicros, { message } = {}) {
     requireId(userId, "userId");
     const estimate = ceilMicros(requireNonNegative(estimateChargedMicros, "estimateChargedMicros"));
     return db.tx(() => {
       const current = readBalance(userId);
-      if (current <= 0) {
-        throw new AppError(402, "insufficient_credits", "You're out of credits. Buy credits to continue.");
+      if (current <= 0) throw new AppError(402, "insufficient_credits", OUT_OF_CREDITS);
+      if (current < estimate) {
+        throw new AppError(
+          402,
+          "insufficient_credits",
+          message || `This request needs up to $${microsToUsd(estimate)} of credit and your balance is $${microsToUsd(current)}. Buy credits to continue.`
+        );
       }
-      // Never hold more than the user has: a cheap answer should still go through on a low balance.
-      const amount = Math.min(estimate, current);
       const holdId = newId();
       const at = now();
-      stmt.insertHold.run(holdId, userId, amount, at);
-      applyDelta(userId, -amount, "hold", holdId, at);
-      return { holdId, amount };
+      stmt.insertHold.run(holdId, userId, estimate, at);
+      applyDelta(userId, -estimate, "hold", holdId, at);
+      return { holdId, amount: estimate };
     });
   }
 
+  /**
+   * Release the hold and charge for the request, never more than the hold: a real cost above the
+   * estimate (provider price drift, a tokenizer denser than chars/4) is absorbed by us, so a balance
+   * cannot be pushed below zero. Returns the new balance and what was actually charged.
+   */
   function settle(holdId, chargedMicros, ref) {
     requireId(holdId, "holdId");
-    const charged = ceilMicros(requireNonNegative(chargedMicros, "chargedMicros"));
+    const wanted = ceilMicros(requireNonNegative(chargedMicros, "chargedMicros"));
     return db.tx(() => {
       const hold = stmt.getHold.get(holdId);
       // Settling twice would charge twice: refuse loudly instead of guessing.
       if (!hold) throw new AppError(409, "conflict", "Credit hold is already settled or released");
+      const charged = Math.min(wanted, hold.amount_micros);
+      if (charged < wanted) {
+        // Ids only: amounts tied to a person stay out of the logs.
+        logger?.warn?.(`[credits] charge for ${String(ref || hold.id).slice(0, 80)} capped at hold ${hold.id}; the overrun is absorbed`);
+      }
       const at = now();
       releaseHoldRow(hold, at);
       applyDelta(hold.user_id, -charged, "charge", ref || hold.id, at);
-      return { balance: readBalance(hold.user_id) };
+      return { balance: readBalance(hold.user_id), charged };
     });
   }
 
@@ -205,6 +250,26 @@ function createCredits(db, config) {
     });
   }
 
+  /**
+   * Admin credit adjustment (kind 'admin_adjust'). A negative delta takes credit away but never
+   * below zero: it is clamped to the current balance. Returns the new balance in micros.
+   */
+  function adjust(userId, deltaMicros, ref) {
+    requireId(userId, "userId");
+    if (!Number.isSafeInteger(deltaMicros)) throw new AppError(400, "bad_request", "Credit amount must be a whole number of micro-USD");
+    return db.tx(() => {
+      const current = readBalance(userId);
+      const delta = deltaMicros < 0 ? -Math.min(-deltaMicros, Math.max(0, current)) : deltaMicros;
+      applyDelta(userId, delta, "admin_adjust", ref, now());
+      return readBalance(userId);
+    });
+  }
+
+  /** Credit currently on hold for running requests (shown as "pending" on the billing page). */
+  function held(userId) {
+    return stmt.heldTotal.get(requireId(userId, "userId")).n;
+  }
+
   function ledger(userId, { limit = 50, kinds } = {}) {
     requireId(userId, "userId");
     const n = Math.min(MAX_LEDGER_LIMIT, Math.max(1, Math.floor(Number(limit) || 50)));
@@ -227,18 +292,39 @@ function createCredits(db, config) {
       .all(...params);
   }
 
-  /** Crash safety: a process that died mid-request leaves holds behind. Refund them at boot. */
-  function releaseStaleHolds(maxAgeMs = DEFAULT_STALE_HOLD_MS) {
+  /**
+   * Crash safety: a process that died mid-request leaves holds behind. server.js releases every
+   * hold at boot (maxAgeMs 0: one process per database, so none belongs to a live request), then
+   * sweeps periodically with an age above the longest request. `keep` lists hold ids of requests
+   * still running in this process, which are never released by the sweep.
+   * @param {number} [maxAgeMs]
+   * @param {{ keep?: Iterable<string> }} [opts]
+   */
+  function releaseStaleHolds(maxAgeMs = DEFAULT_STALE_HOLD_MS, { keep } = {}) {
     requireNonNegative(maxAgeMs, "maxAgeMs");
+    const live = new Set(keep || []);
     return db.tx(() => {
       const at = now();
-      const stale = stmt.staleHolds.all(at - maxAgeMs);
+      const stale = stmt.staleHolds.all(at - maxAgeMs).filter((h) => !live.has(h.id));
       for (const hold of stale) releaseHoldRow(hold, at);
       return stale.length;
     });
   }
 
-  return { balance, priceFor, estimateApiCostMicros, reserve, settle, release, grant, ledger, releaseStaleHolds };
+  return {
+    balance,
+    priceFor,
+    estimateApiCostMicros,
+    affordableOutputTokens,
+    reserve,
+    settle,
+    release,
+    grant,
+    adjust,
+    held,
+    ledger,
+    releaseStaleHolds,
+  };
 }
 
 module.exports = { createCredits, ceilMicros, DEFAULT_PRICES, DEFAULT_MAX_OUTPUT_TOKENS, GRANT_KINDS };

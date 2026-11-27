@@ -30,12 +30,25 @@ function createProviders(config, { providers: overrides = {} } = {}) {
     return provider;
   }
 
-  /** Can this model be called right now? Disabled models never are, whatever the mode. */
+  /**
+   * Can this model be called right now? Disabled models never are, whatever the mode. A configured
+   * gateway can still be unavailable for a while: the self-hosted server after it failed to serve
+   * (gateways.selfhosted.retryMs), so the picker applies PRIVATE_FALLBACK instead of sending every
+   * private request into the outage.
+   */
   function isAvailable(model) {
     if (!model || model.enabled === false || model.enabled === 0) return false;
     if (config.mock) return true;
     const provider = real[model.gateway];
-    return Boolean(provider && provider.configured());
+    if (!provider) return false;
+    return Boolean(typeof provider.available === "function" ? provider.available() : provider.configured());
+  }
+
+  /** Epoch ms until which a gateway counts as down after a failure to serve, or 0. */
+  function downUntil(gateway) {
+    if (config.mock) return 0;
+    const provider = real[gateway];
+    return provider && typeof provider.downUntil === "function" ? provider.downUntil() : 0;
   }
 
   /** { openrouter: bool, openai: bool, selfhosted: bool, fal: bool } for status pages. */
@@ -43,7 +56,7 @@ function createProviders(config, { providers: overrides = {} } = {}) {
     return Object.fromEntries(GATEWAYS.map((g) => [g, Boolean(config.mock || real[g].configured())]));
   }
 
-  return { get, isAvailable, status, mock: Boolean(config.mock) };
+  return { get, isAvailable, downUntil, status, mock: Boolean(config.mock) };
 }
 
 module.exports = { createProviders, GATEWAYS };

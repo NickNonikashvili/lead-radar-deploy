@@ -58,9 +58,24 @@ const TYPE_PHRASES = {
   refusal: "request refused by the model provider",
   provider_overloaded: "overloaded",
 };
+// STATUS_PHRASES speaks OpenRouter ("no provider available"); gateways that are a single service
+// get their own wording for the statuses where that reads wrong.
+const GATEWAY_STATUS_PHRASES = {
+  fal: { 502: "service unavailable", 503: "service unavailable" },
+  selfhosted: { 502: "server unavailable", 503: "server unavailable" },
+};
 // Statuses where the upstream's own wording helps an operator fix the request (bad parameter,
 // unsupported effort, ...). Auth/billing/policy failures get a fixed phrase only.
 const DETAIL_STATUSES = new Set([400, 404, 413, 422]);
+// Answers that mean "the server is not serving right now" rather than "this request is wrong".
+const UNAVAILABLE_STATUSES = new Set([502, 503, 504]);
+// Our own stream deadlines (config.gateways.timeouts); these defaults apply to hand-built configs.
+const DEFAULT_FIRST_BYTE_MS = 120_000;
+const DEFAULT_IDLE_MS = 90_000;
+// High reasoning efforts may think for minutes before the first token on gateways that stream no
+// reasoning (OpenAI chat completions), so their first-byte budget is stretched.
+const EFFORT_FIRST_BYTE_FACTOR = { high: 2, xhigh: 3, max: 4 };
+const TIMEOUT_MESSAGE = "The model took too long to respond.";
 
 /** Strip anything that could be a secret, personal data or quoted prompt text; keep it short. */
 function sanitizeUpstreamMessage(message) {
@@ -88,7 +103,8 @@ function safeType(type) {
 function upstreamError(gateway, { status = null, message, type, retryAfter = null } = {}) {
   const t = safeType(type);
   const detail = !status || DETAIL_STATUSES.has(status) ? sanitizeUpstreamMessage(message) : "";
-  const phrase = detail || (t && TYPE_PHRASES[t]) || STATUS_PHRASES[status] || "request failed";
+  const statusPhrase = GATEWAY_STATUS_PHRASES[gateway]?.[status] || STATUS_PHRASES[status];
+  const phrase = detail || (t && TYPE_PHRASES[t]) || statusPhrase || "request failed";
   const meta = [status ? String(status) : null, t].filter(Boolean).join(", ");
   const extra = { upstreamStatus: status || null, upstreamType: t };
   if (retryAfter) extra.retryAfter = String(retryAfter).slice(0, 32);
@@ -127,6 +143,75 @@ function abortReason(signal) {
   if (signal?.reason !== undefined) return signal.reason;
   return new DOMException("This operation was aborted", "AbortError");
 }
+
+/** Our own deadline fired: an upstream failure the pipeline reports and does not charge for. */
+function timeoutError(gateway, kind) {
+  return new AppError(502, "upstream_error", TIMEOUT_MESSAGE, { upstreamStatus: null, upstreamType: "timeout", timeout: kind, gateway });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Deadlines
+
+/** Milliseconds from config.gateways.timeouts; 0 (or negative) switches that deadline off. */
+function timeoutMs(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, n) : fallback;
+}
+
+/**
+ * First-byte and idle deadlines for one upstream call, as an AbortSignal to combine with the
+ * caller's. The first-byte timer runs from the request until the first data payload; after that
+ * the idle timer covers each wait for the next one. Only data payloads count: keepalive comments
+ * (": OPENROUTER PROCESSING") would otherwise keep a hung upstream alive forever.
+ * pause()/resume() stop the clock while the consumer handles a yielded event, so a slow consumer
+ * is never blamed on the upstream. Timers are ref'd (unlike AbortSignal.timeout) so a script
+ * waiting on a hung upstream ends with this error instead of exiting early; clear() must run when
+ * the call ends.
+ */
+function createDeadline({ firstByteMs, idleMs }) {
+  const ctl = new AbortController();
+  let timer = null;
+  let kind = null;
+  let gotData = false;
+  let firstLeft = firstByteMs; // first-byte budget not yet used, kept across pauses
+  let armedAt = 0;
+  const stop = () => {
+    if (timer) {
+      clearTimeout(timer);
+      if (!gotData) firstLeft = Math.max(1, firstLeft - (Date.now() - armedAt));
+    }
+    timer = null;
+  };
+  const arm = (ms, k) => {
+    stop();
+    if (!(ms > 0) || kind) return;
+    armedAt = Date.now();
+    timer = setTimeout(() => {
+      timer = null;
+      kind = k;
+      ctl.abort(new DOMException(`upstream ${k} deadline`, "TimeoutError"));
+    }, ms);
+  };
+  const resume = () => (gotData ? arm(idleMs, "idle") : arm(firstLeft, "first_byte"));
+  resume();
+  return {
+    signal: ctl.signal,
+    /** 'first_byte' | 'idle' once fired, else null. */
+    get kind() {
+      return kind;
+    },
+    /** A data payload arrived: the clock stops until resume(). */
+    data() {
+      stop();
+      gotData = true;
+    },
+    pause: stop,
+    resume,
+    clear: stop,
+  };
+}
+
+const combineSignals = (signal, other) => (signal ? AbortSignal.any([signal, other]) : other);
 
 // ---------------------------------------------------------------------------------------------
 // HTTP
@@ -186,13 +271,14 @@ async function ensureOk(gateway, res, signal) {
  * JSON request helper shared by the image and fal clients.
  * @returns {Promise<{ status: number, json: any, headers: Headers }>}
  */
-async function requestJSON(gateway, url, { method = "GET", headers = {}, body, signal, okStatuses, maxBytes = MAX_JSON_BODY } = {}) {
+async function requestJSON(gateway, url, { method = "GET", headers = {}, body, signal, okStatuses, maxBytes = MAX_JSON_BODY, onResponse } = {}) {
   const init = { method, headers: { Accept: "application/json", ...headers } };
   if (body !== undefined) {
     init.headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(body);
   }
   const res = await send(gateway, url, init, signal);
+  if (onResponse) onResponse(res);
   const accepted = okStatuses ? okStatuses.includes(res.status) : res.ok;
   if (!accepted) {
     if (res.ok) {
@@ -208,7 +294,8 @@ async function requestJSON(gateway, url, { method = "GET", headers = {}, body, s
   } catch (err) {
     if (signal?.aborted) throw abortReason(signal);
     if (err instanceof AppError) throw err;
-    throw new AppError(502, "upstream_error", `${gateway}: response interrupted`, { upstreamStatus: res.status });
+    // `interrupted`: the connection broke mid-body, which a retry may fix (fal polling).
+    throw new AppError(502, "upstream_error", `${gateway}: response interrupted`, { upstreamStatus: res.status, interrupted: true });
   }
   const json = parseJSON(text);
   if (json === undefined) throw upstreamError(gateway, { message: "response was not JSON" });
@@ -359,51 +446,119 @@ function usageEvent(state, messages, defaultUpstreamProvider) {
   };
 }
 
-/**
- * Stream a chat completion. Yields { type:'delta', text } then exactly one { type:'usage', ... }.
- * Aborts rethrow the signal's reason; every other failure is AppError(502, 'upstream_error').
- */
-async function* streamChatCompletion({ gateway, url, headers, body, signal, defaultUpstreamProvider = null }) {
-  const res = await send(
-    gateway,
-    url,
-    {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json", Accept: "text/event-stream" },
-      body: JSON.stringify(body),
-    },
-    signal
-  );
-  await ensureOk(gateway, res, signal);
+/** A network error from send(): nothing reached the upstream, or its server is not there. */
+function isNetworkError(err) {
+  return err instanceof AppError && err.code === "upstream_error" && Boolean(err.extra) && "networkCode" in err.extra;
+}
 
+/** Record which host got the prompt on an upstream error (never on the caller's abort reason). */
+function withUpstreamProvider(err, provider) {
+  if (provider && err instanceof AppError && err.code === "upstream_error") {
+    err.extra = { ...(err.extra || {}), upstreamProvider: provider };
+  }
+  return err;
+}
+
+const noHealth = { ok() {}, fail() {} };
+
+/**
+ * Stream a chat completion. Yields:
+ *   { type:'meta', upstreamProvider }  as soon as the host that got the prompt is known (the
+ *                                      gateway default once the upstream accepted the request, or
+ *                                      the first chunk's `provider` on OpenRouter), and again only
+ *                                      if a later chunk names a different one
+ *   { type:'delta', text }
+ *   exactly one { type:'usage', ... }, last
+ * Aborts rethrow the signal's reason; every other failure is AppError(502, 'upstream_error'), with
+ * extra.upstreamProvider once that is known. Our own first-byte/idle deadlines give the message
+ * "The model took too long to respond." (extra.timeout 'first_byte' | 'idle').
+ * `health.fail()` is called when the server did not serve at all (network error, 502/503/504, no
+ * data before the first-byte deadline) and `health.ok()` when it answered 2xx.
+ */
+async function* streamChatCompletion({ gateway, url, headers, body, signal, defaultUpstreamProvider = null, timeouts = {}, health = noHealth }) {
+  const deadline = createDeadline({
+    firstByteMs: timeoutMs(timeouts.firstByteMs, DEFAULT_FIRST_BYTE_MS),
+    idleMs: timeoutMs(timeouts.idleMs, DEFAULT_IDLE_MS),
+  });
+  const combined = combineSignals(signal, deadline.signal);
   const state = { usage: null, provider: null, model: null, finish: null, outChars: 0, done: false };
+  let reported = null; // last upstreamProvider sent as a meta event
+  let res = null;
+  const meta = (provider) => {
+    reported = provider;
+    return { type: "meta", upstreamProvider: provider };
+  };
+
   try {
+    try {
+      res = await send(
+        gateway,
+        url,
+        {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json", Accept: "text/event-stream" },
+          body: JSON.stringify(body),
+        },
+        combined
+      );
+    } catch (err) {
+      if (isNetworkError(err)) health.fail();
+      throw err;
+    }
+    if (!res.ok && UNAVAILABLE_STATUSES.has(res.status)) health.fail();
+    await ensureOk(gateway, res, combined);
+    health.ok();
+    // The upstream accepted the prompt: gateways with one known host can say so right away.
+    if (defaultUpstreamProvider) {
+      deadline.pause();
+      yield meta(defaultUpstreamProvider);
+      deadline.resume();
+    }
+
     if ((res.headers.get("content-type") || "").includes("application/json")) {
       // Some servers ignore stream:true (or put an error in a 200 JSON body).
       const json = parseJSON(await readTextLimited(res, MAX_JSON_BODY, { gateway }));
+      deadline.data();
       if (json === undefined) throw upstreamError(gateway, { message: "response was not JSON" });
+      if (typeof json.provider === "string" && json.provider && json.provider !== reported) yield meta(json.provider);
       const text = applyChunk(gateway, state, json);
       if (text) yield { type: "delta", text };
       state.done = true;
     } else {
       for await (const data of readSSE(res.body)) {
+        deadline.data();
         if (data.trim() === "[DONE]") {
           state.done = true;
           break;
         }
         const chunk = parseJSON(data);
         if (chunk === undefined) throw upstreamError(gateway, { message: "malformed stream chunk" });
+        // Before applyChunk: an error chunk names its provider too, and the pipeline should know
+        // who got the prompt even when the stream fails right here.
+        if (typeof chunk.provider === "string" && chunk.provider && chunk.provider !== reported) yield meta(chunk.provider);
         const text = applyChunk(gateway, state, chunk);
         if (text) yield { type: "delta", text };
+        deadline.resume();
       }
     }
   } catch (err) {
     if (signal?.aborted) throw abortReason(signal);
-    if (err instanceof AppError) throw err;
-    throw new AppError(502, "upstream_error", `${gateway}: stream interrupted`, { upstreamStatus: res.status });
+    // Once the upstream answered (or we waited on it past a deadline) it had the prompt.
+    const provider = res || deadline.kind ? (state.provider ?? reported ?? defaultUpstreamProvider) : null;
+    if (deadline.kind) {
+      // No data at all before the deadline: the server is not serving (overloaded or hung).
+      if (deadline.kind === "first_byte") health.fail();
+      throw withUpstreamProvider(timeoutError(gateway, deadline.kind), provider);
+    }
+    if (err instanceof AppError) throw withUpstreamProvider(err, provider);
+    throw withUpstreamProvider(new AppError(502, "upstream_error", `${gateway}: stream interrupted`, { upstreamStatus: res?.status ?? null }), provider);
+  } finally {
+    deadline.clear();
   }
   // A body that just stops (no [DONE], no finish_reason) was cut off, not finished.
-  if (!state.done && !state.finish) throw upstreamError(gateway, { message: "stream ended unexpectedly" });
+  if (!state.done && !state.finish) {
+    throw withUpstreamProvider(upstreamError(gateway, { message: "stream ended unexpectedly" }), state.provider ?? defaultUpstreamProvider);
+  }
   yield usageEvent(state, body.messages, defaultUpstreamProvider);
 }
 
@@ -435,9 +590,41 @@ function responseFormat(schema) {
   };
 }
 
-/** Non-streaming JSON completion. Returns { json, text, usage: { inputTokens, outputTokens, costUsd } }. */
-async function completeChatJSON({ gateway, url, headers, body, signal }) {
-  const { json: res } = await requestJSON(gateway, url, { method: "POST", headers, body, signal });
+/**
+ * Non-streaming JSON completion. Returns { json, text, usage: { inputTokens, outputTokens, costUsd } }.
+ * A non-stream answer has no bytes until it is complete, so the first-byte deadline covers the whole
+ * generation and the idle deadline the body. `health` as for streamChatCompletion.
+ */
+async function completeChatJSON({ gateway, url, headers, body, signal, timeouts = {}, health = noHealth }) {
+  const deadline = createDeadline({
+    firstByteMs: timeoutMs(timeouts.firstByteMs, DEFAULT_FIRST_BYTE_MS),
+    idleMs: timeoutMs(timeouts.idleMs, DEFAULT_IDLE_MS),
+  });
+  let res;
+  try {
+    ({ json: res } = await requestJSON(gateway, url, {
+      method: "POST",
+      headers,
+      body,
+      signal: combineSignals(signal, deadline.signal),
+      onResponse: (r) => {
+        if (r.ok) health.ok();
+        else if (UNAVAILABLE_STATUSES.has(r.status)) health.fail();
+        deadline.data(); // headers are the first byte; the body gets the idle budget
+        deadline.resume();
+      },
+    }));
+  } catch (err) {
+    if (signal?.aborted) throw abortReason(signal);
+    if (deadline.kind) {
+      if (deadline.kind === "first_byte") health.fail();
+      throw timeoutError(gateway, deadline.kind);
+    }
+    if (isNetworkError(err)) health.fail();
+    throw err;
+  } finally {
+    deadline.clear();
+  }
   const state = { usage: null, provider: null, model: null, finish: null, outChars: 0 };
   const text = applyChunk(gateway, state, res);
   if (!text && state.finish === "length") {
@@ -473,10 +660,27 @@ async function completeChatJSON({ gateway, url, headers, body, signal }) {
  * @param {(args: object, effort: string|null) => object} [spec.jsonFields]
  * @param {boolean} [spec.maxTokensLegacy]            send max_tokens instead of max_completion_tokens
  * @param {string|null} [spec.defaultUpstreamProvider]
+ * @param {() => {firstByteMs?: number, idleMs?: number}} [spec.timeouts]  config.gateways.timeouts
+ * @param {() => number} [spec.outageRetryMs]  > 0: after the server failed to serve (network error,
+ *   502/503/504, first-byte timeout) available() is false for this long. For single-server
+ *   gateways only (self-hosted): one failure there means the server is down, while on OpenRouter
+ *   it would only mean one route had a bad moment.
  */
 function createChatProvider(spec) {
   const { name } = spec;
   const maxField = spec.maxTokensLegacy ? "max_tokens" : "max_completion_tokens";
+  let downUntil = 0;
+  const health = {
+    ok() {
+      downUntil = 0;
+    },
+    fail() {
+      const ms = Number(spec.outageRetryMs ? spec.outageRetryMs() : 0);
+      if (ms > 0) downUntil = Date.now() + ms;
+    },
+  };
+  const isDown = () => downUntil > Date.now();
+  const timeouts = () => (spec.timeouts && spec.timeouts()) || {};
 
   function requireConfigured() {
     if (!spec.configured()) throw notConfigured(name);
@@ -489,6 +693,10 @@ function createChatProvider(spec) {
   return {
     name,
     configured: () => Boolean(spec.configured()),
+    /** Configured and not marked down after a failure to serve (see spec.outageRetryMs). */
+    available: () => Boolean(spec.configured()) && !isDown(),
+    /** Epoch ms until which the server counts as down, or 0. */
+    downUntil: () => (isDown() ? downUntil : 0),
 
     async *streamChat(args = {}) {
       const { model, messages, effort, maxTokens, signal } = args;
@@ -497,7 +705,10 @@ function createChatProvider(spec) {
       const body = { model: model.slug, messages: toWireMessages(messages), stream: true };
       const max = positiveInt(maxTokens);
       if (max) body[maxField] = max;
-      Object.assign(body, spec.chatFields ? spec.chatFields(args, resolveEffort(model, effort)) : {});
+      const resolved = resolveEffort(model, effort);
+      Object.assign(body, spec.chatFields ? spec.chatFields(args, resolved) : {});
+      const t = timeouts();
+      const firstByteMs = timeoutMs(t.firstByteMs, DEFAULT_FIRST_BYTE_MS) * (EFFORT_FIRST_BYTE_FACTOR[resolved] || 1);
       yield* streamChatCompletion({
         gateway: name,
         url: `${spec.baseUrl()}/chat/completions`,
@@ -505,6 +716,8 @@ function createChatProvider(spec) {
         body,
         signal,
         defaultUpstreamProvider: spec.defaultUpstreamProvider ?? null,
+        timeouts: { firstByteMs, idleMs: t.idleMs },
+        health,
       });
     },
 
@@ -534,6 +747,8 @@ function createChatProvider(spec) {
         headers: spec.headers(),
         body,
         signal,
+        timeouts: timeouts(),
+        health,
       });
     },
 
@@ -562,4 +777,6 @@ module.exports = {
   notConfigured,
   abortReason,
   positiveInt,
+  createDeadline,
+  TIMEOUT_MESSAGE,
 };

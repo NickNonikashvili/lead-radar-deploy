@@ -5,6 +5,7 @@
 // check (Stripe sends no Origin and no session cookie).
 const express = require("express");
 const { AppError, ah, microsToUsd, usdToMicros } = require("../util");
+const { rateLimit } = require("../auth");
 const { bodyObject, onlyKeys, numberField, intQuery, flagQuery, badRequest } = require("./validate");
 
 // What a statement shows by default. Every request also writes a hold/release pair around its
@@ -13,12 +14,19 @@ const STATEMENT_KINDS = ["purchase", "signup_bonus", "dev_topup", "admin_adjust"
 const LEDGER_DEFAULT = 50;
 const LEDGER_MAX = 500;
 const DEV_TOPUP_MAX_USD = 100;
+// Each checkout is a real Stripe API write: per user, so one account cannot exhaust the operator's
+// Stripe rate limit and block everyone else's purchases.
+const CHECKOUT_LIMIT = Object.freeze({ windowMs: 15 * 60 * 1000, max: 10 });
 
 /**
  * @param {object} ctx  app context (see src/app.js)
  */
-function createBillingRoutes({ config, auth, credits, stripe }) {
+function createBillingRoutes({ config, auth, credits, stripe, limiters = {}, rateLimits = {} }) {
   const router = express.Router();
+  // src/app.js may provide this limiter (stopped on shutdown); otherwise the router owns one.
+  const checkoutLimiter =
+    limiters.checkout ||
+    rateLimit({ ...CHECKOUT_LIMIT, ...(rateLimits.checkout || {}), key: (req) => (req.user ? `user:${req.user.id}` : null) });
 
   router.get("/billing/ledger", auth.requireUser, (req, res) => {
     const limit = intQuery(req.query.limit, "limit", { min: 1, max: LEDGER_MAX, dflt: LEDGER_DEFAULT });
@@ -26,6 +34,8 @@ function createBillingRoutes({ config, auth, credits, stripe }) {
     const rows = credits.ledger(req.user.id, { limit, kinds: all ? undefined : STATEMENT_KINDS });
     res.json({
       balance_usd: microsToUsd(credits.balance(req.user.id)),
+      // Credit on hold for answers still running (already taken out of balance_usd).
+      held_usd: microsToUsd(typeof credits.held === "function" ? credits.held(req.user.id) : 0),
       entries: rows.map((r) => ({ id: r.id, kind: r.kind, delta_usd: microsToUsd(r.delta_micros), created_at: r.created_at })),
     });
   });
@@ -33,6 +43,7 @@ function createBillingRoutes({ config, auth, credits, stripe }) {
   router.post(
     "/billing/checkout",
     auth.requireUser,
+    checkoutLimiter,
     ah(async (req, res) => {
       const body = bodyObject(req);
       onlyKeys(body, ["pack_usd"]);
@@ -76,4 +87,4 @@ function createWebhookHandler({ stripe }) {
   };
 }
 
-module.exports = { createBillingRoutes, createWebhookHandler, STATEMENT_KINDS, DEV_TOPUP_MAX_USD };
+module.exports = { createBillingRoutes, createWebhookHandler, STATEMENT_KINDS, DEV_TOPUP_MAX_USD, CHECKOUT_LIMIT };

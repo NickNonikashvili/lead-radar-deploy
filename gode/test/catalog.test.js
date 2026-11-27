@@ -276,8 +276,55 @@ test("EU-region OpenRouter models are pinned to their EU host with no fallback",
 
 test("text model params hold only adapter inputs, never upstream body fields", () => {
   for (const m of MODELS.filter(isText)) {
-    for (const k of Object.keys(m.params)) assert.ok(["reasoning", "openrouter_provider"].includes(k), `${m.id} params.${k}`);
+    for (const k of Object.keys(m.params)) assert.ok(["reasoning", "openrouter_provider", "pricing"].includes(k), `${m.id} params.${k}`);
+    // params.pricing only matters where the gateway reports no cost.
+    if (m.params.pricing) assert.notEqual(m.gateway, "openrouter", `${m.id}: OpenRouter reports the real cost`);
   }
+});
+
+test("direct-OpenAI models carry their cache-read and long-prompt rates", () => {
+  const astra = byId.get("openai:gpt-6.2-astra");
+  assert.deepEqual(astra.params.pricing, { cached_in: 0.4, long_context: { above_input_tokens: 272000, in_mult: 2, out_mult: 1.5 } });
+  assert.deepEqual(catalog.textRates(astra, 1000), { in: 8, out: 40, cachedIn: 0.4 });
+  assert.deepEqual(catalog.textRates(astra, 272001), { in: 16, out: 60, cachedIn: 0.8 });
+  assert.deepEqual(catalog.textRates(astra, 272000), { in: 8, out: 40, cachedIn: 0.4 }, "the long rate starts above the threshold");
+  assert.equal(byId.get("openai:gpt-6-luna").params.pricing.cached_in, 0.01);
+  // No params.pricing: cached tokens cost the input rate, unknown prices stay unknown.
+  assert.deepEqual(catalog.textRates(byId.get("openai:gpt-6.2-sol"), 500000), { in: 2, out: 10, cachedIn: 2 });
+  assert.deepEqual(catalog.textRates({ price_in: null, price_out: null }, 10), { in: null, out: null, cachedIn: null });
+});
+
+test("media models with a duration input list the durations their endpoint accepts", () => {
+  for (const m of MODELS.filter(isMedia)) {
+    const p = m.params;
+    if (p.duration_options === undefined) continue;
+    assert.notEqual(p.duration, undefined, `${m.id}: duration_options without a default duration`);
+    assert.deepEqual(catalog.validateParams(p), [], m.id);
+    // The catalog default is itself one of the allowed values.
+    assert.equal(catalog.durationFor(m, parseFloat(p.duration)), p.duration, m.id);
+  }
+  for (const id of ["fal:fal-ai/veo3.1/lite", "fal:fal-ai/veo3.1", "fal:alibaba/wan-3.0/text-to-video", "fal:fal-ai/ltx-2.3/text-to-video/fast"]) {
+    assert.ok(byId.get(id).params.duration_options, `${id} has duration_options`);
+  }
+  const veo = byId.get("fal:fal-ai/veo3.1/lite");
+  const wan = byId.get("fal:alibaba/wan-3.0/text-to-video");
+  const ltx = byId.get("fal:fal-ai/ltx-2.3/text-to-video/fast");
+  assert.equal(catalog.durationFor(veo, 5), "4s", "a tie goes to the shorter, cheaper clip");
+  assert.equal(catalog.durationFor(veo, 7), "6s");
+  assert.equal(catalog.durationFor(veo, 20), "8s");
+  assert.equal(catalog.durationFor(wan, 20), 20);
+  assert.equal(catalog.durationFor(wan, 0.5), 2, "clamped up to the shortest allowed clip");
+  assert.equal(catalog.durationFor(wan, 1), 2);
+  assert.equal(catalog.durationFor(wan, 90), 30);
+  assert.equal(catalog.durationFor(ltx, 13), 12);
+  assert.equal(catalog.durationFor(ltx, 3), 6);
+  assert.equal(catalog.durationFor(veo, undefined), null);
+  assert.equal(catalog.durationFor(veo, -4), null);
+  // No duration input (ElevenLabs Music uses music_length_ms) or no options: the default stays.
+  assert.equal(catalog.durationFor(byId.get("fal:elevenlabs/music/v2.5"), 20), null);
+  assert.equal(catalog.durationFor({ params: { duration: 5 } }, 20), null);
+  assert.equal(catalog.durationFor({ params: { duration: "5", duration_options: { min: 2, max: 10 } } }, 8), "8");
+  assert.equal(catalog.durationFor({ params: { duration: "5s", duration_options: { min: 2, max: 10 } } }, 8), "8s");
 });
 
 test("direct-OpenAI image models store WebP, not multi-megabyte PNG data URLs", () => {
@@ -393,6 +440,68 @@ test("validateModel checks the catalog-only params keys adapters read on every r
   assert.match(withParams({ reasoning: { efforts: ["ultra"] } }).join(), /reasoning\.efforts/);
   assert.match(withParams({ reasoning: { mandatory: "yes" } }).join(), /reasoning\.mandatory/);
   assert.match(withParams([]).join(), /params must be an object/);
+  // pricing
+  assert.deepEqual(withParams({ pricing: { cached_in: 0.01, long_context: { above_input_tokens: 272000, in_mult: 2, out_mult: 1.5 } } }), []);
+  assert.match(withParams({ pricing: "cheap" }).join(), /params\.pricing must be an object/);
+  assert.match(withParams({ pricing: { cached: 0.1 } }).join(), /params\.pricing\.cached is not supported/);
+  assert.match(withParams({ pricing: { cached_in: -1 } }).join(), /cached_in must be a price/);
+  assert.match(withParams({ pricing: { long_context: { above_input_tokens: 1.5 } } }).join(), /above_input_tokens must be a positive whole number/);
+  assert.match(withParams({ pricing: { long_context: { above_input_tokens: 10, in_mult: 0 } } }).join(), /in_mult must be a positive number/);
+  assert.match(withParams({ pricing: { long_context: { above_input_tokens: 10, tier: 2 } } }).join(), /long_context\.tier is not supported/);
+  // duration_options
+  assert.deepEqual(withParams({ duration: "4s", duration_options: ["4s", "6s", 8] }), []);
+  assert.deepEqual(withParams({ duration: 5, duration_options: { min: 2, max: 30 } }), []);
+  assert.match(withParams({ duration_options: [4] }).join(), /needs a default params\.duration/);
+  assert.match(withParams({ duration: 4, duration_options: [] }).join(), /1 to 100 durations/);
+  assert.match(withParams({ duration: 4, duration_options: ["four"] }).join(), /entries must be durations/);
+  assert.match(withParams({ duration: 4, duration_options: { min: 5, max: 2 } }).join(), /0 < min <= max/);
+  assert.match(withParams({ duration: 4, duration_options: { min: 1, max: 5, step: 2 } }).join(), /0 < min <= max/);
+  assert.match(withParams({ duration: 4, duration_options: "4s" }).join(), /a list or \{ min, max \}/);
+});
+
+test("validateModel ties privacy flags to what the gateway can enforce", () => {
+  const flash = byId.get("openrouter:deepseek/deepseek-v4.1-flash");
+  const sol = byId.get("openai:gpt-6.2-sol");
+  const flux = byId.get("fal:blackforestlabs/flux-3/klein/text-to-image");
+  const self = byId.get("selfhosted:qwen3.8-27b");
+  // self_hosted and region "self" only on the selfhosted gateway (that gateway alone gets real text).
+  assert.match(validateModel({ ...flash, self_hosted: true }).join(), /self_hosted is only for models on the selfhosted gateway/);
+  assert.match(validateModel({ ...flash, region: "self" }).join(), /region "self" is only for/);
+  assert.deepEqual(validateModel(self), []);
+  // zdr: never on fal; on openai only when OpenAI approved zero retention for the key.
+  assert.match(validateModel({ ...flux, zdr: true }).join(), /zdr is not possible on fal/);
+  assert.match(validateModel({ ...sol, zdr: true }).join(), /OPENAI_ZDR_APPROVED/);
+  assert.deepEqual(validateModel({ ...sol, zdr: true }, { openaiZdrApproved: true }), []);
+  assert.deepEqual(validateModel({ ...flash, zdr: true }), [], "OpenRouter enforces zdr per request");
+
+  // importCatalog applies the same rules (an export with a mislabelled row is refused).
+  const db = openDb(":memory:");
+  assert.throws(() => importCatalog(db, { models: [{ ...flash, self_hosted: true }], routes: [] }), (e) => e.status === 400 && /self_hosted/.test(e.message));
+  assert.throws(() => importCatalog(db, { models: [{ ...sol, zdr: true }], routes: [] }), (e) => e.status === 400);
+  assert.deepEqual(importCatalog(db, { models: [{ ...sol, zdr: true }], routes: [] }, { openaiZdrApproved: true }), { models: 1, routes: 0 });
+});
+
+test("repairCatalog clears privacy flags old rows claim but their gateway can't enforce", () => {
+  const db = openDb(":memory:");
+  seedCatalog(db);
+  assert.deepEqual(catalog.repairCatalog(db), [], "the seeds are clean");
+  const flash = "openrouter:deepseek/deepseek-v4.1-flash";
+  const sol = "openai:gpt-6.2-sol";
+  const flux = "fal:blackforestlabs/flux-3/klein/text-to-image";
+  db.prepare("UPDATE models SET self_hosted = 1, region = 'self' WHERE id = ?").run(flash);
+  db.prepare("UPDATE models SET zdr = 1 WHERE id IN (?, ?)").run(sol, flux);
+  // With OpenAI's approval the openai zdr flag is legitimate and stays.
+  assert.deepEqual(catalog.repairCatalog(db, { openaiZdrApproved: true }), [flux, flash].sort());
+  assert.equal(getModel(db, sol).zdr, true);
+  assert.deepEqual(catalog.repairCatalog(db), [sol]);
+  const fixed = getModel(db, flash);
+  assert.equal(fixed.self_hosted, false);
+  assert.equal(fixed.region, null);
+  assert.equal(fixed.zdr, true, "OpenRouter's own zdr flag is untouched");
+  assert.equal(getModel(db, flux).zdr, false);
+  assert.equal(getModel(db, sol).zdr, false);
+  assert.equal(getModel(db, "selfhosted:qwen3.8-27b").self_hosted, true);
+  assert.deepEqual(catalog.repairCatalog(db), []);
 });
 
 test("setRoute and importCatalog report bad input as AppError 400", () => {

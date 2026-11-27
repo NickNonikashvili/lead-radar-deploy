@@ -52,6 +52,9 @@
 //   chat_truncated        stream ends without finish_reason or [DONE]
 //   chat_no_usage         no usage chunk (adapters must estimate)
 //   chat_slow             40 deltas, 40 ms apart (abort tests); stops writing when the client leaves
+//   chat_keepalive_only   200 SSE, then only ": keepalive" comments every chat.keepaliveMs (timeouts)
+//   chat_stall            one delta, then only keepalive comments (idle timeout mid-stream)
+//   chat_hang             never answers, not even headers (first-byte timeout before the response)
 //   images_error          400 from /images/generations
 //   fal_failed            status COMPLETED with error/error_type
 //   fal_result_error      result GET answers 422 {detail:[{loc,msg,type}]}
@@ -59,6 +62,9 @@
 //   fal_stuck             status stays IN_PROGRESS forever (timeout/abort/cancel tests)
 //   fal_submit_error      submit answers 401 {detail, type:"rejected_key"}
 //   (option) setScenario({ fal: { foreignUrls: true } }): submit returns URLs on another host
+//   (option) fal.statusFailures { [n]: status | "reset" }: status poll n (1-based, per request) fails
+//            with that HTTP status (JSON body, Retry-After: fal.retryAfter when set) or a reset socket
+//   (option) fal.resultFailures [status | "reset", ...]: the first result GETs fail in this order
 //   presidio_down         /analyze and /health answer 500
 //   presidio_slow         /analyze waits scenario.presidio.delayMs (default 2000) before answering
 //   stripe_error          checkout answers 400 {error:{type,message}}
@@ -73,7 +79,7 @@ function defaultScenario() {
   return {
     name: "ok",
     chat: {
-      mode: "ok", // ok | error | midstream_error | error_only | truncated | no_usage | slow
+      mode: "ok", // ok | error | midstream_error | error_only | truncated | no_usage | slow | keepalive_only | stall | hang
       status: 400,
       error: { code: 400, message: "Invalid request: model is required", metadata: { error_type: "invalid_request" } },
       retryAfter: null,
@@ -92,11 +98,12 @@ function defaultScenario() {
       provider: "MockProvider",
       delayMs: 2,
       comments: true,
+      keepaliveMs: 20, // keepalive_only / stall: interval between ": keepalive" comments
     },
     // b64Bytes: pad the returned base64 to this many characters (large-image tests).
     images: { mode: "ok", status: 400, error: { message: "Invalid size", type: "invalid_request_error", code: "invalid_value" }, b64Bytes: 0 },
     // foreignUrls: submit returns status/response/cancel URLs on another host (key-leak guard tests).
-    fal: { mode: "ok", polls: 2, status: 422, result: null, foreignUrls: false },
+    fal: { mode: "ok", polls: 2, status: 422, result: null, foreignUrls: false, statusFailures: null, resultFailures: null, retryAfter: null },
     presidio: { mode: "ok", delayMs: 2000 },
     stripe: { mode: "ok", status: 400 },
   };
@@ -131,6 +138,9 @@ const PRESETS = {
   chat_truncated: { chat: { mode: "truncated" } },
   chat_no_usage: { chat: { mode: "no_usage" } },
   chat_slow: { chat: { mode: "slow", delayMs: 40, deltas: Array.from({ length: 40 }, (_, i) => ` w${i}`) } },
+  chat_keepalive_only: { chat: { mode: "keepalive_only" } },
+  chat_stall: { chat: { mode: "stall" } },
+  chat_hang: { chat: { mode: "hang" } },
   images_error: { images: { mode: "error" } },
   fal_failed: { fal: { mode: "failed" } },
   fal_result_error: { fal: { mode: "result_error" } },
@@ -226,6 +236,11 @@ function chatErrorBody(sc) {
 
 async function handleChat(req, res, body, sc) {
   const c = sc.chat;
+  if (c.mode === "hang") {
+    // Never answer: the client's own deadline (or hanging up) ends this.
+    await new Promise((resolve) => res.on("close", resolve));
+    return;
+  }
   if (c.mode === "error") {
     return sendJSON(res, c.status, chatErrorBody(c), c.retryAfter ? { "Retry-After": c.retryAfter } : {});
   }
@@ -271,7 +286,12 @@ async function handleChat(req, res, body, sc) {
     choices: [{ index: 0, delta: { content: "" }, finish_reason: "error" }],
   };
 
+  // Keepalive comments until the client leaves: an upstream that is "alive" but never answers.
+  const keepalive = async () => {
+    while (await write(": keepalive\n\n")) await wait(c.keepaliveMs);
+  };
   if (c.comments) await write(": OPENROUTER PROCESSING\n\n");
+  if (c.mode === "keepalive_only") return keepalive();
   if (c.mode === "error_only") {
     await event(errorChunk);
     return res.end();
@@ -284,6 +304,7 @@ async function handleChat(req, res, body, sc) {
   for (let i = 0; i < deltas.length; i++) {
     const ok = await event({ ...base, choices: [{ index: 0, delta: { content: deltas[i] }, finish_reason: null }] }, i === 1);
     if (!ok) return; // client went away (abort tests)
+    if (c.mode === "stall" && i === 0) return keepalive();
     if (c.mode === "midstream_error" && i === 0) {
       await event(errorChunk);
       return res.end();
@@ -332,6 +353,12 @@ function falResult(endpoint, sc) {
   return { images: [{ url: `${media}/image.png`, width: 1024, height: 1024, content_type: "image/png" }], seed: 42 };
 }
 
+/** A transient-looking fal failure: an HTTP status (fal's edge answers JSON) or a dropped socket. */
+function falFailure(res, failure, sc) {
+  if (failure === "reset") return res.socket.destroy();
+  return sendJSON(res, failure, { detail: "Service temporarily unavailable" }, sc.fal.retryAfter ? { "Retry-After": String(sc.fal.retryAfter) } : {});
+}
+
 function handleFal(req, res, pathname, body, sc, state, baseUrl) {
   const rest = pathname.slice("/fal/".length);
   const m = /^([^/]+)\/([^/]+)\/requests\/([^/]+)(\/status|\/cancel)?$/.exec(rest);
@@ -373,6 +400,8 @@ function handleFal(req, res, pathname, body, sc, state, baseUrl) {
   }
   if (action === "/status") {
     r.polls += 1;
+    const failure = sc.fal.statusFailures ? sc.fal.statusFailures[r.polls] : undefined;
+    if (failure !== undefined) return falFailure(res, failure, sc);
     if (r.cancelled) {
       r.completed = true;
       return sendJSON(res, 200, { status: "COMPLETED", ...urls, error: "Request cancelled", error_type: "client_cancelled", metrics: {} });
@@ -389,6 +418,9 @@ function handleFal(req, res, pathname, body, sc, state, baseUrl) {
   }
   // Result.
   if (!r.completed) return sendJSON(res, 400, { detail: "Request is still in progress", ...urls });
+  r.resultGets = (r.resultGets || 0) + 1;
+  const resultFailure = Array.isArray(sc.fal.resultFailures) ? sc.fal.resultFailures[r.resultGets - 1] : undefined;
+  if (resultFailure !== undefined) return falFailure(res, resultFailure, sc);
   if (sc.fal.mode === "result_error") {
     return sendJSON(res, sc.fal.status, { detail: [{ loc: ["body", "prompt"], msg: "field required", type: "value_error.missing" }] });
   }

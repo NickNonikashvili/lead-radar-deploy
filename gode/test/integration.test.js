@@ -328,7 +328,7 @@ describe("integration: one account end to end (mock mode)", () => {
     assertBooksBalanced(db);
   });
 
-  test("a client disconnect mid-stream aborts upstream and releases the hold", async () => {
+  test("a client disconnect mid-stream aborts upstream; the partial answer is kept and charged", async () => {
     // Watch the signal the pipeline hands the provider.
     const { providers } = t.deps;
     const realGet = providers.get;
@@ -367,19 +367,22 @@ describe("integration: one account end to end (mock mode)", () => {
       assert.equal(signals.length, 1);
       assert.equal(signals[0].aborted, true, "the upstream call was told to stop");
       const row = requestRow(db, requestId);
-      assert.equal(row.status, "error");
-      assert.equal(row.error_code, "aborted");
-      assert.equal(row.charged_micros, 0);
-      assert.equal(balanceMicros(db, me.user.id), before, "the hold went back in full");
+      assert.equal(row.status, "stopped");
+      assert.equal(row.error_code, null);
+      // What streamed before the stop is paid for (estimated: input sent + text streamed).
+      assert.ok(row.charged_micros > 0);
+      assert.ok(row.message_id, "the partial answer was stored");
+      assert.equal(balanceMicros(db, me.user.id), before - row.charged_micros);
       assertBooksBalanced(db);
 
-      // The question was kept, the partial answer was not. Asking again reuses the question.
+      // The question and the stopped partial answer are both in the conversation.
       let conv = await me.c.json("GET", `/api/conversations/${conversationId}`);
-      assert.equal(conv.body.messages.at(-1).role, "user");
-      assert.equal(conv.body.messages.at(-1).text, text);
+      assert.deepEqual(conv.body.messages.slice(-2).map((m) => m.role), ["user", "assistant"]);
+      assert.equal(conv.body.messages.at(-2).text, text);
+      assert.equal(conv.body.messages.at(-1).id, row.message_id);
+      // Asking again is a new question (the old one has its stopped answer).
       const retry = assertAnswered(await me.c.sse("/api/chat", { conversation_id: conversationId, text }));
       conv = await me.c.json("GET", `/api/conversations/${conversationId}`);
-      assert.equal(conv.body.messages.filter((m) => m.role === "user" && m.text === text).length, 1, "not stored twice");
       assert.equal(conv.body.messages.at(-1).id, retry.done.message_id);
       requestIds.push(requestId, retry.done.request_id);
     } finally {
@@ -394,16 +397,22 @@ describe("integration: one account end to end (mock mode)", () => {
     const ownRequests = db.prepare("SELECT id FROM requests WHERE user_id = ?").all(me.user.id).map((x) => x.id);
     assert.deepEqual(new Set(rows.map((x) => x.id)), new Set(ownRequests), "every request, nobody else's");
     for (const id of requestIds) assert.ok(rows.some((x) => x.id === id), `request ${id} listed`);
+    // The base columns, plus the classifier columns the transparency page may add; never text.
+    const base = [
+      "cost_usd", "created_at", "effort", "error_code", "gateway", "id", "job", "kind", "model_id", "model_label",
+      "private", "redactions", "status", "tier", "upstream_provider", "zdr",
+    ];
+    const optional = ["classifier_label", "classifier_model"];
     for (const row of rows) {
-      assert.deepEqual(Object.keys(row).sort(), [
-        "cost_usd", "created_at", "effort", "error_code", "gateway", "id", "job", "kind", "model_id", "model_label",
-        "private", "redactions", "status", "tier", "upstream_provider", "zdr",
-      ]);
+      const keys = Object.keys(row);
+      for (const k of base) assert.ok(keys.includes(k), `transparency row has ${k}`);
+      for (const k of keys) assert.ok(base.includes(k) || optional.includes(k), `unexpected transparency column ${k}`);
     }
     const ok = rows.find((x) => x.id === requestIds[0]);
     assert.deepEqual(ok.redactions, { PERSON: 1, EMAIL: 1 }, "counts only");
     assert.equal(ok.status, "ok");
-    assert.equal(rows.find((x) => x.error_code === "aborted")?.status, "error");
+    const stopped = rows.find((x) => x.status === "stopped");
+    assert.ok(stopped && stopped.cost_usd > 0, "the stopped answer is listed with what it cost");
     assert.equal(rows.find((x) => x.error_code === "private_blocked")?.cost_usd, 0);
     // Newest first.
     const times = rows.map((x) => x.created_at);
@@ -477,25 +486,28 @@ describe("integration: insufficient credits", () => {
     assertBooksBalanced(db);
   });
 
-  test("a hold larger than the balance is capped and settled; the next turn is refused", async () => {
+  test("a balance too small for any answer is refused up front; a small one buys a shorter answer, never an overdraft", async () => {
     const me = await signedIn(t, "nearly-broke");
-    // One micro-dollar: the hold is capped at the balance, the answer costs more.
+    // One micro-dollar: not even the input fits, so nothing is held, sent or stored.
     assert.equal((await me.c.json("POST", "/api/billing/dev-topup", { usd: 0.000001 })).body.balance_usd, 0.000001);
     const r = await me.c.sse("/api/chat", { text: "What is the capital of Portugal?" });
-    const { done } = assertAnswered(r);
-    const holds = db.prepare("SELECT delta_micros FROM ledger WHERE user_id = ? AND kind = 'hold'").all(me.user.id);
-    assert.deepEqual(holds.map((h) => h.delta_micros), [-1], "hold = min(estimate, balance)");
-    assert.equal(balanceMicros(db, me.user.id), 1 - usdToMicros(done.cost_usd), "slightly negative after the charge");
-    assert.ok(balanceMicros(db, me.user.id) < 0);
-    assertBooksBalanced(db);
+    const err = assertRefused(r, "insufficient_credits");
+    assert.match(err.error, /too low for an answer/);
+    assert.equal(err.conversation_id, undefined);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM ledger WHERE user_id = ? AND kind = 'hold'").get(me.user.id).n, 0, "no hold");
+    assert.equal(balanceMicros(db, me.user.id), 1);
 
-    const again = await me.c.sse("/api/chat", { conversation_id: done.conversation_id, text: "And of Spain?" });
-    const err = assertRefused(again, "insufficient_credits");
-    assert.equal(err.conversation_id, done.conversation_id, "the chat exists, so the error names it");
-    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM ledger WHERE user_id = ? AND kind = 'hold'").get(me.user.id).n, 1, "no second hold");
+    // A cent: the answer goes through with a cap that fits, and the balance stays >= 0.
+    await me.c.json("POST", "/api/billing/dev-topup", { usd: 0.01 });
+    const ok = assertAnswered(await me.c.sse("/api/chat", { text: "What is the capital of Spain?" }));
+    const [hold] = db.prepare("SELECT delta_micros FROM ledger WHERE user_id = ? AND kind = 'hold'").all(me.user.id);
+    assert.ok(-hold.delta_micros <= 10_001, "the hold fits the balance");
+    assert.ok(balanceMicros(db, me.user.id) >= 0, "never below zero");
+    assert.equal(balanceMicros(db, me.user.id), 10_001 - usdToMicros(ok.done.cost_usd));
     const ledger = await me.c.json("GET", "/api/billing/ledger?all=1");
     const sum = ledger.body.entries.reduce((s, e) => s + usdToMicros(e.delta_usd), 0);
     assert.equal(sum, balanceMicros(db, me.user.id));
+    assert.equal(ledger.body.held_usd, 0);
     assertBooksBalanced(db);
   });
 });
@@ -609,7 +621,8 @@ describe("integration: real gateway adapters (mock upstream)", () => {
     assert.equal(route.model.id, QWEN_IMAGE);
     assert.deepEqual(all(r, "progress").at(-1), { status: "running" });
     assert.ok(all(r, "progress").some((p) => p.status === "queued" && Number.isInteger(p.position)));
-    assert.deepEqual(all(r, "media"), [{ type: "image", url: "https://v3.fal.media/files/mock/image.png", mime: "image/png" }]);
+    // The browser gets Gode's media proxy link, after the answer was stored with the fal URL.
+    assert.deepEqual(all(r, "media"), [{ type: "image", url: `/api/media/${done.message_id}/0`, mime: "image/png" }]);
     const submit = up.find("/fal/alibaba/qwen-image-3/text-to-image").find((q) => q.method === "POST");
     assert.equal(submit.headers.authorization, "Key fal-test-integration");
     assert.equal(submit.body.prompt, "Draw a picture of a red fox in the snow");
@@ -619,7 +632,7 @@ describe("integration: real gateway adapters (mock upstream)", () => {
     assertBooksBalanced(db);
   });
 
-  test("a client disconnect mid-stream closes the upstream request and releases the hold", async () => {
+  test("a client disconnect mid-stream closes the upstream request; what streamed is charged", async () => {
     up.reset();
     up.setScenario("chat_slow"); // 40 deltas, 40 ms apart
     const before = balanceMicros(db, me.user.id);
@@ -642,11 +655,12 @@ describe("integration: real gateway adapters (mock upstream)", () => {
     const upstream = streamed().at(-1);
     assert.equal(upstream.closedEarly, true, "OpenRouter's stream was cut off, not read to the end");
     const row = await waitFor(() => requestRow(db, requestId));
-    assert.equal(row.status, "error");
-    assert.equal(row.error_code, "aborted");
-    // Only the classifier call (already made) is real spend; the user is not charged for it.
-    assert.equal(row.charged_micros, 0);
-    assert.equal(balanceMicros(db, me.user.id), before);
+    assert.equal(row.status, "stopped");
+    // OpenRouter reports usage only at the end of a stream, so the charge is estimated from the
+    // input sent and the text streamed, plus the classifier call (420 micros), with the margin.
+    assert.ok(row.api_cost_micros > 420 && row.output_tokens > 0, `api_cost_micros ${row.api_cost_micros}`);
+    assert.equal(row.charged_micros, t.deps.credits.priceFor(row.api_cost_micros));
+    assert.equal(balanceMicros(db, me.user.id), before - row.charged_micros);
     assertBooksBalanced(db);
   });
 

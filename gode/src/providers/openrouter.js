@@ -88,6 +88,7 @@ function createOpenRouterProvider(config) {
       return fields;
     },
     jsonFields: (args, effort) => routingFields(args, effort),
+    timeouts: () => config.gateways.timeouts,
   });
 }
 

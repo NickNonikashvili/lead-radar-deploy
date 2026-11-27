@@ -10,7 +10,7 @@ const express = require("express");
 const { loadConfig } = require("../src/config");
 const { openDb } = require("../src/db");
 const { createKeyring, sha256, hashPassword } = require("../src/crypto");
-const { AppError, newId, now } = require("../src/util");
+const { AppError, newId, now, ah } = require("../src/util");
 const {
   createAuth,
   publicUser,
@@ -19,12 +19,19 @@ const {
   requireSameOrigin,
   parseCookies,
   normalizeEmail,
+  ipPrefix,
+  cspFor,
+  CSP,
   SESSION_COOKIE,
+  HOST_SESSION_COOKIE,
 } = require("../src/auth");
 
 // ---------------------------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------------------------
+
+// Not on the common-password list (validatePassword refuses "password123" and friends).
+const PW = "violet-kettle-42";
 
 function stubCredits(db, { fail = false } = {}) {
   const calls = [];
@@ -74,16 +81,24 @@ function buildApp(ctx, { loginLimit = 100, sameOrigin } = {}) {
   app.post("/api/billing/webhook", (req, res) => res.json({ received: true }));
   app.use("/api", sameOrigin || auth.requireSameOrigin);
   const limiter = rateLimit({ windowMs: 60_000, max: loginLimit });
-  app.post("/api/auth/signup", limiter, (req, res) => {
-    const user = auth.signup(req.body || {});
-    auth.setCookie(res, auth.createSession(user.id));
-    res.json({ user: publicUser(user) });
-  });
-  app.post("/api/auth/login", limiter, (req, res) => {
-    const user = auth.login(req.body || {});
-    auth.setCookie(res, auth.createSession(user.id));
-    res.json({ user: publicUser(user) });
-  });
+  app.post(
+    "/api/auth/signup",
+    limiter,
+    ah(async (req, res) => {
+      const user = await auth.signup(req.body || {});
+      auth.setCookie(res, auth.createSession(user.id));
+      res.json({ user: publicUser(user) });
+    })
+  );
+  app.post(
+    "/api/auth/login",
+    limiter,
+    ah(async (req, res) => {
+      const user = await auth.login(req.body || {});
+      auth.setCookie(res, auth.createSession(user.id));
+      res.json({ user: publicUser(user) });
+    })
+  );
   app.post("/api/auth/logout", (req, res) => {
     auth.logout(req, res);
     res.json({ ok: true });
@@ -142,10 +157,10 @@ function request(port, method, path, { headers = {}, body } = {}) {
   });
 }
 
-function sessionCookieFrom(setCookies) {
-  const line = setCookies.find((c) => c.startsWith(`${SESSION_COOKIE}=`));
+function sessionCookieFrom(setCookies, name = SESSION_COOKIE) {
+  const line = setCookies.find((c) => c.startsWith(`${name}=`));
   if (!line) return null;
-  const value = line.split(";")[0].slice(SESSION_COOKIE.length + 1);
+  const value = line.split(";")[0].slice(name.length + 1);
   const attrs = line
     .split(";")
     .slice(1)
@@ -168,7 +183,7 @@ async function withServer(ctx, opts, fn) {
 // Pure helpers
 // ---------------------------------------------------------------------------------------------
 
-test("parseCookies handles spaces, quotes, encoding, junk and __proto__", () => {
+test("parseCookies handles spaces, quotes, encoding, junk and __proto__", async () => {
   const c = parseCookies(' a=1;b = two ;  gode_session="tok%2Fen" ; bad ; =x; e=%E0%A4%A; __proto__=p; a=dup');
   assert.equal(c.a, "1", "first occurrence wins");
   assert.equal(c.b, "two");
@@ -182,14 +197,14 @@ test("parseCookies handles spaces, quotes, encoding, junk and __proto__", () => 
   assert.equal(parseCookies(["x=1", "y=2"]).y, "2");
 });
 
-test("normalizeEmail lower-cases, trims and rejects junk", () => {
+test("normalizeEmail lower-cases, trims and rejects junk", async () => {
   assert.equal(normalizeEmail("  Ada.Lovelace+gode@Example.COM "), "ada.lovelace+gode@example.com");
   for (const bad of ["", "nope", "@x.com", "a@", "a@b", "a b@c.com", "a@b..com", ".a@b.com", "a..b@c.com", "a@-b.com", 5, null, `${"a".repeat(65)}@b.com`, `a@${"b".repeat(250)}.com`]) {
     assert.equal(normalizeEmail(bad), null, String(bad));
   }
 });
 
-test("publicUser exposes only the public fields with booleans and balance_usd", () => {
+test("publicUser exposes only the public fields with booleans and balance_usd", async () => {
   const row = {
     id: "u1",
     email: "a@b.co",
@@ -221,7 +236,7 @@ test("publicUser exposes only the public fields with booleans and balance_usd", 
   assert.equal(publicUser(null), null);
 });
 
-test("createAuth validates its dependencies and accepts the positional form", () => {
+test("createAuth validates its dependencies and accepts the positional form", async () => {
   const { db, config, keyring, credits } = setup();
   assert.throws(() => createAuth({ config, keyring }), TypeError);
   assert.throws(() => createAuth({ db, keyring }), TypeError);
@@ -235,9 +250,9 @@ test("createAuth validates its dependencies and accepts the positional form", ()
 // Accounts
 // ---------------------------------------------------------------------------------------------
 
-test("signup normalises email, hashes the password, wraps a DEK and grants the bonus", () => {
+test("signup normalises email, hashes the password, wraps a DEK and grants the bonus", async () => {
   const { auth, db, credits, keyring } = setup({ SIGNUP_CREDIT_USD: "0.25" });
-  const user = auth.signup({ email: "  Ada@Example.com ", password: "correct horse" });
+  const user = await auth.signup({ email: "  Ada@Example.com ", password: "correct horse" });
   assert.equal(user.email, "ada@example.com");
   const row = db.prepare("SELECT * FROM users WHERE id = ?").get(user.id);
   assert.match(row.password_hash, /^scrypt\$/);
@@ -250,9 +265,9 @@ test("signup normalises email, hashes the password, wraps a DEK and grants the b
   assert.equal(publicUser(user).balance_usd, 0.25);
 });
 
-test("signup user object hides password_hash and wrapped_dek from serialisation", () => {
+test("signup user object hides password_hash and wrapped_dek from serialisation", async () => {
   const { auth } = setup();
-  const user = auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await auth.signup({ email: "a@example.com", password: PW });
   assert.match(user.password_hash, /^scrypt\$/, "still readable server-side");
   assert.ok(user.wrapped_dek.startsWith("v1."));
   const json = JSON.stringify(user);
@@ -260,19 +275,19 @@ test("signup user object hides password_hash and wrapped_dek from serialisation"
   assert.ok(!("password_hash" in { ...user }));
 });
 
-test("no signup bonus when SIGNUP_CREDIT_USD is 0", () => {
+test("no signup bonus when SIGNUP_CREDIT_USD is 0", async () => {
   const { auth, credits } = setup({ SIGNUP_CREDIT_USD: "0" });
-  auth.signup({ email: "a@example.com", password: "password123" });
+  await auth.signup({ email: "a@example.com", password: PW });
   assert.equal(credits.calls.length, 0);
 });
 
-test("a failing bonus grant rolls back the whole signup", () => {
+test("a failing bonus grant rolls back the whole signup", async () => {
   const { auth, db } = setup({}, { creditsFail: true });
-  assert.throws(() => auth.signup({ email: "a@example.com", password: "password123" }), /ledger unavailable/);
+  await assert.rejects(() => auth.signup({ email: "a@example.com", password: PW }), /ledger unavailable/);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM users").get().n, 0);
 });
 
-test("weak, long or missing passwords and bad emails are 400 bad_request", () => {
+test("weak, common, long or missing passwords and bad emails are 400 bad_request", async () => {
   const { auth, db } = setup();
   const cases = [
     { email: "a@example.com", password: "short" },
@@ -280,65 +295,114 @@ test("weak, long or missing passwords and bad emails are 400 bad_request", () =>
     { email: "a@example.com", password: "x".repeat(201) },
     { email: "a@example.com" },
     { email: "a@example.com", password: 12345678 },
-    { email: "not-an-email", password: "password123" },
-    { password: "password123" },
+    { email: "not-an-email", password: PW },
+    { password: PW },
+    // Very common passwords, any case, and passwords that are only spaces or one repeated character.
+    { email: "a@example.com", password: "12345678" },
+    { email: "a@example.com", password: "password" },
+    { email: "a@example.com", password: "Password123" },
+    { email: "a@example.com", password: "qwertyuiop" },
+    { email: "a@example.com", password: "        " },
+    { email: "a@example.com", password: " \t \n \t  " },
+    { email: "a@example.com", password: "zzzzzzzzzz" },
+    // The address itself, or its local part.
+    { email: "longname@example.com", password: "LongName@example.com" },
+    { email: "longname@example.com", password: "longname" },
   ];
   for (const c of cases) {
-    assert.throws(
+    await assert.rejects(
       () => auth.signup(c),
       (e) => e instanceof AppError && e.status === 400 && e.code === "bad_request",
       JSON.stringify(c)
     );
   }
-  auth.signup({ email: "ok@example.com", password: "x".repeat(200) }); // boundary is inclusive
-  auth.signup({ email: "ok2@example.com", password: "12345678" });
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM users").get().n, 0, "nothing was stored");
+  await auth.signup({ email: "ok@example.com", password: "xy".repeat(100) }); // boundary is inclusive
+  await auth.signup({ email: "ok2@example.com", password: "  spaces inside are fine  " });
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM users").get().n, 2);
 });
 
-test("duplicate email (any case) is 409 conflict", () => {
+test("duplicate email (any case) is 409 conflict", async () => {
   const { auth, credits } = setup();
-  auth.signup({ email: "dup@example.com", password: "password123" });
-  assert.throws(
+  await auth.signup({ email: "dup@example.com", password: PW });
+  await assert.rejects(
     () => auth.signup({ email: "DUP@Example.com", password: "another-pass" }),
     (e) => e instanceof AppError && e.status === 409 && e.code === "conflict"
   );
   assert.equal(credits.calls.length, 1, "no bonus for the rejected signup");
 });
 
-test("first user is admin; later users only when listed in ADMIN_EMAILS", () => {
+test("with ADMIN_EMAILS set only listed addresses are admins, never the first account", async () => {
   const { auth } = setup({ ADMIN_EMAILS: "Boss@Example.com, ops@example.com" });
-  assert.equal(auth.signup({ email: "first@example.com", password: "password123" }).is_admin, 1);
-  assert.equal(auth.signup({ email: "second@example.com", password: "password123" }).is_admin, 0);
-  assert.equal(auth.signup({ email: "boss@example.com", password: "password123" }).is_admin, 1);
-  assert.equal(auth.signup({ email: "OPS@example.com", password: "password123" }).is_admin, 1);
+  assert.equal((await auth.signup({ email: "first@example.com", password: PW })).is_admin, 0, "first account is not admin");
+  assert.equal((await auth.signup({ email: "second@example.com", password: PW })).is_admin, 0);
+  assert.equal((await auth.signup({ email: "boss@example.com", password: PW })).is_admin, 1);
+  assert.equal((await auth.signup({ email: "OPS@example.com", password: PW })).is_admin, 1);
 });
 
-test("login accepts the right password (email case-insensitive) and returns the user", () => {
+test("without ADMIN_EMAILS the first account is admin only when FIRST_USER_ADMIN is on (off in production)", async () => {
+  const dev = setup();
+  assert.equal(dev.config.firstUserAdmin, true, "on by default outside production");
+  assert.equal((await dev.auth.signup({ email: "first@example.com", password: PW })).is_admin, 1);
+  assert.equal((await dev.auth.signup({ email: "second@example.com", password: PW })).is_admin, 0);
+
+  const off = setup({ FIRST_USER_ADMIN: "0" });
+  assert.equal((await off.auth.signup({ email: "first@example.com", password: PW })).is_admin, 0);
+
+  const prod = setup({ NODE_ENV: "production", GODE_MASTER_KEY: crypto.randomBytes(32).toString("base64") });
+  assert.equal(prod.config.firstUserAdmin, false);
+  assert.equal((await prod.auth.signup({ email: "first@example.com", password: PW })).is_admin, 0, "no first-come admin in production");
+});
+
+test("ADMIN_EMAILS is re-checked: removing an address revokes admin for live sessions and at login", async () => {
+  const before = setup({ ADMIN_EMAILS: "boss@example.com" });
+  const boss = await before.auth.signup({ email: "boss@example.com", password: PW });
+  const token = before.auth.createSession(boss.id);
+  assert.equal(before.auth.userFromToken(token).is_admin, 1);
+
+  // Same database, restarted without the address (and with someone else listed).
+  const after = createAuth({ db: before.db, config: loadConfig({ GODE_MOCK: "1", ADMIN_EMAILS: "other@example.com" }), keyring: before.keyring, credits: before.credits });
+  assert.equal(after.userFromToken(token).is_admin, 0, "an existing session loses admin at once");
+  assert.equal(before.db.prepare("SELECT is_admin FROM users WHERE id = ?").get(boss.id).is_admin, 0, "and the stored flag follows");
+  assert.equal((await after.login({ email: "boss@example.com", password: PW })).is_admin, 0);
+
+  // A stale stored flag can't grant admin either while ADMIN_EMAILS is set.
+  before.db.prepare("UPDATE users SET is_admin = 1 WHERE id = ?").run(boss.id);
+  assert.equal(after.userFromToken(token).is_admin, 0);
+
+  // Listed again: admin comes back on the next request.
+  const relisted = createAuth({ db: before.db, config: loadConfig({ GODE_MOCK: "1", ADMIN_EMAILS: "boss@example.com" }), keyring: before.keyring, credits: before.credits });
+  assert.equal(relisted.userFromToken(token).is_admin, 1);
+});
+
+test("login accepts the right password (email case-insensitive) and returns the user", async () => {
   const { auth } = setup();
-  const created = auth.signup({ email: "ada@example.com", password: "password123" });
-  const user = auth.login({ email: " ADA@example.com", password: "password123" });
+  const created = await auth.signup({ email: "ada@example.com", password: PW });
+  const user = await auth.login({ email: " ADA@example.com", password: PW });
   assert.equal(user.id, created.id);
 });
 
-test("login fails with the same 401 for unknown email, wrong password and malformed input", () => {
+test("login fails with the same 401 for unknown email, wrong password and malformed input", async () => {
   const { auth } = setup();
-  auth.signup({ email: "ada@example.com", password: "password123" });
+  await auth.signup({ email: "ada@example.com", password: PW });
   const attempts = [
     { email: "ada@example.com", password: "wrong-password" },
-    { email: "nobody@example.com", password: "password123" },
-    { email: "not-an-email", password: "password123" },
+    { email: "nobody@example.com", password: PW },
+    { email: "not-an-email", password: PW },
     { email: "ada@example.com" },
     { email: "ada@example.com", password: "x".repeat(10_000) },
     {},
   ];
-  const errors = attempts.map((a) => {
+  const errors = [];
+  for (const a of attempts) {
     try {
-      auth.login(a);
+      await auth.login(a);
     } catch (e) {
-      return e;
+      errors.push(e);
+      continue;
     }
     assert.fail("login should have failed");
-  });
+  }
   for (const e of errors) {
     assert.ok(e instanceof AppError);
     assert.equal(e.status, 401);
@@ -347,31 +411,119 @@ test("login fails with the same 401 for unknown email, wrong password and malfor
   }
 });
 
-test("login for an unknown email still pays for a password verification", () => {
+test("login for an unknown email still pays for a password verification", async () => {
   const { auth } = setup();
-  auth.signup({ email: "ada@example.com", password: "password123" });
-  const time = (attempt) => {
+  await auth.signup({ email: "ada@example.com", password: PW });
+  const time = async (attempt) => {
     let best = Infinity;
     for (let i = 0; i < 3; i++) {
       const t = process.hrtime.bigint();
-      assert.throws(() => auth.login(attempt));
+      await assert.rejects(() => auth.login(attempt));
       best = Math.min(best, Number(process.hrtime.bigint() - t) / 1e6);
     }
     return best;
   };
-  const wrongPassword = time({ email: "ada@example.com", password: "nope-nope" });
-  const unknownEmail = time({ email: "ghost@example.com", password: "nope-nope" });
+  const wrongPassword = await time({ email: "ada@example.com", password: "nope-nope" });
+  const unknownEmail = await time({ email: "ghost@example.com", password: "nope-nope" });
   // A short-circuit would be ~100x faster than scrypt; equal work lands near 1x.
   assert.ok(unknownEmail > wrongPassword * 0.3, `unknown ${unknownEmail}ms vs wrong ${wrongPassword}ms`);
+});
+
+test("password hashing is async: the event loop keeps running while scrypt works", async () => {
+  const { auth } = setup();
+  let ticks = 0;
+  const timer = setInterval(() => ticks++, 5);
+  try {
+    await auth.signup({ email: "ada@example.com", password: PW });
+    await assert.rejects(() => auth.login({ email: "ada@example.com", password: "nope-nope" }));
+  } finally {
+    clearInterval(timer);
+  }
+  // Two hashes take ~400 ms; a synchronous scryptSync would leave the 5 ms timer at 0-1 ticks.
+  assert.ok(ticks >= 10, `timer ticked ${ticks} times while hashing`);
+});
+
+test("new hashes use scrypt N=2^15, r=8, p=3; an old N=2^14 hash still logs in and is upgraded", async () => {
+  const { auth, db, keyring } = setup();
+  const user = await auth.signup({ email: "ada@example.com", password: PW });
+  assert.match(db.prepare("SELECT password_hash FROM users WHERE id = ?").get(user.id).password_hash, /^scrypt\$32768\$8\$3\$/);
+
+  // A hash as the previous release wrote it (scryptSync, N=2^14, r=8, p=1).
+  const salt = crypto.randomBytes(16);
+  const old = `scrypt$16384$8$1$${salt.toString("base64")}$${crypto.scryptSync("old-password-1", salt, 64, { N: 16384, r: 8, p: 1 }).toString("base64")}`;
+  db.prepare("INSERT INTO users (id, email, password_hash, wrapped_dek, created_at) VALUES (?, ?, ?, ?, ?)").run("old", "old@example.com", old, keyring.newWrappedDek(), now());
+  assert.equal((await auth.login({ email: "old@example.com", password: "old-password-1" })).id, "old");
+  const upgraded = db.prepare("SELECT password_hash FROM users WHERE id = 'old'").get().password_hash;
+  assert.match(upgraded, /^scrypt\$32768\$8\$3\$/, "rehashed with the new parameters");
+  assert.equal((await auth.login({ email: "old@example.com", password: "old-password-1" })).id, "old", "and still logs in");
+  await assert.rejects(() => auth.login({ email: "old@example.com", password: "wrong-password" }), (e) => e.status === 401);
+});
+
+test("one signup bonus per email address, even after delete everything, +tags and gmail dots", async () => {
+  const { auth, db, credits } = setup({ SIGNUP_CREDIT_USD: "0.25" });
+  const first = await auth.signup({ email: "Farm.Er@gmail.com", password: PW });
+  assert.equal(credits.calls.length, 1);
+  assert.equal(first.signupBonusMicros, 250_000);
+  auth.deleteEverything(first.id);
+  const again = await auth.signup({ email: "farm.er@gmail.com", password: PW });
+  assert.equal(again.balance_micros, 0, "no second bonus for a re-registered address");
+  assert.equal(again.signupBonusMicros, 0);
+  auth.deleteEverything(again.id);
+  for (const variant of ["farmer+1@gmail.com", "f.a.r.m.e.r@googlemail.com"]) {
+    const u = await auth.signup({ email: variant, password: PW });
+    assert.equal(u.balance_micros, 0, variant);
+  }
+  const other = await auth.signup({ email: "someone.else@example.com", password: PW });
+  assert.equal(other.balance_micros, 250_000);
+  assert.equal(credits.calls.length, 2);
+  // Only keyed fingerprints are kept: no address in the claims table.
+  const claims = db.prepare("SELECT * FROM bonus_claims").all();
+  assert.equal(claims.length, 2);
+  assert.ok(claims.every((c) => /^[0-9a-f]{64}$/.test(c.email_hmac)));
+  assert.ok(!JSON.stringify(claims).includes("farm"));
+  assert.notEqual(claims[0].email_hmac, sha256("farmer@gmail.com"), "an HMAC, not a guessable plain hash");
+});
+
+test("signup bonuses stop at SIGNUP_BONUS_DAILY_CAP per UTC day; accounts still open", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: Date.UTC(2026, 10, 27, 23, 0, 0) });
+  const { auth, db } = setup({ SIGNUP_CREDIT_USD: "0.25", SIGNUP_BONUS_DAILY_CAP: "2" });
+  const balances = [];
+  for (const n of [1, 2, 3]) balances.push((await auth.signup({ email: `u${n}@example.com`, password: PW })).balance_micros);
+  assert.deepEqual(balances, [250_000, 250_000, 0]);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM users").get().n, 3);
+  t.mock.timers.tick(2 * 60 * 60 * 1000); // past midnight UTC
+  assert.equal((await auth.signup({ email: "u4@example.com", password: PW })).balance_micros, 250_000, "a new day, new bonuses");
+  const unlimited = setup({ SIGNUP_CREDIT_USD: "0.25", SIGNUP_BONUS_DAILY_CAP: "0" });
+  for (const n of [1, 2, 3]) assert.equal((await unlimited.auth.signup({ email: `v${n}@example.com`, password: PW })).balance_micros, 250_000);
+});
+
+test("changePassword checks the current password, applies the rules and signs out other sessions", async () => {
+  const { auth, db } = setup();
+  const user = await auth.signup({ email: "ada@example.com", password: PW });
+  const here = auth.createSession(user.id);
+  const elsewhere = auth.createSession(user.id);
+  await assert.rejects(() => auth.changePassword(user, { current: "not-it-at-all", next: "new-pass-word-9", keepToken: here }), (e) => e.status === 401);
+  await assert.rejects(() => auth.changePassword(user, { current: PW, next: "password1", keepToken: here }), (e) => e.status === 400);
+  await assert.rejects(() => auth.changePassword(user, { current: PW, next: PW, keepToken: here }), (e) => e.status === 400);
+  assert.equal(auth.userFromToken(elsewhere).id, user.id, "nothing changed on refusal");
+  const out = await auth.changePassword(user, { current: PW, next: "new-pass-word-9", keepToken: here });
+  assert.deepEqual(out, { revoked: 1 });
+  assert.equal(auth.userFromToken(here).id, user.id, "this session stays");
+  assert.equal(auth.userFromToken(elsewhere), null, "the other device is signed out");
+  await assert.rejects(() => auth.login({ email: "ada@example.com", password: PW }), (e) => e.status === 401);
+  assert.equal((await auth.login({ email: "ada@example.com", password: "new-pass-word-9" })).id, user.id);
+  assert.equal(await auth.checkPassword(user, "new-pass-word-9"), true);
+  assert.equal(await auth.checkPassword(user, PW), false);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?").get(user.id).n, 1);
 });
 
 // ---------------------------------------------------------------------------------------------
 // Sessions
 // ---------------------------------------------------------------------------------------------
 
-test("createSession stores only sha256(token) with the configured expiry", () => {
+test("createSession stores only sha256(token) with the configured expiry", async () => {
   const { auth, db } = setup({ SESSION_DAYS: "7" });
-  const user = auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await auth.signup({ email: "a@example.com", password: PW });
   const before = now();
   const token = auth.createSession(user.id);
   assert.match(token, /^[A-Za-z0-9_-]{43}$/);
@@ -385,9 +537,9 @@ test("createSession stores only sha256(token) with the configured expiry", () =>
   assert.equal(auth.userFromToken(token).id, user.id);
 });
 
-test("userFromToken rejects junk, unknown and expired tokens (deleting expired rows)", () => {
+test("userFromToken rejects junk, unknown and expired tokens (deleting expired rows)", async () => {
   const { auth, db } = setup();
-  const user = auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await auth.signup({ email: "a@example.com", password: PW });
   for (const junk of [undefined, null, "", "short", "x".repeat(300), "has space in it!!!!!", 42]) {
     assert.equal(auth.userFromToken(junk), null);
   }
@@ -398,9 +550,9 @@ test("userFromToken rejects junk, unknown and expired tokens (deleting expired r
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sessions").get().n, 0, "expired session deleted lazily");
 });
 
-test("destroySession removes the session; purgeExpiredSessions clears old ones", () => {
+test("destroySession removes the session; purgeExpiredSessions clears old ones", async () => {
   const { auth, db } = setup();
-  const user = auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await auth.signup({ email: "a@example.com", password: PW });
   const t1 = auth.createSession(user.id);
   const t2 = auth.createSession(user.id);
   assert.equal(auth.destroySession(t1), true);
@@ -412,9 +564,9 @@ test("destroySession removes the session; purgeExpiredSessions clears old ones",
   assert.equal(auth.purgeExpiredSessions(), 1);
 });
 
-test("createSession prunes the user's expired sessions", () => {
+test("createSession prunes the user's expired sessions", async () => {
   const { auth, db } = setup();
-  const user = auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await auth.signup({ email: "a@example.com", password: PW });
   auth.createSession(user.id);
   db.prepare("UPDATE sessions SET expires_at = 1").run();
   auth.createSession(user.id);
@@ -428,7 +580,7 @@ test("createSession prunes the user's expired sessions", () => {
 test("signup -> me -> logout -> me over HTTP, with correct cookie flags", async () => {
   const ctx = setup({ SESSION_DAYS: "30" });
   await withServer(ctx, {}, async ({ port }) => {
-    const signup = await request(port, "POST", "/api/auth/signup", { body: { email: "Ada@Example.com", password: "password123" } });
+    const signup = await request(port, "POST", "/api/auth/signup", { body: { email: "Ada@Example.com", password: PW } });
     assert.equal(signup.status, 200);
     assert.equal(signup.json.user.email, "ada@example.com");
     assert.equal(signup.json.user.is_admin, true);
@@ -466,14 +618,14 @@ test("signup -> me -> logout -> me over HTTP, with correct cookie flags", async 
 
 test("login over HTTP: success sets a new cookie; failures share one error body", async () => {
   const ctx = setup();
-  ctx.auth.signup({ email: "ada@example.com", password: "password123" });
+  await ctx.auth.signup({ email: "ada@example.com", password: PW });
   await withServer(ctx, {}, async ({ port }) => {
-    const ok = await request(port, "POST", "/api/auth/login", { body: { email: "ada@example.com", password: "password123" } });
+    const ok = await request(port, "POST", "/api/auth/login", { body: { email: "ada@example.com", password: PW } });
     assert.equal(ok.status, 200);
     assert.ok(sessionCookieFrom(ok.setCookies).value.length >= 43);
 
     const wrongPw = await request(port, "POST", "/api/auth/login", { body: { email: "ada@example.com", password: "nope-nope" } });
-    const noUser = await request(port, "POST", "/api/auth/login", { body: { email: "ghost@example.com", password: "password123" } });
+    const noUser = await request(port, "POST", "/api/auth/login", { body: { email: "ghost@example.com", password: PW } });
     assert.equal(wrongPw.status, 401);
     assert.equal(noUser.status, 401);
     assert.deepEqual(wrongPw.json, noUser.json);
@@ -481,19 +633,76 @@ test("login over HTTP: success sets a new cookie; failures share one error body"
   });
 });
 
-test("Secure cookie flag when COOKIE_SECURE is on", async () => {
+test("COOKIE_SECURE: the session cookie is __Host-gode_session, Secure, Path=/ and without Domain", async () => {
   const ctx = setup({ COOKIE_SECURE: "1" });
+  assert.equal(ctx.auth.cookieName, HOST_SESSION_COOKIE);
   await withServer(ctx, {}, async ({ port }) => {
-    const res = await request(port, "POST", "/api/auth/signup", { body: { email: "a@example.com", password: "password123" } });
-    assert.ok(sessionCookieFrom(res.setCookies).attrs.includes("Secure"));
-    const out = await request(port, "POST", "/api/auth/logout", {});
-    assert.ok(sessionCookieFrom(out.setCookies).attrs.includes("Secure"));
+    const res = await request(port, "POST", "/api/auth/signup", { body: { email: "a@example.com", password: PW } });
+    const cookie = sessionCookieFrom(res.setCookies, HOST_SESSION_COOKIE);
+    assert.ok(cookie, "__Host- cookie set");
+    assert.ok(cookie.attrs.includes("Secure"));
+    assert.ok(cookie.attrs.includes("Path=/"));
+    assert.ok(!cookie.attrs.some((a) => /^domain=/i.test(a)), "a __Host- cookie must not carry Domain");
+    assert.equal(sessionCookieFrom(res.setCookies), null, "no plain-name cookie is issued");
+    const me = await request(port, "GET", "/api/me", { headers: { cookie: `${HOST_SESSION_COOKIE}=${cookie.value}` } });
+    assert.equal(me.status, 200);
+    const out = await request(port, "POST", "/api/auth/logout", { headers: { cookie: `${HOST_SESSION_COOKIE}=${cookie.value}` } });
+    assert.ok(sessionCookieFrom(out.setCookies, HOST_SESSION_COOKIE).attrs.includes("Secure"));
+    assert.equal(sessionCookieFrom(out.setCookies).value, "", "the legacy name is cleared too");
+    assert.equal((await request(port, "GET", "/api/me", { headers: { cookie: `${HOST_SESSION_COOKIE}=${cookie.value}` } })).status, 401);
+  });
+});
+
+test("COOKIE_SECURE: a pre-rename gode_session cookie still works once and moves to the __Host- name", async () => {
+  const ctx = setup({ COOKIE_SECURE: "1" });
+  const user = await ctx.auth.signup({ email: "a@example.com", password: PW });
+  const token = ctx.auth.createSession(user.id);
+  await withServer(ctx, {}, async ({ port }) => {
+    const res = await request(port, "GET", "/api/me", { headers: { cookie: `${SESSION_COOKIE}=${token}` } });
+    assert.equal(res.status, 200);
+    assert.equal(res.json.user.id, user.id);
+    assert.equal(sessionCookieFrom(res.setCookies, HOST_SESSION_COOKIE).value, token, "same session under the new name");
+    const legacy = sessionCookieFrom(res.setCookies);
+    assert.equal(legacy.value, "");
+    assert.ok(legacy.attrs.includes("Max-Age=0"), "old cookie dropped");
+  });
+});
+
+test("COOKIE_SECURE: a tossed plain-name cookie never overrides the real __Host- session", async () => {
+  const ctx = setup({ COOKIE_SECURE: "1" });
+  const alice = await ctx.auth.signup({ email: "alice@example.com", password: PW });
+  const mallory = await ctx.auth.signup({ email: "mallory@example.com", password: PW });
+  const aliceToken = ctx.auth.createSession(alice.id);
+  const malloryToken = ctx.auth.createSession(mallory.id);
+  await withServer(ctx, {}, async ({ port }) => {
+    // A sibling subdomain set gode_session=<mallory> with Path=/api, which browsers send first.
+    const res = await request(port, "GET", "/api/me", { headers: { cookie: `${SESSION_COOKIE}=${malloryToken}; ${HOST_SESSION_COOKIE}=${aliceToken}` } });
+    assert.equal(res.status, 200);
+    assert.equal(res.json.user.email, "alice@example.com");
+    assert.equal(res.setCookies.length, 0, "nothing re-issued");
+  });
+});
+
+test("two different users' valid sessions in one request sign in neither (cookie tossing)", async () => {
+  const ctx = setup();
+  const alice = await ctx.auth.signup({ email: "alice@example.com", password: PW });
+  const mallory = await ctx.auth.signup({ email: "mallory@example.com", password: PW });
+  const aliceToken = ctx.auth.createSession(alice.id);
+  const malloryToken = ctx.auth.createSession(mallory.id);
+  await withServer(ctx, {}, async ({ port }) => {
+    const res = await request(port, "GET", "/api/me", { headers: { cookie: `${SESSION_COOKIE}=${malloryToken}; ${SESSION_COOKIE}=${aliceToken}` } });
+    assert.equal(res.status, 401, "never Mallory's account");
+    assert.equal(ctx.auth.userFromToken(aliceToken).id, alice.id, "Alice's session itself is intact");
+    // Two cookies of the same user (an old tab) are fine.
+    const second = ctx.auth.createSession(alice.id);
+    const ok = await request(port, "GET", "/api/me", { headers: { cookie: `${SESSION_COOKIE}=${second}; ${SESSION_COOKIE}=${aliceToken}` } });
+    assert.equal(ok.json.user.id, alice.id);
   });
 });
 
 test("an expired session cookie is rejected over HTTP and cleared", async () => {
   const ctx = setup();
-  const user = ctx.auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await ctx.auth.signup({ email: "a@example.com", password: PW });
   const token = ctx.auth.createSession(user.id);
   ctx.db.prepare("UPDATE sessions SET expires_at = ?").run(now() - 1000);
   await withServer(ctx, {}, async ({ port }) => {
@@ -506,7 +715,7 @@ test("an expired session cookie is rejected over HTTP and cleared", async () => 
 
 test("a tossed bogus cookie ahead of the real one does not log the user out", async () => {
   const ctx = setup();
-  const user = ctx.auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await ctx.auth.signup({ email: "a@example.com", password: PW });
   const token = ctx.auth.createSession(user.id);
   await withServer(ctx, {}, async ({ port }) => {
     const res = await request(port, "GET", "/api/me", { headers: { cookie: `${SESSION_COOKIE}=${"B".repeat(43)}; ${SESSION_COOKIE}=${token}` } });
@@ -518,8 +727,8 @@ test("a tossed bogus cookie ahead of the real one does not log the user out", as
 
 test("requireUser / requireAdmin", async () => {
   const ctx = setup();
-  const admin = ctx.auth.signup({ email: "admin@example.com", password: "password123" });
-  const plain = ctx.auth.signup({ email: "plain@example.com", password: "password123" });
+  const admin = await ctx.auth.signup({ email: "admin@example.com", password: PW });
+  const plain = await ctx.auth.signup({ email: "plain@example.com", password: PW });
   const adminCookie = `${SESSION_COOKIE}=${ctx.auth.createSession(admin.id)}`;
   const plainCookie = `${SESSION_COOKIE}=${ctx.auth.createSession(plain.id)}`;
   await withServer(ctx, {}, async ({ port }) => {
@@ -540,16 +749,16 @@ test("requireUser / requireAdmin", async () => {
 
 test("rate limiter returns 429 rate_limited with Retry-After over HTTP", async () => {
   const ctx = setup();
-  ctx.auth.signup({ email: "a@example.com", password: "password123" });
+  await ctx.auth.signup({ email: "a@example.com", password: PW });
   await withServer(ctx, { loginLimit: 3 }, async ({ port }, limiter) => {
     const body = { email: "a@example.com", password: "wrong-pass" };
     for (let i = 0; i < 3; i++) assert.equal((await request(port, "POST", "/api/auth/login", { body })).status, 401);
-    const limited = await request(port, "POST", "/api/auth/login", { body: { email: "a@example.com", password: "password123" } });
+    const limited = await request(port, "POST", "/api/auth/login", { body: { email: "a@example.com", password: PW } });
     assert.equal(limited.status, 429);
     assert.equal(limited.json.code, "rate_limited");
     assert.ok(Number(limited.headers["retry-after"]) >= 1);
     limiter.reset();
-    assert.equal((await request(port, "POST", "/api/auth/login", { body: { email: "a@example.com", password: "password123" } })).status, 200);
+    assert.equal((await request(port, "POST", "/api/auth/login", { body: { email: "a@example.com", password: PW } })).status, 200);
   });
 });
 
@@ -565,7 +774,7 @@ function fakeLimiterCall(limiter, req) {
   return { passed, error, headers };
 }
 
-test("rate limiter windows reset, keys are independent, custom key and falsy key", (t) => {
+test("rate limiter windows reset, keys are independent, custom key and falsy key", async (t) => {
   t.mock.timers.enable({ apis: ["Date"], now: 1_000_000 });
   const limiter = rateLimit({ windowMs: 10_000, max: 2 });
   try {
@@ -596,7 +805,7 @@ test("rate limiter windows reset, keys are independent, custom key and falsy key
   }
 });
 
-test("rate limiter bounds memory and validates options", () => {
+test("rate limiter bounds memory and validates options", async () => {
   const limiter = rateLimit({ windowMs: 60_000, max: 1, maxKeys: 3 });
   try {
     for (const ip of ["a", "b", "c", "d"]) assert.ok(fakeLimiterCall(limiter, { ip }).passed);
@@ -618,7 +827,7 @@ test("rate limiter bounds memory and validates options", () => {
 
 test("requireSameOrigin: own origin, public URL, missing Origin pass; others are 403", async () => {
   const ctx = setup({ PUBLIC_URL: "https://gode.example/" });
-  const user = ctx.auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await ctx.auth.signup({ email: "a@example.com", password: PW });
   const cookie = `${SESSION_COOKIE}=${ctx.auth.createSession(user.id)}`;
   await withServer(ctx, {}, async ({ port }) => {
     const post = (headers) => request(port, "POST", "/api/me/echo", { headers: { cookie, ...headers }, body: {} });
@@ -643,7 +852,7 @@ test("requireSameOrigin: own origin, public URL, missing Origin pass; others are
     // Blocked before the route runs: no signup happens from a foreign origin.
     const signup = await request(port, "POST", "/api/auth/signup", {
       headers: { origin: "https://evil.example" },
-      body: { email: "csrf@example.com", password: "password123" },
+      body: { email: "csrf@example.com", password: PW },
     });
     assert.equal(signup.status, 403);
     assert.equal(ctx.db.prepare("SELECT COUNT(*) AS n FROM users WHERE email = 'csrf@example.com'").get().n, 0);
@@ -715,8 +924,18 @@ test("requireSameOrigin works as a plain middleware and as a factory", async () 
 // Security headers
 // ---------------------------------------------------------------------------------------------
 
+// With the media proxy on (the default), media loads from our own origin only: the browser never
+// contacts a media host, which would learn the user's IP address.
 const EXPECTED_CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+
+test("CSP: media hosts are allowed only when the media proxy is off", () => {
+  assert.equal(cspFor(loadConfig({ GODE_MOCK: "1" })), EXPECTED_CSP);
+  assert.equal(CSP, EXPECTED_CSP, "the exported default is the strict one");
+  const off = cspFor(loadConfig({ GODE_MOCK: "1", MEDIA_PROXY: "0" }));
+  assert.match(off, /img-src 'self' data: blob: https:;/);
+  assert.match(off, /media-src 'self' data: blob: https:;/);
+});
 
 test("CSP allows only same-origin scripts: no eval, no inline script", async () => {
   const app = express();
@@ -816,10 +1035,10 @@ function countFor(db, table, userId) {
   return db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE user_id = ?`).get(userId).n;
 }
 
-test("deleteEverything removes the user's data, unlinks the ledger and forgets the DEK", () => {
+test("deleteEverything removes the user's data, unlinks the ledger and forgets the DEK", async () => {
   const { auth, db, keyring, forgotten } = setup();
-  const victim = auth.signup({ email: "gone@example.com", password: "password123" });
-  const keeper = auth.signup({ email: "stay@example.com", password: "password123" });
+  const victim = await auth.signup({ email: "gone@example.com", password: PW });
+  const keeper = await auth.signup({ email: "stay@example.com", password: PW });
   auth.createSession(victim.id);
   auth.createSession(victim.id);
   const keeperToken = auth.createSession(keeper.id);
@@ -852,21 +1071,21 @@ test("deleteEverything removes the user's data, unlinks the ledger and forgets t
   for (const table of ["conversations", "messages", "requests", "holds"]) assert.equal(countFor(db, table, keeper.id), table === "messages" ? 2 : 1, table);
   assert.equal(countFor(db, "ledger", keeper.id), 3);
   assert.equal(auth.userFromToken(keeperToken).id, keeper.id);
-  assert.throws(() => auth.login({ email: "gone@example.com", password: "password123" }), (e) => e.status === 401);
+  await assert.rejects(() => auth.login({ email: "gone@example.com", password: PW }), (e) => e.status === 401);
 });
 
-test("deleteEverything on an unknown user is 404 and changes nothing", () => {
+test("deleteEverything on an unknown user is 404 and changes nothing", async () => {
   const { auth, db, forgotten } = setup();
-  auth.signup({ email: "a@example.com", password: "password123" });
+  await auth.signup({ email: "a@example.com", password: PW });
   assert.throws(() => auth.deleteEverything("nope"), (e) => e instanceof AppError && e.status === 404 && e.code === "not_found");
   assert.throws(() => auth.deleteEverything(""), (e) => e instanceof AppError && e.status === 400);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM users").get().n, 1);
   assert.deepEqual(forgotten, []);
 });
 
-test("deleteEverything is atomic: a failure mid-way rolls back and keeps the key", () => {
+test("deleteEverything is atomic: a failure mid-way rolls back and keeps the key", async () => {
   const { auth, db, keyring, forgotten } = setup();
-  const user = auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await auth.signup({ email: "a@example.com", password: PW });
   seedUserData(db, keyring, user);
   // A trigger that fails the final DELETE simulates a crash after the child rows are gone.
   db.exec("CREATE TRIGGER block_user_delete BEFORE DELETE ON users BEGIN SELECT RAISE(ABORT, 'blocked'); END;");
@@ -879,23 +1098,91 @@ test("deleteEverything is atomic: a failure mid-way rolls back and keeps the key
 
 test("deleteEverything over HTTP-style flow: the session cookie stops working", async () => {
   const ctx = setup();
-  const user = ctx.auth.signup({ email: "a@example.com", password: "password123" });
+  const user = await ctx.auth.signup({ email: "a@example.com", password: PW });
   const token = ctx.auth.createSession(user.id);
   ctx.auth.deleteEverything(user.id);
   assert.equal(ctx.auth.userFromToken(token), null);
   // Re-signup with the same email is allowed after deletion.
-  const again = ctx.auth.signup({ email: "a@example.com", password: "password123" });
+  const again = await ctx.auth.signup({ email: "a@example.com", password: PW });
   assert.notEqual(again.id, user.id);
 });
 
-test("a stored hash from another code path still verifies (password_hash compatibility)", () => {
+test("a stored hash from another code path still verifies (password_hash compatibility)", async () => {
   const { auth, db, keyring } = setup();
   db.prepare("INSERT INTO users (id, email, password_hash, wrapped_dek, created_at) VALUES (?, ?, ?, ?, ?)").run(
     "legacy",
     "legacy@example.com",
-    hashPassword("legacy-password"),
+    await hashPassword("legacy-password"),
     keyring.newWrappedDek(),
     now()
   );
-  assert.equal(auth.login({ email: "legacy@example.com", password: "legacy-password" }).id, "legacy");
+  assert.equal((await auth.login({ email: "legacy@example.com", password: "legacy-password" })).id, "legacy");
+});
+
+// ---------------------------------------------------------------------------------------------
+// Client networks and failure-only counting
+// ---------------------------------------------------------------------------------------------
+
+test("ipPrefix: IPv4 as is, IPv4-mapped IPv6 as IPv4, IPv6 by its /64", () => {
+  assert.equal(ipPrefix("203.0.113.7"), "203.0.113.7");
+  assert.equal(ipPrefix("::ffff:203.0.113.7"), "203.0.113.7");
+  const a = ipPrefix("2001:db8:1:2::5");
+  assert.equal(a, "2001:0db8:0001:0002::/64");
+  assert.equal(ipPrefix("2001:0db8:0001:0002:ffff:eeee:dddd:cccc"), a, "same /64, same key");
+  assert.equal(ipPrefix("[2001:db8:1:2::9]"), a);
+  assert.notEqual(ipPrefix("2001:db8:1:3::5"), a, "another /64");
+  assert.equal(ipPrefix("fe80::1%eth0"), "fe80:0000:0000:0000::/64");
+  assert.equal(ipPrefix("64:ff9b::192.0.2.1"), "0064:ff9b:0000:0000::/64");
+  assert.equal(ipPrefix(""), null);
+});
+
+test("rate limiter: IPv6 clients in one /64 share a bucket; peek/hit count only what the route says", () => {
+  const limiter = rateLimit({ windowMs: 60_000, max: 2 });
+  try {
+    assert.ok(fakeLimiterCall(limiter, { ip: "2001:db8:9::1" }).passed);
+    assert.ok(fakeLimiterCall(limiter, { ip: "2001:db8:9::2" }).passed);
+    assert.equal(fakeLimiterCall(limiter, { ip: "2001:db8:9:0:abcd::3" }).error.status, 429, "rotating inside the /64 does not help");
+    assert.ok(fakeLimiterCall(limiter, { ip: "2001:db8:a::1" }).passed, "another /64 is another client");
+    assert.equal(limiter.peek("k"), 0);
+    limiter.hit("k");
+    assert.equal(limiter.peek("k"), 0, "under the limit");
+    limiter.hit("k");
+    assert.ok(limiter.peek("k") >= 1, "at the limit: blocked, with seconds to wait");
+    assert.equal(limiter.peek(null), 0);
+  } finally {
+    limiter.stop();
+  }
+});
+
+test("deleteEverything on a file database leaves no wrapped DEK or ciphertext in gode.db or its WAL", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gode-shred-"));
+  const file = path.join(dir, "gode.db");
+  const db = openDb(file);
+  try {
+    const config = loadConfig({ GODE_MOCK: "1", SIGNUP_CREDIT_USD: "0" });
+    const keyring = createKeyring(crypto.randomBytes(32));
+    const auth = createAuth({ db, config, keyring });
+    const victim = await auth.signup({ email: "gone@example.com", password: PW });
+    const keeper = await auth.signup({ email: "stay@example.com", password: PW });
+    seedUserData(db, keyring, victim);
+    seedUserData(db, keyring, keeper);
+    const victimRow = db.prepare("SELECT wrapped_dek FROM users WHERE id = ?").get(victim.id);
+    const sealed = db.prepare("SELECT content_enc FROM messages WHERE user_id = ?").all(victim.id).map((r) => r.content_enc);
+    const needles = [victimRow.wrapped_dek, ...sealed, "gone@example.com"].map((s) => s.slice(0, 40));
+    const onDisk = () => ["gode.db", "gode.db-wal"].map((f) => (fs.existsSync(path.join(dir, f)) ? fs.readFileSync(path.join(dir, f)).toString("latin1") : "")).join("\n");
+    assert.ok(needles.every((n) => onDisk().includes(n)), "the bytes are there before the delete");
+
+    auth.deleteEverything(victim.id);
+    const after = onDisk();
+    for (const n of needles) assert.ok(!after.includes(n), `left on disk: ${n.slice(0, 12)}...`);
+    // The other account is intact and still decrypts.
+    const keep = db.prepare("SELECT content_enc FROM messages WHERE user_id = ?").get(keeper.id);
+    assert.deepEqual(keyring.decrypt(keeper.wrapped_dek, keep.content_enc, { json: true }), { text: "hi" });
+  } finally {
+    db.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

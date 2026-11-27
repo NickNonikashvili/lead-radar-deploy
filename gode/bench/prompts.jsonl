@@ -1,6 +1,6 @@
 {"id": "p001", "prompt": "Implement binary search in Go and explain the edge cases.", "job_hint": "code"}
 {"id": "p002", "prompt": "Draft a complaint email to an airline about a lost suitcase. The flight was last Tuesday and the bag is still missing after 6 days.", "job_hint": "chat"}
-{"id": "p003", "prompt": "Video of a drone shot flying over misty mountains at sunrise.", "job_hint": "video"}
+{"id": "p003", "prompt": "What should I pack for a five-day hiking trip in the Scottish Highlands in October?", "job_hint": "chat"}
 {"id": "p004", "prompt": "Write a TypeScript utility type that takes an object type and returns a new type with all keys optional and readonly, recursively.", "job_hint": "code"}
 {"id": "p005", "prompt": "Write a product description for a handmade ceramic mug, about 80 words, warm tone.", "job_hint": "chat"}
 {"id": "p006", "prompt": "What happened during the 2008 financial crisis, in plain English?", "job_hint": "chat"}
@@ -15,7 +15,7 @@
 {"id": "p015", "prompt": "Make a simple personal portfolio website in a single HTML file with embedded CSS: a header with my name, an about section, 3 project cards and a contact link. It should look good on phones.", "job_hint": "code"}
 {"id": "p016", "prompt": "What's a good 10-minute stretching routine for someone who sits at a desk all day?", "job_hint": "chat"}
 {"id": "p017", "prompt": "Translate this into Spanish for a sign in my shop: 'Back in 15 minutes. Please call the number below if it's urgent.'", "job_hint": "chat"}
-{"id": "p018", "prompt": "Write and produce a funny song about my cat knocking things off the table.", "job_hint": "music"}
+{"id": "p018", "prompt": "My cat keeps knocking things off the table. Why do cats do this, and how can I get her to stop?", "job_hint": "chat"}
 {"id": "p019", "prompt": "Write a limerick about a cat who learns to use the TV remote.", "job_hint": "chat"}
 {"id": "p020", "prompt": "Write a Dockerfile for a Node.js 22 Express app that uses a multi-stage build and runs as a non-root user.", "job_hint": "code"}
 {"id": "p021", "prompt": "Parse this log line with a regex and extract the IP, the timestamp and the status code:\n203.0.113.9 - - [12/Mar/2026:10:15:32 +0000] \"GET /index.html HTTP/1.1\" 200 5123", "job_hint": "code"}
@@ -24,7 +24,7 @@
 {"id": "p024", "prompt": "Compare renting vs buying in a city where a 2-bedroom rents for $2,400/month and costs $550,000 to buy. Assume 20% down, a 6.5% 30-year mortgage, 1.2% property tax, 1% yearly maintenance, 4% rent growth and 3% home price growth. Walk me through the 5-year math and tell me which comes out ahead.", "job_hint": "chat"}
 {"id": "p025", "prompt": "Can you explain what inflation is and why central banks raise interest rates to fight it?", "job_hint": "chat"}
 {"id": "p026", "prompt": "Hello, who are you?", "job_hint": "chat"}
-{"id": "p027", "prompt": "Make a short jingle for my podcast intro: cheerful acoustic guitar, 10 seconds.", "job_hint": "music"}
+{"id": "p027", "prompt": "Write a bash script that renames every .jpeg file in a folder to .jpg and prints how many files it changed.", "job_hint": "code"}
 {"id": "p028", "prompt": "My name is Jane Doe and my email is jane.doe@example.com. Write a short email to my team announcing that I'll be out of office from December 22 to January 3, and that Mark Rivera will cover for me while I'm away.", "job_hint": "chat"}
 {"id": "p029", "prompt": "Refactor this class to follow the single responsibility principle:\n\nclass Report {\n  fetchData() { /* calls the API */ }\n  calculateTotals() { /* sums rows */ }\n  renderHtml() { /* builds a table */ }\n  emailToManager() { /* sends via SMTP */ }\n}", "job_hint": "code"}
 {"id": "p030", "prompt": "What's the time complexity of this and can it be improved?\n\ndef has_dup(a):\n    for i in range(len(a)):\n        for j in range(i + 1, len(a)):\n            if a[i] == a[j]:\n                return True\n    return False", "job_hint": "code"}
@@ -33,25 +33,25 @@
 {"id": "p033", "prompt": "Implement an LRU cache in Python with O(1) get and put, without using functools.", "job_hint": "code"}
 {"id": "p034", "prompt": "I've been offered a job that pays 15% more but has a 50-minute commute each way, versus my current 10-minute walk. Help me think through whether it's worth it.", "job_hint": "chat"}
 {"id": "p035", "prompt": "Center a div horizontally and vertically with CSS. Show me both the flexbox and the grid way.", "job_hint": "code"}
-{"id": "p036", "prompt": "Make a poster for a neighborhood yard sale on Saturday, June 14, 8am to 1pm. Bright and fun.", "job_hint": "image"}
+{"id": "p036", "prompt": "Write a short announcement for the neighborhood group chat: yard sale on Saturday, June 14, 8am to 1pm. Bright and fun.", "job_hint": "chat"}
 {"id": "p037", "prompt": "There are three boxes: one has only apples, one has only oranges, and one has both. All three labels are wrong. You may take one fruit from one box without looking inside. How do you relabel all the boxes correctly?", "job_hint": "chat"}
 {"id": "p038", "prompt": "Analyze the arguments for and against a four-day work week from the perspective of both employers and employees.", "job_hint": "chat"}
 {"id": "p039", "prompt": "Write a Python decorator that retries a function up to 3 times with exponential backoff when it raises an exception.", "job_hint": "code"}
-{"id": "p040", "prompt": "Make a birthday card image with balloons that says 'Happy 7th Birthday, Leo!'", "job_hint": "image"}
+{"id": "p040", "prompt": "Suggest five themes for a 7-year-old's birthday party, with one game idea for each.", "job_hint": "chat"}
 {"id": "p041", "prompt": "Write a Python script that reads a CSV of bank transactions (date, description, amount) and prints total spending per month, largest first.", "job_hint": "code"}
-{"id": "p042", "prompt": "Illustrate a children's book page: a small fox teaching a hedgehog to ride a bicycle.", "job_hint": "image"}
+{"id": "p042", "prompt": "Write a 300-word children's story about a small fox teaching a hedgehog to ride a bicycle.", "job_hint": "chat"}
 {"id": "p043", "prompt": "What's the tallest mountain in Africa?", "job_hint": "chat"}
 {"id": "p044", "prompt": "Write a Google Sheets formula that looks up a product's price from another sheet by product ID and shows 'Not found' if it's missing.", "job_hint": "code"}
 {"id": "p045", "prompt": "Explain what this command does: git rebase -i HEAD~3", "job_hint": "code"}
-{"id": "p046", "prompt": "Write a CSS animation that makes a button pulse gently on hover.", "job_hint": "code"}
+{"id": "p046", "prompt": "Write CSS that makes a button pulse gently on hover using keyframes.", "job_hint": "code"}
 {"id": "p047", "prompt": "How do you say 'thank you for your patience' in Japanese, both formal and casual?", "job_hint": "chat"}
 {"id": "p048", "prompt": "Create a landing page for a dog-walking business using HTML and Tailwind CSS, with a hero section, a pricing table with 3 plans, and a testimonials section.", "job_hint": "code"}
-{"id": "p049", "prompt": "Make a voiceover for my product video: 'Meet Lumo, the smart lamp that learns your routine.'", "job_hint": "voice"}
+{"id": "p049", "prompt": "Write three taglines for Lumo, a smart lamp that learns your routine. Keep each under eight words.", "job_hint": "chat"}
 {"id": "p050", "prompt": "Summarize this in 3 bullet points: A two-year study of 1,600 employees at a travel agency found that letting staff work from home two days a week had no effect on performance reviews or promotions over the following two years. Quit rates fell by a third, with the biggest drops among women, non-managers and employees with long commutes. Managers initially expected productivity to fall, but by the end of the study most said the hybrid schedule had a small positive effect. Employees valued the arrangement as much as an 8% pay rise. The company extended hybrid work to all staff after the experiment ended.", "job_hint": "chat"}
 {"id": "p051", "prompt": "What is a closure in JavaScript? Give a practical example.", "job_hint": "code"}
 {"id": "p052", "prompt": "How does a heat pump heat a house when it's freezing outside?", "job_hint": "chat"}
 {"id": "p053", "prompt": "Create a 12-week training plan to go from couch to running a 10K.", "job_hint": "chat"}
-{"id": "p054", "prompt": "Animate a paper airplane flying over a city skyline, cartoon style.", "job_hint": "video"}
+{"id": "p054", "prompt": "In Python, how do I compute the angle between two 2D vectors, and what should happen when one of them has zero length?", "job_hint": "code"}
 {"id": "p055", "prompt": "Explain quantum entanglement without using the word 'spooky'.", "job_hint": "chat"}
 {"id": "p056", "prompt": "Give me a 3-day itinerary for Kyoto for someone who loves food and temples but hates crowds.", "job_hint": "chat"}
 {"id": "p057", "prompt": "Write a SQL query to find the top 5 customers by total order amount in the last 90 days. Tables: customers(id, name), orders(id, customer_id, amount, created_at).", "job_hint": "code"}
@@ -59,7 +59,7 @@
 {"id": "p059", "prompt": "I was charged twice by an online store on my card 4242 4242 4242 4242 for the same $59.90 order. Write a short dispute message to my bank.", "job_hint": "chat"}
 {"id": "p060", "prompt": "Write a short, heartfelt birthday message for my grandmother who is turning 90.", "job_hint": "chat"}
 {"id": "p061", "prompt": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost?", "job_hint": "chat"}
-{"id": "p062", "prompt": "Make a 10-second video intro for my YouTube cooking channel with spinning vegetables and the title 'Kitchen Chaos'.", "job_hint": "video"}
+{"id": "p062", "prompt": "Plan a month of posts for a small home-cooking blog: three posts a week, each with a title and a one-line idea.", "job_hint": "chat"}
 {"id": "p063", "prompt": "How do I undo my last git commit but keep the changes?", "job_hint": "code"}
 {"id": "p064", "prompt": "My sourdough bread keeps coming out dense and flat. What am I doing wrong?", "job_hint": "chat"}
 {"id": "p065", "prompt": "I want to learn Spanish in 6 months with 30 minutes a day. Give me a realistic plan.", "job_hint": "chat"}
@@ -69,11 +69,11 @@
 {"id": "p069", "prompt": "What's the difference between INNER JOIN, LEFT JOIN and FULL OUTER JOIN in SQL? Show examples with two small tables.", "job_hint": "code"}
 {"id": "p070", "prompt": "Tell me a joke about programmers.", "job_hint": "chat"}
 {"id": "p071", "prompt": "Write a bash script that renames all .jpeg files in a folder to .jpg.", "job_hint": "code"}
-{"id": "p072", "prompt": "Turn this into speech for my presentation intro: 'Good morning everyone, and thank you for joining today's quarterly review.'", "job_hint": "voice"}
+{"id": "p072", "prompt": "Give me three ways to open a talk about remote work that grab the audience's attention in the first 30 seconds.", "job_hint": "chat"}
 {"id": "p073", "prompt": "Explain what Kubernetes is to a developer who only knows Docker.", "job_hint": "code"}
 {"id": "p074", "prompt": "What should I pack for a 4-day trip to Lisbon in late March?", "job_hint": "chat"}
 {"id": "p075", "prompt": "What's the difference between a Roth IRA and a traditional IRA?", "job_hint": "chat"}
-{"id": "p076", "prompt": "Picture of a modern minimalist living room with lots of plants and big windows, for my mood board.", "job_hint": "image"}
+{"id": "p076", "prompt": "How can I make a small living room with one big window feel bigger? I have lots of plants.", "job_hint": "chat"}
 {"id": "p077", "prompt": "What are the warning signs of burnout and what can I actually do about it?", "job_hint": "chat"}
 {"id": "p078", "prompt": "Find the derivative of f(x) = x^3 * ln(x) and explain each step.", "job_hint": "chat"}
 {"id": "p079", "prompt": "How do I negotiate a higher salary when I get a job offer? I don't want to seem greedy.", "job_hint": "chat"}
@@ -83,23 +83,23 @@
 {"id": "p083", "prompt": "How do I politely tell my roommate they need to start paying their share of the utilities on time?", "job_hint": "chat"}
 {"id": "p084", "prompt": "You have 12 coins. One is counterfeit and is either heavier or lighter than the others. Using a balance scale only three times, how do you find the fake coin and tell whether it's heavier or lighter?", "job_hint": "chat"}
 {"id": "p085", "prompt": "Evaluate this business idea: a subscription service that delivers pre-portioned spices for specific recipes each week. Who are the competitors and what's the biggest risk?", "job_hint": "chat"}
-{"id": "p086", "prompt": "Generate a time-lapse video of a flower blooming.", "job_hint": "video"}
+{"id": "p086", "prompt": "Why do some flowers close their petals at night?", "job_hint": "chat"}
 {"id": "p087", "prompt": "thanks!", "job_hint": "chat"}
 {"id": "p088", "prompt": "What's the difference between == and === in JavaScript?", "job_hint": "code"}
 {"id": "p089", "prompt": "In simple terms, how do large language models like you generate text?", "job_hint": "chat"}
 {"id": "p090", "prompt": "How many bones are in the adult human body?", "job_hint": "chat"}
 {"id": "p091", "prompt": "What is 17% of 2,340?", "job_hint": "chat"}
-{"id": "p092", "prompt": "Draw a cozy cabin in a snowy forest at dusk, warm light in the windows, watercolor style.", "job_hint": "image"}
+{"id": "p092", "prompt": "Write a cozy, atmospheric paragraph describing a cabin in a snowy forest at dusk, with warm light in the windows.", "job_hint": "chat"}
 {"id": "p093", "prompt": "Write a short email asking my professor for a one-week extension on my essay because I was sick last week.", "job_hint": "chat"}
 {"id": "p094", "prompt": "Build a responsive navigation bar with a hamburger menu on mobile using only HTML, CSS and a little JavaScript.", "job_hint": "code"}
 {"id": "p095", "prompt": "Translate to French: 'Could you tell me where the nearest pharmacy is? I need something for a headache.'", "job_hint": "chat"}
 {"id": "p096", "prompt": "Schedule a meeting with my team next Tuesday at 10am and send everyone an invite.", "job_hint": "action"}
-{"id": "p097", "prompt": "Read this aloud in a warm, friendly voice: 'Welcome to Maple Street Dental. Our office hours are Monday to Friday, 8am to 5pm.'", "job_hint": "voice"}
+{"id": "p097", "prompt": "Send an email to office@example.com telling the team that our new opening hours start on Monday.", "job_hint": "action"}
 {"id": "p098", "prompt": "Good morning! What's a quick breakfast I can make in 5 minutes with eggs and spinach?", "job_hint": "chat"}
 {"id": "p099", "prompt": "What's the difference between baking soda and baking powder, and can I substitute one for the other?", "job_hint": "chat"}
 {"id": "p100", "prompt": "Help me write the opening paragraph of a cover letter for a junior data analyst role. I'm switching careers after 7 years of teaching high school math.", "job_hint": "chat"}
-{"id": "p101", "prompt": "Compose an upbeat lo-fi hip hop beat for studying, about 2 minutes long.", "job_hint": "music"}
-{"id": "p102", "prompt": "Generate epic orchestral music for a fantasy game trailer.", "job_hint": "music"}
+{"id": "p101", "prompt": "Write a Pomodoro timer in plain JavaScript that runs 25-minute work and 5-minute break cycles and shows the time left in the page title.", "job_hint": "code"}
+{"id": "p102", "prompt": "Give me 10 names for a fantasy kingdom ruled by a dragon queen, each with a one-line backstory.", "job_hint": "chat"}
 {"id": "p103", "prompt": "A farmer needs to cross a river with a wolf, a goat and a cabbage. The boat holds him and one item. Explain the solution step by step.", "job_hint": "chat"}
 {"id": "p104", "prompt": "I have 3 exams next week (statistics on Monday, history on Wednesday, biology on Friday) and I work 5pm to 10pm every weekday. Make me a study schedule.", "job_hint": "chat"}
 {"id": "p105", "prompt": "Post this on my LinkedIn at 9am tomorrow: 'Excited to share that our team just shipped version 2.0!'", "job_hint": "action"}
@@ -107,15 +107,15 @@
 {"id": "p107", "prompt": "I accidentally committed my .env file with API keys to a public GitHub repo. What should I do right now, step by step?", "job_hint": "code"}
 {"id": "p108", "prompt": "Write pytest unit tests for this function:\n\ndef fizzbuzz(n):\n    if n % 15 == 0:\n        return 'FizzBuzz'\n    if n % 3 == 0:\n        return 'Fizz'\n    if n % 5 == 0:\n        return 'Buzz'\n    return str(n)", "job_hint": "code"}
 {"id": "p109", "prompt": "Alice is older than Bob. Carol is younger than Bob but older than Dave. Eve is older than Alice. Who is the second youngest?", "job_hint": "chat"}
-{"id": "p110", "prompt": "Make a 5-second video of ocean waves crashing on rocks at sunset, in slow motion.", "job_hint": "video"}
-{"id": "p111", "prompt": "Text to speech please, with a British accent: 'Please mind the gap between the train and the platform.'", "job_hint": "voice"}
+{"id": "p110", "prompt": "Why do ocean waves get bigger as they get close to the shore?", "job_hint": "chat"}
+{"id": "p111", "prompt": "Which everyday British English phrases most often confuse American visitors? Explain each one.", "job_hint": "chat"}
 {"id": "p112", "prompt": "Write a minimal REST API in FastAPI for notes with create, list, get and delete endpoints, using an in-memory dict.", "job_hint": "code"}
 {"id": "p113", "prompt": "Write a regular expression that extracts all hashtags from a tweet, including ones with underscores and numbers.", "job_hint": "code"}
 {"id": "p114", "prompt": "What's the probability of rolling at least one six with four dice?", "job_hint": "chat"}
-{"id": "p115", "prompt": "Design an app icon for a habit tracker: a checkmark inside a leaf, flat style.", "job_hint": "image"}
+{"id": "p115", "prompt": "Write a custom React hook, useStreak, that counts a daily habit streak in localStorage and resets it when a day is missed.", "job_hint": "code"}
 {"id": "p116", "prompt": "Write a 300-word short story about a lighthouse keeper who discovers the light has been signaling to someone across the sea.", "job_hint": "chat"}
 {"id": "p117", "prompt": "What questions should I ask a contractor before hiring them to redo my bathroom?", "job_hint": "chat"}
-{"id": "p118", "prompt": "Create a short vertical video clip of a steaming cup of coffee on a rainy window sill, cozy vibe, for Instagram.", "job_hint": "video"}
+{"id": "p118", "prompt": "Add coffee with Priya to my calendar for Thursday at 10am.", "job_hint": "action"}
 {"id": "p119", "prompt": "Explain the difference between a recession and a depression.", "job_hint": "chat"}
 {"id": "p120", "prompt": "Explain the difference between processes and threads, and when I should use async instead.", "job_hint": "code"}
 {"id": "p121", "prompt": "I have a job interview tomorrow for a retail store manager position. What questions should I expect and how should I answer them?", "job_hint": "chat"}
@@ -137,14 +137,14 @@
 {"id": "p137", "prompt": "My SQL query is slow: SELECT * FROM orders WHERE YEAR(created_at) = 2025 AND status = 'shipped'; The table has 50 million rows on MySQL 8. How do I speed it up?", "job_hint": "code"}
 {"id": "p138", "prompt": "How much should I tip on an $86 restaurant bill in the US if the service was okay but slow?", "job_hint": "chat"}
 {"id": "p139", "prompt": "Write a C function that reverses a string in place.", "job_hint": "code"}
-{"id": "p140", "prompt": "Generate an image of a golden retriever astronaut floating in space, photorealistic.", "job_hint": "image"}
+{"id": "p140", "prompt": "Could a golden retriever live on the International Space Station? Answer seriously first, then for fun.", "job_hint": "chat"}
 {"id": "p141", "prompt": "hi", "job_hint": "chat"}
-{"id": "p142", "prompt": "Narrate this bedtime story opening in a soft voice: 'Once upon a time, in a forest where the trees could whisper, there lived a very small owl.'", "job_hint": "voice"}
+{"id": "p142", "prompt": "Write the opening paragraph of a bedtime story set in a forest where the trees can talk.", "job_hint": "chat"}
 {"id": "p143", "prompt": "Write a JavaScript function that debounces another function.", "job_hint": "code"}
 {"id": "p144", "prompt": "Can you recommend 5 sci-fi novels for someone who loved The Martian?", "job_hint": "chat"}
 {"id": "p145", "prompt": "Why does this Python code print the same number five times?\n\nfuncs = [lambda: i for i in range(5)]\nprint([f() for f in funcs])", "job_hint": "code"}
 {"id": "p146", "prompt": "Refactor this function to be more readable:\n\nfunction getDiscount(user) {\n  if (user) {\n    if (user.isMember) {\n      if (user.years > 5) {\n        return 0.2;\n      } else {\n        return 0.1;\n      }\n    } else {\n      if (user.coupon) {\n        return 0.05;\n      } else {\n        return 0;\n      }\n    }\n  } else {\n    return 0;\n  }\n}", "job_hint": "code"}
-{"id": "p147", "prompt": "Create a realistic product photo of a matte black water bottle on a marble countertop.", "job_hint": "image"}
+{"id": "p147", "prompt": "Write a SQL query that returns each product's average rating and number of reviews, only for products with at least 10 reviews.", "job_hint": "code"}
 {"id": "p148", "prompt": "How should I structure a medium-sized Express.js project? Suggest a folder layout and explain why.", "job_hint": "code"}
 {"id": "p149", "prompt": "How do I reverse a singly linked list in Java? Show both an iterative and a recursive version.", "job_hint": "code"}
 {"id": "p150", "prompt": "A recipe serves 6 and needs 450 g of flour and 3 eggs. How much do I need for 15 people?", "job_hint": "chat"}
@@ -156,7 +156,7 @@
 {"id": "p156", "prompt": "My React component re-renders forever. Here's the code:\n\nfunction Counter() {\n  const [count, setCount] = useState(0);\n  useEffect(() => {\n    setCount(count + 1);\n  });\n  return <p>{count}</p>;\n}\n\nWhat's wrong?", "job_hint": "code"}
 {"id": "p157", "prompt": "Write a LinkedIn post announcing that I've started a new job as a product designer at a climate startup. Not too cringey please.", "job_hint": "chat"}
 {"id": "p158", "prompt": "What are some good ways to fall asleep faster without taking pills?", "job_hint": "chat"}
-{"id": "p159", "prompt": "Create a calm piano melody for a meditation app.", "job_hint": "music"}
+{"id": "p159", "prompt": "Give me a simple five-minute breathing exercise to calm down before a big meeting.", "job_hint": "chat"}
 {"id": "p160", "prompt": "My electricity bill went from $90 to $210 this month. I got a new 1500 W space heater and a gaming PC with a 750 W power supply. Help me figure out which one is more likely responsible and estimate what each costs to run at $0.17 per kWh.", "job_hint": "chat"}
 {"id": "p161", "prompt": "Is it better to pay off my car loan early or put the extra money into an index fund? The loan is at 6.9% APR and I have about $400 a month spare.", "job_hint": "chat"}
 {"id": "p162", "prompt": "Make me a weekly vegetarian meal plan for a family of four on a $120 budget, with a grocery list.", "job_hint": "chat"}
@@ -193,7 +193,7 @@
 {"id": "p193", "prompt": "Prove that the square root of 2 is irrational.", "job_hint": "chat"}
 {"id": "p194", "prompt": "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?", "job_hint": "chat"}
 {"id": "p195", "prompt": "Is it safe to eat rice that was left out on the counter overnight?", "job_hint": "chat"}
-{"id": "p196", "prompt": "Create a logo for a bakery called 'Rise & Shine': minimal, sunrise motif, warm colors.", "job_hint": "image"}
+{"id": "p196", "prompt": "Post on LinkedIn that our bakery Rise & Shine is hiring a morning baker.", "job_hint": "action"}
 {"id": "p197", "prompt": "I'm getting 'Cannot read properties of undefined (reading 'map')' in React when rendering a list from an API. How do I fix it?", "job_hint": "code"}
 {"id": "p198", "prompt": "My 6-year-old refuses to eat vegetables. Any tricks that actually work?", "job_hint": "chat"}
 {"id": "p199", "prompt": "Write a regex that matches valid US ZIP codes, both 5-digit and ZIP+4.", "job_hint": "code"}
