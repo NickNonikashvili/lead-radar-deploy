@@ -59,6 +59,12 @@ describe("admin accounts and catalog guards", () => {
     // A refund larger than the balance takes it to zero, not below.
     const all = await admin.json("POST", `/api/admin/users/${aliceUser.id}/credit`, { usd: -10_000 });
     assert.equal(all.body.balance_usd, 0);
+    // What was actually taken back: the balance, not the $10,000 asked for.
+    assert.equal(Math.round(all.body.applied_usd * 1e6), -(start + 2_500_000));
+    assert.equal(add.body.applied_usd, 5);
+    assert.equal(back.body.applied_usd, -2.5);
+    const none = await admin.json("POST", `/api/admin/users/${aliceUser.id}/credit`, { usd: -1 });
+    assert.deepEqual(none.body, { balance_usd: 0, applied_usd: 0 });
     assert.equal(balance(aliceUser.id), 0);
     assert.equal(ledgerSum(aliceUser.id), 0, "balance == SUM(ledger)");
 

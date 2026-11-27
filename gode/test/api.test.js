@@ -1831,7 +1831,7 @@ describe("conversation state, password change and privacy facts", () => {
       assert.equal(kept.text, "Once upon");
       assert.equal(kept.request.status, "stopped");
       assert.equal(kept.request.cost_usd, 0.001234);
-      assert.match(kept.request.chip, / · \$0\.0012$/);
+      assert.match(kept.request.chip, / · \$0\.00123$/);
       assert.equal(byId[answered.asstId].stopped, undefined, "only stopped answers carry the flag");
     } finally {
       await t.close();

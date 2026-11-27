@@ -83,24 +83,39 @@
     return Number.isFinite(n) ? n : null;
   }
 
-  /** Same rule as the server's chip: >= 1 cent -> 2 dp; smaller -> up to 4 dp ("$0.0031"). */
+  /** Micro-dollars as dollars, up to 6 decimals and at least 2 ("0.02", "0.0249", "5.00"). */
+  function microsText(micros) {
+    const s = (micros / 1e6).toFixed(6).replace(/0+$/, '');
+    const decimals = s.length - s.indexOf('.') - 1;
+    return decimals >= 2 ? s : s + '0'.repeat(2 - decimals);
+  }
+
+  /**
+   * The chip's cost, the same rule as the server's formatCost (src/chat/pipeline.js): 3 significant
+   * digits below $1 ("$0.0249", "$0.0521", "$0.000225"), cents from $1, "<$0.0001" below that.
+   */
   function formatCost(usd) {
     const n = toNumber(usd);
     if (n === null || n <= 0) return '$0.00';
-    if (n >= 0.01) return '$' + n.toFixed(2);
-    if (n < 0.0001) return '<$0.0001';
-    return '$' + n.toFixed(4).replace(/0+$/, '');
+    const micros = Math.round(n * 1e6);
+    if (micros < 100) return '<$0.0001';
+    if (micros >= 1e6) return '$' + (Math.round(micros / 1e4) / 100).toFixed(2);
+    const step = Math.pow(10, Math.max(0, String(micros).length - 3));
+    const rounded = Math.round(micros / step) * step;
+    return '$' + (rounded >= 1e6 ? '1.00' : microsText(rounded));
   }
 
-  /** Ledger and log amounts: exact down to a micro-dollar, because a single answer can cost $0.000013. */
+  /**
+   * Ledger and log amounts: exact down to a micro-dollar at every size, because a single answer can
+   * cost $0.000013 and the history has to add up to the balance (−$0.024868, not −$0.02).
+   */
   function formatPrecise(usd) {
     const n = toNumber(usd);
     if (n === null || n === 0) return '$0.00';
-    const abs = Math.abs(n);
     const sign = n < 0 ? '−' : '';
-    if (abs >= 0.01) return sign + '$' + abs.toFixed(2);
-    if (abs < 0.000001) return sign + '<$0.000001';
-    return sign + '$' + abs.toFixed(6).replace(/0+$/, '');
+    const micros = Math.round(Math.abs(n) * 1e6);
+    if (micros < 1) return sign + '<$0.000001';
+    return sign + '$' + microsText(micros);
   }
 
   const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -727,12 +742,8 @@
     return renderTokens(parseInline(text));
   }
 
-  async function copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-    // Plain-http dev servers have no async clipboard API.
+  /** Copy through a hidden textarea (no async clipboard API, or it is blocked). True when it worked. */
+  function copyWithSelection(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.setAttribute('readonly', '');
@@ -740,9 +751,31 @@
     ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
-    const ok = document.execCommand('copy');
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (e) {
+      ok = false;
+    }
     ta.remove();
-    if (!ok) throw new Error('Copy is not available in this browser.');
+    return ok;
+  }
+
+  async function copyText(text) {
+    // A page embedded without clipboard-write permission (an iframe, some browser settings) has the
+    // API but every call is refused, and the browser logs a policy error: ask the policy first.
+    const policy = document.permissionsPolicy || document.featurePolicy;
+    const allowed = !(policy && typeof policy.allowsFeature === 'function' && !policy.allowsFeature('clipboard-write'));
+    if (navigator.clipboard && window.isSecureContext && allowed) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch (e) {
+        // Refused (permission denied, document not focused): the selection copy below may still work.
+      }
+    }
+    // Plain-http dev servers have no async clipboard API.
+    if (!copyWithSelection(text)) throw new Error('Copy is not available here. Select the text and copy it instead.');
   }
 
   function safeMediaUrl(url) {
@@ -1357,6 +1390,36 @@
       window.setTimeout(attempt, 300);
     }, []);
 
+    /**
+     * A regenerate/switch stopped after it started is charged, while the earlier answer stays: read
+     * what the stopped attempt cost from the routing log (its row is written as soon as the server
+     * sees the client go, so look again a few times) and put it on the answer's stop note.
+     */
+    const costOfStoppedAttempt = useCallback((key, msgKey, requestId) => {
+      if (!key || !requestId) return;
+      let tries = 0;
+      const attempt = async () => {
+        tries += 1;
+        try {
+          const data = await api('/api/transparency?limit=10');
+          const row = (data.requests || []).find((r) => r.id === requestId);
+          if (row && row.status !== 'streaming') {
+            dispatch({
+              type: 'patch',
+              key,
+              msgKey,
+              patch: (m) => (m.stoppedAttempt && m.stoppedAttempt.request_id === requestId ? { stoppedAttempt: Object.assign({}, m.stoppedAttempt, { cost_usd: toNumber(row.cost_usd) ?? 0 }) } : {}),
+            });
+            return;
+          }
+        } catch (e) {
+          // Keep the note without a figure (it still says the attempt is charged).
+        }
+        if (tries < 4) window.setTimeout(attempt, 500 * tries);
+      };
+      window.setTimeout(attempt, 300);
+    }, []);
+
     const runStream = useCallback(
       async ({ threadKey, msgKey, kind, url, body, onRoute, sentText, pickSource }) => {
         const controller = new AbortController();
@@ -1370,13 +1433,17 @@
         // A media job the provider started: a Stop now is charged and kept as a stopped answer.
         let mediaStarted = false;
         let answerId = null;
+        // The new answer's model and routing-log row, for a regenerate/switch stopped mid-way.
+        let attemptLabel = null;
+        let attemptJob = null;
+        let attemptRequestId = null;
         dispatch({ type: 'stream_start', key: threadKey, kind, msgKey });
 
         // A regenerate/switch that fails or is stopped puts the previous (saved) answer back: the
         // partial new one was never stored. A new answer keeps its partial text, marked unsaved.
         const finish = (extra) =>
           patch(keyRef.current, msgKey, (m) => {
-            const base = { phase: null, progress: null, switchingTo: null };
+            const base = { phase: null, progress: null, switchingTo: null, stoppedAttempt: null };
             if (m.prev) return Object.assign(base, m.prev, { prev: null }, extra);
             return Object.assign(base, extra);
           });
@@ -1385,6 +1452,9 @@
           route(d) {
             routed = true;
             answerId = d.message_id || null;
+            attemptLabel = (d.model && d.model.label) || null;
+            attemptJob = d.job || null;
+            attemptRequestId = d.request_id || null;
             if (onRoute) onRoute(d, keyRef);
             patch(keyRef.current, msgKey, (m) => ({
               id: d.message_id || null,
@@ -1422,6 +1492,7 @@
               phase: null,
               progress: null,
               prev: null,
+              stoppedAttempt: null,
               switchingTo: null,
               request: Object.assign({}, m.request, {
                 id: d.request_id || (m.request && m.request.id),
@@ -1435,6 +1506,10 @@
           },
           error(d) {
             settled = true;
+            // Charged anyway (it finished upstream but could not be stored): the chip says what.
+            // Otherwise the chip says "not charged", never the estimate (failedChipText).
+            const charged = toNumber(d.cost_usd);
+            if (charged !== null && charged > 0) patch(keyRef.current, msgKey, (m) => (m.request ? { request: Object.assign({}, m.request, { cost_usd: charged }) } : {}));
             fail({ code: d.code || 'error', message: d.error || 'Something went wrong.', kind });
             if (d.code === 'insufficient_credits') hooksRef.current.refreshUser();
             else if (toNumber(d.balance_usd) !== null) hooksRef.current.setUser({ balance_usd: d.balance_usd });
@@ -1454,8 +1529,23 @@
           if (!settled) fail({ code: 'interrupted', message: 'The connection closed before the answer finished.', kind });
         } catch (e) {
           if (e && e.name === 'AbortError') {
-            finish(kind === 'chat' ? { stopped: true } : {});
-            if (routed) {
+            // Stopped before the route event: the server stored nothing (no question, and for a
+            // new chat no conversation). Like an unsent failure, the text goes back to the
+            // composer and the next send replaces this pair, so the screen matches what is stored.
+            const notStored = kind === 'chat' && !routed;
+            // A regenerate or switch stopped once the new answer had started: the earlier answer
+            // comes back, but the stopped attempt is charged (its words, or a started generation).
+            // Say so on the answer, with the cost once the routing log has it.
+            const attempt = kind !== 'chat' && routed && (streamedText || mediaStarted) ? { model_label: attemptLabel, job: attemptJob, request_id: attemptRequestId, media: mediaStarted, cost_usd: null } : null;
+            // A media job the provider had started is billed, and its answer is kept as stopped:
+            // say so from the start (no Try again) until the reload shows what it cost.
+            finish(kind === 'chat' ? { stopped: true, notStored, mediaStarted } : attempt ? { stoppedAttempt: attempt } : {});
+            if (notStored && sentText) hooksRef.current.restoreDraft(keyRef.current, sentText);
+            if (attempt) {
+              // The earlier answer is unchanged on the server: no reload (it would drop the note).
+              costOfStoppedAttempt(keyRef.current, msgKey, attempt.request_id);
+              hooksRef.current.refreshUser();
+            } else if (routed) {
               // Fetch the kept partial answer (chip, cost, "Stopped") and the new balance.
               reloadAfterStop(keyRef.current, kind === 'chat' && (streamedText || mediaStarted) ? answerId : null);
               hooksRef.current.refreshUser();
@@ -1470,7 +1560,7 @@
           hooksRef.current.onStreamSettled(keyRef.current);
         }
       },
-      [patch, hooksRef, reloadAfterStop, invalidateModels]
+      [patch, hooksRef, reloadAfterStop, costOfStoppedAttempt, invalidateModels]
     );
 
     const send = useCallback(
@@ -1534,7 +1624,7 @@
 
     const regenerate = useCallback(
       (threadKey, msg) => {
-        patch(threadKey, msg.key, { prev: snapshot(msg), text: '', media: [], request: null, error: null, stopped: false, unsaved: true, phase: 'routing', switchingTo: null });
+        patch(threadKey, msg.key, { prev: snapshot(msg), text: '', media: [], request: null, error: null, stopped: false, unsaved: true, phase: 'routing', switchingTo: null, stoppedAttempt: null });
         runStream({ threadKey, msgKey: msg.key, kind: 'regenerate', url: '/api/messages/' + encodeURIComponent(msg.id) + '/regenerate', body: {} });
       },
       [patch, runStream]
@@ -1543,7 +1633,7 @@
     const switchModel = useCallback(
       (threadKey, msg, model) => {
         invalidateModels(); // the conversation's pins change with a switch
-        patch(threadKey, msg.key, { prev: snapshot(msg), text: '', media: [], request: null, error: null, stopped: false, unsaved: true, phase: 'routing', switchingTo: model.label });
+        patch(threadKey, msg.key, { prev: snapshot(msg), text: '', media: [], request: null, error: null, stopped: false, unsaved: true, phase: 'routing', switchingTo: model.label, stoppedAttempt: null });
         runStream({
           threadKey,
           msgKey: msg.key,
@@ -1641,6 +1731,9 @@
     switch (code) {
       case 'insufficient_credits':
         // The question was not stored: once credits are added, Try again sends it as it was.
+        // With some credit left, the server says what this would cost against the balance: a
+        // video with $0.25 left is not "out of credits".
+        if (message && !/^you(?:'|’)re out of credits/i.test(message)) return { title: 'Not enough credit for this', body: message, cta: 'billing', retry: true };
         return { title: "You're out of credits", body: 'Add credits to keep going. Every answer shows exactly what it cost.', cta: 'billing', retry: true };
       case 'private_blocked':
         // Not "sent to no AI provider": a classifier model may have read it (redacted) to decide.
@@ -1708,24 +1801,28 @@
           : 'This answer came from a model hosted by Gode.' + readFirst,
       };
     }
+    // Only claim a removal that happened: a private request can hold nothing to replace (a
+    // health topic with no name, email or number in it).
+    const removed = countRedactions(request.redactions) > 0;
     if (request.zdr) {
       return {
         kind: 'private',
         icon: 'lock',
         label: request.private ? 'Private' : 'Zero retention',
         title: request.private
-          ? 'Treated as private: only zero-retention or self-hosted models were allowed, after your personal details were removed.' + readFirst
+          ? 'Treated as private: only zero-retention or self-hosted models were allowed' + (removed ? ', after your personal details were removed.' : '.') + readFirst
           : 'Zero data retention: the provider does not keep this request.',
       };
     }
     return {
       kind: 'redacted',
-      icon: 'eye-off',
-      label: 'Private · details removed',
+      // The crossed-out eye means "hidden": only when something was.
+      icon: removed ? 'eye-off' : 'alert',
+      label: removed ? 'Private · details removed' : 'Private · no zero retention',
       title:
-        'Treated as private: personal details were replaced with generic words before it was sent.' +
+        (removed ? 'Treated as private: personal details were replaced with generic words before it was sent.' : 'Treated as private; nothing personal was found to replace.') +
         // A follow-up ("now make a video of it") quotes the earlier request so the result matches it.
-        (request.context_included ? ' It also included the earlier message it builds on, with the same details replaced.' : '') +
+        (request.context_included ? ' It also included the earlier message it builds on' + (removed ? ', with the same details replaced.' : '.') : '') +
         ' Media providers do not offer zero retention, so this one may keep the request.' +
         readFirst,
     };
@@ -1892,10 +1989,12 @@
   function GeneratingState({ job, progress }) {
     let detail = job === 'video' ? 'Videos can take a few minutes.' : 'This usually takes a few seconds.';
     if (progress && progress.status) {
+      // The server sends `queued` / `running` (src/providers/fal.js progressReporter); fal's own
+      // IN_QUEUE / IN_PROGRESS are accepted too.
       const s = String(progress.status).toUpperCase();
       const pos = toNumber(progress.position);
-      if (s === 'IN_QUEUE') detail = pos === null ? 'Waiting in line…' : pos <= 0 ? "You're next in line." : pos + ' ahead of you in line.';
-      else if (s === 'IN_PROGRESS') detail = 'Generating now…';
+      if (s === 'QUEUED' || s === 'IN_QUEUE') detail = pos === null ? 'Waiting in line…' : pos <= 0 ? "You're next in line." : pos + ' ahead of you in line.';
+      else if (s === 'RUNNING' || s === 'IN_PROGRESS') detail = 'Generating now…';
       else detail = String(progress.status).replace(/_/g, ' ').toLowerCase();
     }
     return h(
@@ -1932,11 +2031,19 @@
       ),
       h(
         'button',
-        { type: 'button', className: 'action-btn', 'aria-label': 'Regenerate with the same model', title: 'Regenerate', disabled, onClick: onRegenerate },
+        { type: 'button', className: 'action-btn', 'data-action': 'regenerate', 'aria-label': 'Regenerate with the same model', title: 'Regenerate', disabled, onClick: onRegenerate },
         h(Icon, { name: 'refresh', size: 16 })
       ),
       msg.text && h('button', { type: 'button', className: 'action-btn', 'aria-label': 'Copy answer', title: 'Copy', onClick: onCopy }, h(Icon, { name: 'copy', size: 16 }))
     );
+  }
+
+  /** "Model · effort · $0.07" as the label (may be cut short) and the cost part (always shown). */
+  function chipParts(text) {
+    const t = String(text || '');
+    const at = t.lastIndexOf(' · ');
+    if (at <= 0) return t;
+    return [h('span', { key: 'l', className: 'chip-label' }, t.slice(0, at)), h('span', { key: 'c', className: 'chip-cost' }, t.slice(at))];
   }
 
   function AssistantMessage({ msg, busy, conversationId, engine, threadKey, isLast, onAskAgain }) {
@@ -1960,10 +2067,46 @@
     // Feedback, regenerate and switch need the answer to exist server-side.
     const saved = Boolean(msg.id) && Boolean(req) && !msg.unsaved;
     const canAct = !live && !busy && saved;
-    const chipText = req ? req.chip || liveChipText(req) : '';
+    // A failed answer has no final chip: the estimate would contradict "you weren't charged".
+    const chipText = req ? req.chip || (msg.error ? failedChipText(req) : liveChipText(req)) : '';
+
+    // Regenerate and a switch-menu pick start from a control inside this answer, which the live
+    // answer replaces: focus would drop to <body>, and keyboard and screen-reader users would lose
+    // their place. While the answer runs the answer itself holds focus; once it can be acted on
+    // again, its Regenerate button does (unless the user moved focus somewhere else meanwhile).
+    const articleRef = useRef(null);
+    const keepFocus = useRef(false);
+    const fromHere = () => {
+      const el = articleRef.current;
+      keepFocus.current = Boolean(el && document.activeElement && el.contains(document.activeElement));
+    };
+    useLayoutEffect(() => {
+      const el = articleRef.current;
+      if (!el || !keepFocus.current) return;
+      const active = document.activeElement;
+      const lost = !active || active === document.body || active === el;
+      if (live || (!canAct && saved && busy)) {
+        if (lost && active !== el) el.focus({ preventScroll: true });
+        return;
+      }
+      keepFocus.current = false;
+      if (!lost) return;
+      const target = el.querySelector('.action-btn[data-action="regenerate"]:not(:disabled)') || el.querySelector('.chip-button:not(:disabled)');
+      if (target) target.focus({ preventScroll: true });
+    }, [live, canAct, saved, busy]);
+
     return h(
       'article',
-      { className: cx('msg', 'msg-assistant', live && 'is-live'), 'aria-busy': live || undefined },
+      {
+        ref: articleRef,
+        className: cx('msg', 'msg-assistant', live && 'is-live'),
+        'aria-busy': live || undefined,
+        tabIndex: keepFocus.current ? -1 : undefined,
+        // Focus moved on (to Stop, the message box): that is where it stays.
+        onBlur: (e) => {
+          if (keepFocus.current && e.relatedTarget && articleRef.current && !articleRef.current.contains(e.relatedTarget)) keepFocus.current = false;
+        },
+      },
       h('div', { className: 'msg-avatar' }, h(BrandMark, { size: 28 })),
       h(
         'div',
@@ -1979,8 +2122,11 @@
             { className: 'msg-stopped' },
             h('span', { className: 'tag tag-stopped' }, 'Stopped'),
             stoppedNote(msg),
-            msg.sentText && !busy && !msg.text && isLast && h('button', { type: 'button', className: 'link-btn', onClick: () => engine.retry(threadKey, msg) }, 'Try again')
+            msg.sentText && !busy && !msg.text && !msg.mediaStarted && isLast && h('button', { type: 'button', className: 'link-btn', onClick: () => engine.retry(threadKey, msg) }, 'Try again')
           ),
+        !live &&
+          msg.stoppedAttempt &&
+          h('p', { className: 'msg-stopped msg-stopped-attempt' }, h('span', { className: 'tag tag-stopped' }, 'Stopped'), stoppedAttemptNote(msg.stoppedAttempt)),
         msg.error && h(ErrorNotice, { error: msg.error, onRetry: retry && retry.run, retryLabel: retry && retry.label }),
         req &&
           h(
@@ -1998,16 +2144,29 @@
                   disabled: !canAct,
                   fetchModels: engine.fetchModels,
                   label: chipText,
-                  onPick: (model) => engine.switchModel(threadKey, msg, model),
+                  onPick: (model) => {
+                    fromHere();
+                    engine.switchModel(threadKey, msg, model);
+                  },
                 },
                 h(Icon, { name: 'sparkle', size: 14, className: 'chip-icon' }),
-                h('span', { className: 'chip-text' }, chipText),
+                h('span', { className: 'chip-text' }, chipParts(chipText)),
                 live && h('span', { className: 'chip-pulse', 'aria-hidden': 'true' })
               ),
               h(PrivacyBadge, { request: req }),
               hidden > 0 && h('span', { className: 'badge badge-hidden', title: 'Replaced with placeholders before the request left Gode, then restored in this answer.' }, h(Icon, { name: 'eye-off', size: 13 }), hiddenDetailsText(hidden))
             ),
-            saved && !live && h(MessageActions, { msg, disabled: !canAct, onFeedback: (v) => engine.feedback(threadKey, msg, v), onRegenerate: () => engine.regenerate(threadKey, msg) })
+            saved &&
+              !live &&
+              h(MessageActions, {
+                msg,
+                disabled: !canAct,
+                onFeedback: (v) => engine.feedback(threadKey, msg, v),
+                onRegenerate: () => {
+                  fromHere();
+                  engine.regenerate(threadKey, msg);
+                },
+              })
           )
       )
     );
@@ -2096,11 +2255,23 @@
     );
   }
 
+  const STOP_CLICK_GUARD_MS = 500;
+  const STOP_SUBMIT_GUARD_MS = 300;
+
   function Composer({ value, onChange, onSubmit, onStop, streaming, inputRef, manual, maxLength }) {
     const btnRef = useRef(null);
     // The Stop button had keyboard focus: when the answer ends it turns into a disabled Send
     // button, which drops focus to <body>. Then focus goes back to the message box instead.
     const stopFocused = useRef(false);
+    // When Send turned into Stop. Send and Stop are one button, so the second click of a
+    // double-click on Send would stop the answer it just started.
+    const stopSince = useRef(0);
+    useLayoutEffect(() => {
+      if (streaming) stopSince.current = Date.now();
+    }, [streaming]);
+    // When Stop was pressed: a form submit right after it comes from that same press, not from the
+    // user sending (Enter in the message box calls onSubmit directly, never through the form).
+    const stoppedAt = useRef(0);
     useLayoutEffect(() => {
       const el = inputRef.current;
       if (!el) return;
@@ -2132,6 +2303,7 @@
         className: 'composer',
         onSubmit: (e) => {
           e.preventDefault();
+          if (Date.now() - stoppedAt.current < STOP_SUBMIT_GUARD_MS) return;
           if (canSend) onSubmit();
         },
       },
@@ -2172,7 +2344,17 @@
                   ref: btnRef,
                   type: 'button',
                   className: 'send-btn is-stop',
-                  onClick: onStop,
+                  onClick: (e) => {
+                    // The Stop turns this same <button> into the submit button before the click's
+                    // default action runs (the abort re-renders in a microtask), which would send
+                    // the composer's text at once: the stopped question, or a half-typed draft.
+                    e.preventDefault();
+                    // Pointer clicks only (keyboard and scripted clicks have detail 0): the rest of
+                    // a double-click, or a click in the first moment after sending, is not a Stop.
+                    if (e.detail > 0 && (e.detail > 1 || Date.now() - stopSince.current < STOP_CLICK_GUARD_MS)) return;
+                    stoppedAt.current = Date.now();
+                    onStop();
+                  },
                   onFocus: () => (stopFocused.current = true),
                   onBlur: (e) => {
                     // Focus moved elsewhere on purpose (not lost because the button changed).
@@ -2189,6 +2371,30 @@
     );
   }
 
+  /**
+   * The line under an answer whose regenerate or switch was stopped after it had started: the
+   * earlier answer is back, and the stopped attempt is charged (the words it had written, or a
+   * generation the provider had started). `cost_usd` is null until the routing log has the row.
+   */
+  function stoppedAttemptNote(a) {
+    const who = a && a.model_label ? ' from ' + a.model_label : '';
+    const why = a && a.media ? 'providers bill a generation once it starts' : 'it is charged for the words it had written';
+    const cost = toNumber(a && a.cost_usd);
+    const head = 'You stopped the new answer' + who + ', so the earlier answer is kept. ';
+    if (cost === null) return head + 'The stopped attempt is charged: ' + why + '.';
+    if (cost <= 0) return head + 'The stopped attempt was not charged.';
+    return head + 'The stopped attempt cost ' + formatPrecise(cost) + ': ' + why + '.';
+  }
+
+  /** The chip of a failed answer: the model, and no estimate (a failure is not charged). */
+  function failedChipText(req) {
+    if (!req) return '';
+    const cost = toNumber(req.cost_usd);
+    // Charged anyway (finished upstream, then could not be stored): the live chip shows the cost.
+    if (cost !== null && cost > 0) return liveChipText(req);
+    return (req.model_label || 'Model') + ' · not charged';
+  }
+
   /** The line under a stopped answer. A media job stopped after it started is charged: say why. */
   function stoppedNote(msg) {
     if (msg.text || (msg.media && msg.media.length)) return 'You stopped this answer. It is kept as far as it got.';
@@ -2196,7 +2402,38 @@
     if (req && MEDIA_JOBS.has(req.job) && toNumber(req.cost_usd) > 0) {
       return 'You stopped this after the provider had started making it. Providers bill a generation once it starts, so it was charged.';
     }
+    // Stopped here while the provider was making it: the server's cost is fetched in a moment.
+    if (msg.mediaStarted) return 'You stopped this after the provider had started making it. Providers bill a generation once it starts, so it is charged.';
+    // Stopped before the server stored the question: the next message replaces it.
+    if (msg.notStored) return 'Stopped before the answer started, so nothing was saved.';
     return 'Stopped before the answer started.';
+  }
+
+  /** Markdown as the words a reader sees (no ** or # marks; a code block becomes "Code."). */
+  function markdownText(md) {
+    const inline = (tokens) => tokens.map((tk) => (tk.children ? inline(tk.children) : tk.t === 'br' ? ' ' : tk.v || '')).join('');
+    const blocks = (list) =>
+      list
+        .map((b) => {
+          switch (b.type) {
+            case 'code':
+              return 'Code.';
+            case 'ul':
+            case 'ol':
+              return b.items.map(blocks).join(' ');
+            case 'quote':
+              return blocks(b.blocks);
+            case 'table':
+              return [b.head].concat(b.rows).map((r) => r.map((c) => inline(parseInline(c))).join(', ')).join('. ');
+            case 'hr':
+              return '';
+            default:
+              return inline(parseInline(b.text || ''));
+          }
+        })
+        .filter(Boolean)
+        .join(' ');
+    return blocks(parseBlocks(String(md || '')));
   }
 
   /** What a screen reader hears when an answer ends (errors are announced by their role=alert). */
@@ -2204,9 +2441,10 @@
     if (!msg || msg.role !== 'assistant' || msg.phase || msg.error) return '';
     const req = msg.request;
     const chip = req ? req.chip || liveChipText(req) : '';
+    if (msg.stoppedAttempt) return 'Stopped. ' + stoppedAttemptNote(msg.stoppedAttempt);
     if (msg.stopped) return 'Answer stopped.' + (chip ? ' ' + chip : '');
     if (req && MEDIA_JOBS.has(req.job)) return (JOB_LABEL[req.job] || 'Media') + ' ready.' + (chip ? ' ' + chip : '');
-    const text = String(msg.text || '').replace(/\s+/g, ' ').trim();
+    const text = markdownText(msg.text).replace(/\s+/g, ' ').trim();
     return 'Answer ready.' + (chip ? ' ' + chip + '.' : '') + (text ? ' ' + (text.length > 200 ? text.slice(0, 200) + '…' : text) : '');
   }
 
@@ -2277,10 +2515,37 @@
       const el = scrollRef.current;
       if (el) stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
     };
+    const hasMessages = Boolean(thread && thread.messages.length);
+    const hasMessagesRef = useRef(hasMessages);
+    hasMessagesRef.current = hasMessages;
+    // The empty state (a new chat) opens at its top, once per chat: its heading and the first
+    // suggestions, not its last card. A conversation sticks to its latest message.
+    const emptyTopFor = useRef(null);
     useLayoutEffect(() => {
       const el = scrollRef.current;
-      if (el && stickRef.current) el.scrollTop = el.scrollHeight;
+      if (!el) return;
+      if (!hasMessages) {
+        if (emptyTopFor.current !== threadKey) {
+          el.scrollTop = 0;
+          emptyTopFor.current = threadKey;
+        }
+        return;
+      }
+      emptyTopFor.current = null;
+      if (stickRef.current) el.scrollTop = el.scrollHeight;
     });
+    // Content that grows after it renders (a picture or video loading, a font) would leave the
+    // latest message half under the composer: keep sticking while the view is at the bottom.
+    useEffect(() => {
+      const el = scrollRef.current;
+      const inner = el && el.firstElementChild;
+      if (!inner || typeof window.ResizeObserver !== 'function') return undefined;
+      const ro = new window.ResizeObserver(() => {
+        if (stickRef.current && hasMessagesRef.current) el.scrollTop = el.scrollHeight;
+      });
+      ro.observe(inner);
+      return () => ro.disconnect();
+    }, []);
 
     const submit = () => {
       const text = draft.trim();
@@ -2561,15 +2826,16 @@
                       h('td', null, JOB_LABEL[r.job] || r.job || '—', r.private ? h('span', { className: 'tag tag-private' }, 'private') : null),
                       h(
                         'td',
-                        { className: 'nowrap' },
-                        r.model_label || '—',
+                        null,
+                        // The name stays on one line; a "failed" / "stopped" tag may go below it.
+                        h('span', { className: 'nowrap' }, r.model_label || '—'),
                         r.status === 'error' ? h('span', { className: 'tag tag-error' }, 'failed') : r.status === 'stopped' ? h('span', { className: 'tag tag-stopped' }, 'stopped') : null
                       ),
                       h('td', { className: 'num' }, formatPrecise(r.cost_usd)),
                       h('td', null, hidden ? String(hidden) : h('span', { className: 'muted' }, '0')),
                       h('td', null, r.zdr ? h('span', { className: 'yes' }, h(Icon, { name: 'lock', size: 13 }), 'Yes') : h('span', { className: 'muted' }, 'No')),
                       h('td', null, [r.gateway, r.upstream_provider].filter(Boolean).join(' → ') || '—'),
-                      h('td', { className: 'nowrap' }, classifier ? (r.classifier_model === 'heuristic' ? h('span', { className: 'muted' }, classifier) : classifier) : h('span', { className: 'muted' }, '—'))
+                      h('td', null, classifier ? (r.classifier_model === 'heuristic' ? h('span', { className: 'muted' }, classifier) : classifier) : h('span', { className: 'muted' }, '—'))
                     );
                   })
                 )
@@ -2954,7 +3220,19 @@
             packs.map((p) =>
               h(
                 'button',
-                { key: p, type: 'button', className: 'pack', disabled: !stripeOn || buying !== null, onClick: () => buy(Number(p)) },
+                {
+                  key: p,
+                  type: 'button',
+                  className: 'pack',
+                  // While a checkout opens the packs are only marked busy: a disabled button would
+                  // drop keyboard focus to <body>, and a failed checkout would leave it there.
+                  disabled: !stripeOn,
+                  'aria-disabled': buying !== null || undefined,
+                  'aria-describedby': buyError ? 'buy-error' : undefined,
+                  onClick: () => {
+                    if (buying === null) buy(Number(p));
+                  },
+                },
                 h('span', { className: 'pack-amount' }, Number.isInteger(Number(p)) ? '$' + Number(p) : formatMoney(p)),
                 h('span', { className: 'pack-sub' }, buying === Number(p) ? 'Opening checkout…' : 'of credits'),
                 h('span', { className: 'pack-cta' }, buying === Number(p) ? h(Spinner, { size: 14 }) : h(Icon, { name: 'arrow', size: 16 }))
@@ -2963,7 +3241,7 @@
           ),
           !stripeOn && h('p', { className: 'muted small' }, 'Card payments are not set up on this server yet.'),
           stripeOn && h('p', { className: 'muted small' }, 'You pay securely on Stripe. Gode never sees your card number.'),
-          buyError && h('p', { className: 'field-error', role: 'alert' }, buyError)
+          buyError && h('p', { id: 'buy-error', className: 'field-error', role: 'alert' }, buyError)
         ),
         config &&
           config.dev_topup &&
@@ -2992,7 +3270,7 @@
                 { className: 'table-wrap' },
                 h(
                   'table',
-                  { className: 'table' },
+                  { className: 'table table-ledger' },
                   h('thead', null, h('tr', null, h('th', { scope: 'col' }, 'Date'), h('th', { scope: 'col' }, 'What'), h('th', { scope: 'col', className: 'num' }, 'Amount'))),
                   h(
                     'tbody',
@@ -3081,18 +3359,20 @@
             h(StatCard, { label: 'Gross margin', value: formatPct(g.gross_margin_pct), hint: 'Charged minus API cost', tone: g.credits_cover_api_costs === false ? 'bad' : null }),
             h(StatCard, { label: 'Thumbs-up rate', value: formatRate(g.thumbs_up_rate), hint: 'Of answers that were rated' }),
             h(StatCard, { label: 'Requests', value: (g.requests ?? 0).toLocaleString(), hint: 'Last ' + days + ' days' }),
+            // Headline totals read like the chip (cents from $1, 3 significant digits below); the
+            // micro-dollar-exact figures belong in the ledger and the transparency log.
             h(StatCard, {
               label: 'API cost vs charged',
-              value: formatPrecise(g.api_cost_usd) + ' → ' + formatPrecise(g.charged_usd),
+              value: formatCost(g.api_cost_usd) + ' → ' + formatCost(g.charged_usd),
               hint:
                 (g.credits_cover_api_costs === false ? 'Charged less than the API cost!' : 'What providers billed us, then what balances paid (free credit included)') +
-                (toNumber(g.failed_api_cost_usd) ? ' · ' + formatPrecise(g.failed_api_cost_usd) + ' on failed or stopped requests' : ''),
+                (toNumber(g.failed_api_cost_usd) ? ' · ' + formatCost(g.failed_api_cost_usd) + ' on failed or stopped requests' : ''),
               tone: g.credits_cover_api_costs === false ? 'bad' : null,
             }),
             // Free credit (signup bonus, test top-ups) also pays for answers: only purchases are cash.
             h(StatCard, {
               label: 'Purchases vs API cost',
-              value: formatPrecise(g.purchases_usd) + ' vs ' + formatPrecise(g.api_cost_usd),
+              value: formatCost(g.purchases_usd) + ' vs ' + formatCost(g.api_cost_usd),
               hint:
                 (g.cash_covers_api_costs === false ? 'Purchases do not cover the API cost' : 'Cash in, against what providers billed us') +
                 (toNumber(g.free_credit_share_pct) !== null ? ' · free credit ' + formatPct(g.free_credit_share_pct) + ' of credit given' : ''),
@@ -3311,7 +3591,8 @@
                         h('td', null, labels[p.current_model_id] || p.current_model_id || '—'),
                         h('td', null, h('strong', null, labels[p.proposed_model_id] || p.proposed_model_id)),
                         h('td', { className: 'nowrap num' }, score(p.current_score) + ' → ' + score(p.proposed_score)),
-                        h('td', { className: 'reason' }, p.reason)
+                        // The readable sentence; older stored runs only have the audit string.
+                        h('td', { className: 'reason' }, p.summary || p.reason)
                       )
                     )
                   )
@@ -3519,6 +3800,21 @@
   }
 
   /** One account in the admin user list, with a credit adjustment (+ adds, − takes back). */
+  /**
+   * The toast after a credit adjustment: the change the server made, which for a take-back can be
+   * less than asked (the balance stops at $0). Servers without `applied_usd` get the request.
+   */
+  function adjustToast(requested, data) {
+    const applied = toNumber(data && data.applied_usd);
+    const balance = 'New balance ' + formatBalance(data && data.balance_usd) + '.';
+    if (requested > 0 || applied === null) return (requested > 0 ? 'Added ' : 'Took back ') + formatPrecise(Math.abs(applied === null ? requested : applied)) + '. ' + balance;
+    const took = Math.abs(applied);
+    if (took < 1e-9) return 'Nothing to take back: the balance was already ' + formatBalance(0) + '.';
+    // Micro-dollar rounding aside, less than asked means the whole balance was taken.
+    if (took + 1e-6 < Math.abs(requested)) return 'Took back ' + formatPrecise(took) + ' (all of it). ' + balance;
+    return 'Took back ' + formatPrecise(took) + '. ' + balance;
+  }
+
   function AdminUserRow({ user, onBalance }) {
     const notify = useToast();
     const [usd, setUsd] = useState('');
@@ -3538,7 +3834,7 @@
         setUsd('');
         setNote('');
         setStatus({ s: 'idle', msg: null });
-        notify((n > 0 ? 'Added ' : 'Took back ') + formatPrecise(Math.abs(n)) + '. New balance ' + formatBalance(data.balance_usd) + '.');
+        notify(adjustToast(n, data));
       } catch (err) {
         setStatus({ s: 'error', msg: err.message });
       }
@@ -3565,7 +3861,7 @@
   }
 
   /** Find accounts by email and adjust their credit (refunds, goodwill). The balance never goes below $0. */
-  function AdminUsers() {
+  function AdminUsers({ me, setUser }) {
     const [query, setQuery] = useState('');
     const [state, setState] = useState({ status: 'loading', users: [], error: null });
     const search = useCallback(async (q) => {
@@ -3580,7 +3876,11 @@
     useEffect(() => {
       search('');
     }, [search]);
-    const onBalance = (id, balance) => setState((st) => Object.assign({}, st, { users: st.users.map((u) => (u.id === id ? Object.assign({}, u, { balance_usd: balance }) : u)) }));
+    const onBalance = (id, balance) => {
+      setState((st) => Object.assign({}, st, { users: st.users.map((u) => (u.id === id ? Object.assign({}, u, { balance_usd: balance }) : u)) }));
+      // Your own account: the sidebar's balance changes with it.
+      if (me && me.id === id && setUser) setUser({ balance_usd: balance });
+    };
     return h(
       'section',
       { 'aria-labelledby': 'users-title' },
@@ -3631,7 +3931,7 @@
     { id: 'users', label: 'Users' },
   ];
 
-  function AdminView() {
+  function AdminView({ user, setUser }) {
     const [tab, setTabState] = useState(() => (ADMIN_TABS.some((t) => t.id === readLocal('gode.adminTab')) ? readLocal('gode.adminTab') : 'overview'));
     const [catalog, setCatalog] = useState({ status: 'loading', models: [], routes: [], classifier: null, error: null });
     const load = useCallback(async () => {
@@ -3673,7 +3973,7 @@
 
     let content;
     if (tab === 'overview') content = h(AdminOverview, { labels });
-    else if (tab === 'users') content = h(AdminUsers);
+    else if (tab === 'users') content = h(AdminUsers, { me: user, setUser });
     else if (catalog.status === 'error') content = h(LoadError, { error: catalog.error, onRetry: load });
     else if (catalog.status === 'loading') content = h('div', { className: 'page-loading' }, h(Spinner, { size: 20, label: 'Loading' }));
     else if (tab === 'routing')
@@ -3796,7 +4096,7 @@
               h('td', { 'data-label': 'Model' }, h('strong', null, m.label)),
               h('td', { 'data-label': 'Made by' }, m.vendor || '—'),
               h('td', { 'data-label': 'Used for' }, (m.jobs || []).filter((j) => j !== 'action').map((j) => JOB_LABEL[j] || j).join(', ')),
-              h('td', { 'data-label': 'Runs in' }, REGION_LABEL[m.region] || m.region || '—'),
+              h('td', { 'data-label': 'Runs in' }, regionCell(m)),
               h(
                 'td',
                 { 'data-label': 'Zero retention' },
@@ -3808,6 +4108,19 @@
         )
       )
     );
+  }
+
+  /**
+   * Where a model runs, for the privacy table. `region` is the worst case over every host the
+   * gateway may pick (src/seed/catalog.js), so an open-weight model from a Chinese vendor reads
+   * "China" because OpenRouter may send ordinary requests to the vendor's own platform. Requests
+   * that need zero retention (private ones, Strict privacy) only go to the zero-retention hosts its
+   * note names: say so, or the private route would seem to lead there.
+   */
+  function regionCell(m) {
+    const where = REGION_LABEL[m.region] || m.region || '—';
+    if (!m.zdr || m.self_hosted || !m.region || ['eu', 'us', 'self'].includes(m.region)) return where;
+    return [where + ', for ordinary requests', h('span', { key: 'z', className: 'cell-note muted small' }, 'Zero-retention requests: only the hosts named under “What they keep”.')];
   }
 
   /** How the classifier hop reads on the privacy page (it sees messages before routing). */
@@ -4266,7 +4579,7 @@
     else if (route.page === 'billing') main = h(BillingView, { user, config, setUser, route });
     else if (route.page === 'admin')
       main = user.is_admin
-        ? h(AdminView)
+        ? h(AdminView, { user, setUser })
         : h('div', { className: 'page' }, h('div', { className: 'page-inner' }, h(Notice, { tone: 'info', title: 'Admins only' }, 'This page is for Gode administrators.')));
     else if (route.page === 'privacy') main = h(PrivacyView);
     else
@@ -4425,9 +4738,14 @@
     messageFromServer,
     privacyBadgeFor,
     stoppedNote,
+    stoppedAttemptNote,
+    failedChipText,
+    regionCell,
+    adjustToast,
     privacyFacts,
     promisesFor,
     announcementFor,
+    markdownText,
     classifierText,
     redactionLine,
   };

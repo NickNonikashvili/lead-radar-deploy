@@ -1585,10 +1585,22 @@ pre {
 }
 
 .chip-text {
+  display: inline-flex;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* On a narrow chip the model name gives way, never the cost at the end. */
+.chip-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.chip-cost {
+  flex: none;
+  white-space: pre;
 }
 
 .chip-pulse {
@@ -2203,6 +2215,17 @@ td > .tag + .tag {
   margin-left: 0;
 }
 
+/* A regenerate or switch stopped mid-way: the note under the earlier answer that came back. */
+.msg-stopped-attempt {
+  margin-top: 8px;
+}
+
+/* While an answer is rewritten (Regenerate, a switch) the answer itself holds keyboard focus for
+   the control it replaced; focus moves on to its Regenerate button when it is done. */
+.msg-assistant[tabindex="-1"]:focus {
+  outline: none;
+}
+
 /* plan picker */
 .plan-grid {
   display: grid;
@@ -2672,7 +2695,7 @@ td > .tag + .tag {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.pack:hover:not(:disabled) {
+.pack:hover:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--accent);
   box-shadow: var(--shadow);
 }
@@ -2680,6 +2703,12 @@ td > .tag + .tag {
 .pack:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* A checkout is opening: the packs wait (they keep focus, unlike disabled buttons). */
+.pack[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .pack-amount {
@@ -2786,6 +2815,13 @@ td > .tag + .tag {
 
 .providers > p {
   margin: 0 0 4px;
+}
+
+/* "China, for ordinary requests" + where zero-retention requests go. */
+.table-providers .cell-note {
+  display: block;
+  margin-top: 2px;
+  line-height: 1.4;
 }
 
 .table-providers .retention {
@@ -3049,6 +3085,17 @@ td > .tag + .tag {
     transition: transform 0.24s ease;
   }
 
+  /* On a short phone screen the list keeps room for a few chats and the drawer itself scrolls
+     down to the account section, instead of squeezing the list away. */
+  .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .conv-nav {
+    flex: 1 0 184px;
+  }
+
   .scrim {
     position: fixed;
     inset: 0;
@@ -3139,6 +3186,16 @@ td > .tag + .tag {
     font-size: 15px;
   }
 
+  /* Billing history: the date may wrap so the amount column stays in view. */
+  .table-ledger th,
+  .table-ledger td {
+    padding: 9px 10px;
+  }
+
+  .table-ledger td.nowrap {
+    white-space: normal;
+  }
+
   .messages-inner {
     gap: 20px;
     padding: 20px 16px 16px;
@@ -3174,7 +3231,10 @@ td > .tag + .tag {
     margin-top: 6px;
   }
 
+  /* Manual mode: the model select gives way first, so the row never runs under Send. */
   .model-picker .select {
+    flex: 0 1 auto;
+    min-width: 0;
     max-width: 170px;
   }
 
@@ -3305,6 +3365,16 @@ td > .tag + .tag {
 
   .public-main {
     padding: 24px 16px 48px;
+  }
+}
+
+@media (max-width: 420px) {
+  /* "Turn on / auto-pick" on two short lines, so the model select keeps room for a name. */
+  .model-picker-link {
+    flex: none;
+    max-width: 5.2em;
+    line-height: 1.2;
+    white-space: normal;
   }
 }
 

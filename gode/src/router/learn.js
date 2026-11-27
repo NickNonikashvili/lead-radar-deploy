@@ -151,7 +151,7 @@ const SELECTORS = {
     const ok = pool
       .filter((s) => s.score >= current.score - BUDGET_SCORE_TOLERANCE && s.avg_cost_micros < current.avg_cost_micros)
       .sort(cheaperFirst);
-    return ok.length ? { stat: ok[0], rule: `cheapest within ${BUDGET_SCORE_TOLERANCE} of the current satisfaction` } : null;
+    return ok.length ? { stat: ok[0], rule: `cheapest model at least as well liked (within ${BUDGET_SCORE_TOLERANCE})` } : null;
   },
   // Satisfaction minus a cost penalty (cost normalised to the dearest candidate); never a model
   // users liked less than the current pick.
@@ -167,12 +167,36 @@ function describe(stat, model) {
   return `${model?.label || stat.model_id} ${stat.score.toFixed(2)} (${stat.ratings} ratings, ${stat.n} answers, avg ${usd(stat.avg_cost_micros)})`;
 }
 
+/** "$0.10" / "$0.0042": an average cost per answer, short enough for a sentence. */
+function perAnswer(micros) {
+  const v = microsToUsd(micros);
+  return "$" + (v >= 0.01 ? v.toFixed(2) : String(Number(v.toPrecision(2))));
+}
+
+/**
+ * The proposal in words, for the admin page's "Why" column (`reason` stays the audit string that
+ * route_history keeps): who people rated higher, on how many ratings, and what each costs.
+ */
+function summarize(tier, proposed, current, models) {
+  const name = (s) => models.get(s.model_id)?.label || s.model_id;
+  const p = name(proposed);
+  const c = name(current);
+  const scores = `${proposed.score.toFixed(2)} vs ${current.score.toFixed(2)}, from ${proposed.ratings} and ${current.ratings} ratings`;
+  const costs = `${perAnswer(proposed.avg_cost_micros)} vs ${perAnswer(current.avg_cost_micros)} per answer`;
+  if (tier === "budget") {
+    const liked = proposed.score >= current.score ? "rated at least as well as" : "rated about as well as";
+    return `${p} is ${liked} ${c} (${scores}) and costs less: ${costs}.`;
+  }
+  if (tier === "balanced") return `${p} is rated at least as well as ${c} (${scores}) and is better value for its cost: ${costs}.`;
+  return `People rated ${p} clearly better than ${c} (${scores}). It costs ${costs}.`;
+}
+
 /**
  * Propose routing changes from the per-cell stats. A cell (job x routed tier) is considered only
  * when its current model has >= minSamples ratings in that cell; a challenger needs >= minSamples
  * ratings in the same cell (same job, same tier: comparable traffic). The private tier is never
  * touched (it is a privacy decision, not a satisfaction one).
- * @returns {Array<{ job, tier, current_model_id, proposed_model_id, reason, current_score,
+ * @returns {Array<{ job, tier, current_model_id, proposed_model_id, reason, summary, current_score,
  *                   proposed_score, current_n, proposed_n, current_requests, proposed_requests }>}
  *   current_n / proposed_n are rating counts (what minSamples is compared with).
  */
@@ -208,6 +232,7 @@ function proposeRoutes(db, { minSamples = DEFAULT_MIN_SAMPLES, sinceMs } = {}) {
       current_model_id: currentId,
       proposed_model_id: proposed.model_id,
       reason: `learn ${job}/${tier}, ${choice.rule}: ${describe(proposed, models.get(proposed.model_id))} vs ${describe(current, models.get(currentId))}`,
+      summary: summarize(tier, proposed, current, models),
       current_score: round(current.score, 4),
       proposed_score: round(proposed.score, 4),
       current_n: current.ratings,

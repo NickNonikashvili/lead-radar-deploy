@@ -97,6 +97,31 @@ test("the screen-reader announcement: once per finished answer, never for errors
   assert.match(ui.announcementFor({ role: "assistant", text: "partial", stopped: true, request: { chip: "M · $0.001" } }), /^Answer stopped\./);
   // Long answers are cut to their first 200 characters.
   assert.equal(ui.announcementFor({ role: "assistant", text: "x".repeat(500), request: null }), "Answer ready. " + "x".repeat(200) + "…");
+  // Markdown is read as the words on screen, not its marks.
+  const md = "## Steps\n\n**Bold** start, *soft* and `code`, a [link](https://example.com).\n\n- one\n- two\n\n> quoted\n\n```js\nlet x = 1;\n```\n\nsnake_case_name stays.";
+  assert.equal(
+    ui.announcementFor({ role: "assistant", text: md, request: { chip: "M · $0.01" } }),
+    "Answer ready. M · $0.01. Steps Bold start, soft and code, a link. one two quoted Code. snake_case_name stays."
+  );
+  assert.equal(ui.markdownText("| a | b |\n| - | - |\n| **1** | 2 |"), "a, b. 1, 2");
+});
+
+test("a Stop before the question was stored is unsent: the next send replaces it", () => {
+  assert.equal(ui.stoppedNote({ text: "", media: [], stopped: true, notStored: true, request: null }), "Stopped before the answer started, so nothing was saved.");
+  const state = {
+    threads: {
+      d: {
+        status: "ready",
+        error: null,
+        messages: [
+          { key: "u1", role: "user", text: "Q" },
+          { key: "a1", role: "assistant", text: "", stopped: true, notStored: true, userKey: "u1", phase: null },
+        ],
+      },
+    },
+    streams: {},
+  };
+  assert.deepEqual(ui.chatReducer(state, { type: "prune_unsent", key: "d" }).threads.d.messages, []);
 });
 
 test("privacy promises follow the server: self-hosting, fallback, Presidio, classifier, media proxy", () => {
@@ -218,4 +243,97 @@ test("privacy badge: a private media follow-up says the earlier message went wit
   assert.match(followUp.title, /included the earlier message it builds on/);
   assert.match(followUp.title, /may keep the request/);
   assert.equal(ui.requestFromRoute({ request_id: "r", model: {}, context_included: true }).context_included, true);
+});
+
+test("credit adjustment toast: the change the server made, which a take-back caps at $0", () => {
+  assert.equal(ui.adjustToast(1.5, { balance_usd: 6.5, applied_usd: 1.5 }), "Added $1.50. New balance $6.50.");
+  assert.equal(ui.adjustToast(-1.5, { balance_usd: 5, applied_usd: -1.5 }), "Took back $1.50. New balance $5.00.");
+  assert.equal(ui.adjustToast(-100, { balance_usd: 0, applied_usd: -21.187829 }), "Took back $21.187829 (all of it). New balance $0.00.");
+  assert.equal(ui.adjustToast(-100, { balance_usd: 0, applied_usd: -0.25 }), "Took back $0.25 (all of it). New balance $0.00.");
+  assert.equal(ui.adjustToast(-5, { balance_usd: 0, applied_usd: 0 }), "Nothing to take back: the balance was already $0.00.");
+  // A server without applied_usd: the request, as before.
+  assert.equal(ui.adjustToast(-2, { balance_usd: 3 }), "Took back $2.00. New balance $3.00.");
+});
+
+test("error copy: not enough credit for this request repeats the server's numbers; out of credits stays short", () => {
+  const short = ui.errorCopy({ code: "insufficient_credits", message: "This costs about $0.26 and your balance is $0.25. Buy credits to continue." });
+  assert.equal(short.title, "Not enough credit for this");
+  assert.equal(short.body, "This costs about $0.26 and your balance is $0.25. Buy credits to continue.");
+  assert.equal(short.cta, "billing");
+  assert.equal(short.retry, true);
+  const low = ui.errorCopy({ code: "insufficient_credits", message: "Your balance ($0.0001) is too low for an answer from Claude Opus 5.5. Buy credits to continue." });
+  assert.equal(low.title, "Not enough credit for this");
+  for (const message of ["You're out of credits. Buy credits to continue.", undefined]) {
+    const out = ui.errorCopy({ code: "insufficient_credits", message });
+    assert.equal(out.title, "You're out of credits");
+    assert.match(out.body, /Add credits to keep going/);
+  }
+});
+
+test("privacy badge: a private request with nothing to replace never claims details were removed", () => {
+  const media = ui.privacyBadgeFor({ private: true, zdr: false, model_region: "us", job: "image", redactions: {} });
+  assert.equal(media.kind, "redacted");
+  assert.equal(media.label, "Private · no zero retention");
+  assert.equal(media.icon, "alert", "not the crossed-out eye of hidden details");
+  assert.match(media.title, /^Treated as private; nothing personal was found to replace\. Media providers do not offer zero retention, so this one may keep the request\.$/);
+  assert.doesNotMatch(media.title, /replaced with generic words/);
+  const followUp = ui.privacyBadgeFor({ private: true, zdr: false, model_region: "us", job: "video", redactions: {}, context_included: true });
+  assert.match(followUp.title, /It also included the earlier message it builds on\. /);
+  assert.doesNotMatch(followUp.title, /same details replaced/);
+  const swapped = ui.privacyBadgeFor({ private: true, zdr: false, model_region: "us", job: "image", redactions: { PERSON: 1 } });
+  assert.equal(swapped.label, "Private · details removed");
+  assert.match(swapped.title, /replaced with generic words/);
+  // Private text on a zero-retention model: "after your personal details were removed" only when some were.
+  assert.doesNotMatch(ui.privacyBadgeFor({ private: true, zdr: true, model_region: "us", redactions: {} }).title, /personal details were removed/);
+  assert.match(ui.privacyBadgeFor({ private: true, zdr: true, model_region: "us", redactions: { EMAIL: 1 } }).title, /after your personal details were removed/);
+});
+
+test("stopped note: a media job stopped while the provider was making it says it is charged, before the reload", () => {
+  const live = { text: "", media: [], stopped: true, mediaStarted: true, request: { job: "image", cost_usd: null, est_cost_usd: 0.05 } };
+  assert.match(ui.stoppedNote(live), /after the provider had started making it.*charged/);
+  assert.doesNotMatch(ui.stoppedNote(live), /before the answer started/);
+  // Still queued when stopped: free, and said so.
+  assert.equal(ui.stoppedNote({ text: "", media: [], stopped: true, request: { job: "image", cost_usd: null } }), "Stopped before the answer started.");
+});
+
+test("money: chips round to 3 significant digits like the server; ledger amounts are exact", () => {
+  const { formatCost } = require("../src/chat/pipeline");
+  for (const v of [0, 0.00004, 0.0001, 0.000225, 0.0031, 0.00314, 0.0117, 0.024868, 0.052065, 0.1, 0.9996, 1.2, 12.5]) {
+    assert.equal(ui.formatCost(v), formatCost(v), `chip for ${v}`);
+  }
+  assert.equal(ui.formatCost(0.024868), "$0.0249");
+  assert.equal(ui.formatCost(0.052065), "$0.0521");
+  assert.equal(ui.formatPrecise(-0.024868), "−$0.024868");
+  assert.equal(ui.formatPrecise(-0.052065), "−$0.052065");
+  assert.equal(ui.formatPrecise(5), "$5.00");
+  assert.equal(ui.formatPrecise(0.25), "$0.25");
+  assert.equal(ui.formatPrecise(-0.0000004), "−<$0.000001");
+  // The seeded demo history adds up to its balance to the micro-dollar.
+  const rows = [0.25, 5, -0.024868, -0.000225, -0.000264, -0.000167, -0.052065];
+  const shown = rows.map((r) => Number(ui.formatPrecise(r).replace("−", "-").replace("$", "")));
+  assert.equal(Math.round(shown.reduce((a, b) => a + b, 0) * 1e6), Math.round(rows.reduce((a, b) => a + b, 0) * 1e6));
+});
+
+test("a stopped regenerate or switch says the earlier answer is kept and what the attempt cost", () => {
+  const pending = ui.stoppedAttemptNote({ model_label: "GPT-Image-2.6 Sunburst", media: true, cost_usd: null });
+  assert.match(pending, /^You stopped the new answer from GPT-Image-2\.6 Sunburst, so the earlier answer is kept\. The stopped attempt is charged: providers bill a generation once it starts\.$/);
+  assert.match(ui.stoppedAttemptNote({ model_label: "Qwen Image 3", media: true, cost_usd: 0.052065 }), /The stopped attempt cost \$0\.052065: providers bill a generation once it starts\.$/);
+  assert.match(ui.stoppedAttemptNote({ model_label: "DeepSeek V4.1 Flash", media: false, cost_usd: 0.000039 }), /cost \$0\.000039: it is charged for the words it had written\.$/);
+  assert.match(ui.stoppedAttemptNote({ model_label: "X", media: true, cost_usd: 0 }), /The stopped attempt was not charged\.$/);
+  // Screen readers hear it when the stream ends.
+  const msg = { role: "assistant", text: "Old answer", request: { chip: "M · $0.05" }, stoppedAttempt: { model_label: "M2", media: false, cost_usd: null } };
+  assert.match(ui.announcementFor(msg), /^Stopped\. You stopped the new answer from M2, so the earlier answer is kept\./);
+});
+
+test("a failed answer's chip says it was not charged, never the estimate", () => {
+  const req = { job: "chat", model_label: "DeepSeek V4.1 Flash", effort: "none", est_cost_usd: 0.0001, cost_usd: null };
+  assert.equal(ui.failedChipText(req), "DeepSeek V4.1 Flash · not charged");
+  assert.equal(ui.failedChipText({ ...req, cost_usd: 0.0021 }), "DeepSeek V4.1 Flash · no thinking · $0.0021", "charged anyway: the cost");
+});
+
+test("privacy table: a Chinese vendor's open model with zero-retention hosts says where private requests go", () => {
+  const text = (cell) => (Array.isArray(cell) ? cell.map((c) => (typeof c === "string" ? c : c.props.children)).join(" ") : cell);
+  assert.equal(ui.regionCell({ region: "us", zdr: true }), "United States");
+  assert.equal(ui.regionCell({ region: "cn", zdr: false }), "China");
+  assert.match(text(ui.regionCell({ region: "cn", zdr: true })), /^China, for ordinary requests Zero-retention requests: only the hosts named under “What they keep”\.$/);
 });

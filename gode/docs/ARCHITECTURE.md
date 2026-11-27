@@ -417,7 +417,7 @@ createClassifier({ config, db, providers, redactor?, logger? })
               redactionCounts, signal, zdrOnly /* strict privacy: ZDR/self-hosted classifier only */,
               conversationPrivate /* conversations.private */, euOnly /* user.eu_only */ })
   -> Promise<{ job, difficulty, private: bool,
-               output: { length, format, duration_s?, aspect?, media_prompt? },
+               output: { length, format, duration_s?, aspect?, media_prompt?, speak_text? },
                title /* <= 6 words */, classifierModel /* models.id | 'heuristic' */,
                usage: { inputTokens, outputTokens, costMicros } }>
   .resolveModel({ zdrOnly?, euOnly?, selfHostedOnly? }) -> Model|null   // the classifier model in use
@@ -444,7 +444,15 @@ validated and clamped. `private` is true if the LLM says so OR any local signal 
 `output.media_prompt`: a self-contained prompt for a media job, possibly with placeholders. The
 heuristic fills it for a short follow-up ("now make a video of it") by combining it with the previous
 user message (voice: the previous answer's text). A media request in a private conversation is
-private only when its media_prompt quotes earlier messages. Classifier cost: provider-reported, else
+private only when its media_prompt quotes earlier messages.
+
+`output.speak_text` (voice only): the words to speak, without the request around them ("Read this
+aloud in a warm voice: Good morning" -> "Good morning"): the text after the instruction's colon, or a
+quoted span after a speak verb. The LLM classifier may write it (its schema and prompt ask for it);
+its value is kept only when the message holds those words, else the heuristic's reading is used.
+Text to speech reads its whole input aloud, so the pipeline sends speak_text instead of the message.
+
+Classifier cost: provider-reported, else
 tokens × `textRates(model)` (cached and long-context rates apply).
 
 pick.js:
@@ -508,7 +516,10 @@ computeStats(db, { sinceMs }) -> [{ job, model_id, n, ratings, up, down, regener
 computeCellStats(db, { sinceMs }) -> the same per (job, tier) cell, from requests.tier; action folds
   // into chat; only status 'ok' rows count (stopped and failed answers are neutral)
 proposeRoutes(db, { minSamples, sinceMs }) -> [{ job, tier, current_model_id, proposed_model_id,
-    reason, current_score, proposed_score, current_n, proposed_n, current_requests, proposed_requests }]
+    reason, summary, current_score, proposed_score, current_n, proposed_n, current_requests, proposed_requests }]
+  // reason: the audit string route_history keeps ("learn chat/quality, best satisfaction: ...");
+  // summary: the same in words for the admin page ("People rated X clearly better than Y (0.83 vs
+  // 0.43, from 21 and 26 ratings). It costs $0.10 vs $0.04 per answer.").
   // Per routed cell, comparing models only within that cell. A cell is considered only when its
   // CURRENT model has >= minSamples ratings there; a challenger needs as many in the same cell
   // (current_n / proposed_n are ratings). quality: best score, only when > current + 0.02;
@@ -728,7 +739,8 @@ Steps (auto/manual):
    `filterResponse` (unless `RESPONSE_FILTER=off`) as the safety net; if it masked anything (a
    multi-line key block) emit `replace { text }`. A stream without a usage event is billed from
    estimated tokens, never as zero.
-   MEDIA: prompt = the classifier's `output.media_prompt` when present (genericizePlaceholders, then a
+   MEDIA: prompt = the classifier's `output.media_prompt` when present (voice: else `output.speak_text`;
+   either goes through genericizePlaceholders, then a
    second `redactMessages(..., { mode: 'generic' })` pass), else the latest text generically redacted;
    counts come from the placeholders plus the generic pass. `generateMedia` with `params { aspect,
    duration }` (duration = `durationFor(model, output.duration_s)`) and the hold sized from the same
@@ -844,10 +856,13 @@ short/medium/long plus a reasoning allowance by effort, capped at the turn's max
 the hold covers the turn's full max_tokens.
 
 Chip text: `${label} · ${effort === 'none' ? 'no thinking' : effort + ' effort'} · ${cost}` where
-`formatCost` shows 2 significant decimals in integer micro-USD (≥ $0.01 → 2 dp, so 0.045 → $0.05;
-smaller → up to 4 dp, e.g. $0.0031; below $0.0001 → `<$0.0001`). `formatChip(label, effort, costUsd)`
+`formatCost` shows 3 significant digits below $1 in integer micro-USD ($0.0249, $0.052, $0.0031,
+$0.000225; at least 2 decimals, so $0.02 and $0.10), cents from $1 ($1.20), and `<$0.0001` below a
+hundredth of a cent; the frontend's formatCost follows the same rule, and ledger and log amounts
+(formatPrecise) are exact to the micro-dollar, so the history adds up to the balance (the admin
+overview's headline totals use formatCost, so they read $8.81, not $8.808865). `formatChip(label, effort, costUsd)`
 leaves the effort part out when effort is null/undefined; `chipFor({ label, job, effort, costUsd })`
-does that for media jobs ("Qwen Image 3 · $0.05"). The routes use `chipFor` for stored answers, so a
+does that for media jobs ("Qwen Image 3 · $0.052"). The routes use `chipFor` for stored answers, so a
 reloaded chip is identical to the live one.
 
 ## HTTP API — src/routes/ and src/app.js
@@ -934,7 +949,7 @@ POST   /api/admin/learn            {apply?, days?, min_samples?, run_id?, propos
 GET    /api/admin/learn/runs?limit=20 -> {runs:[...]}
 GET    /api/admin/users?email=     -> {users:[{id,email,balance_usd,is_admin,created_at}]}
                                    // case-insensitive substring (LIKE wildcards escaped), newest 50
-POST   /api/admin/users/:id/credit {usd, note?} -> {balance_usd}   // credits.adjust, ref
+POST   /api/admin/users/:id/credit {usd, note?} -> {balance_usd, applied_usd}   // credits.adjust, ref; applied_usd is the change made (a take-back stops at $0)
                                    // 'admin:<admin id> <note>'; never below 0; |usd| <= 10,000
 GET    /api/admin/catalog/export   -> {models, routes}
 POST   /api/admin/catalog/import   {models, routes} -> {ok, models, routes}

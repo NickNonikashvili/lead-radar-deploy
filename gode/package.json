@@ -13,7 +13,10 @@
     "learn": "node scripts/learn.js",
     "bench": "node bench/run.js",
     "export-bench-prompts": "node scripts/export-bench-prompts.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "preview:build": "node preview/build.js",
+    "preview:serve": "node preview/build.js && node preview/harness.js",
+    "preview:test": "node preview/build.js && node --test --test-concurrency=1 \"preview/test/*.test.js\" && node preview/smoke.js"
   },
   "engines": {
     "node": ">=22.5"

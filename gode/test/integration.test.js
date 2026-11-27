@@ -13,7 +13,7 @@ const assert = require("node:assert/strict");
 
 const { createTestApp } = require("./helpers/app");
 const { startMockUpstream } = require("./helpers/mock-upstream");
-const { chipFor, formatChip } = require("../src/chat/pipeline");
+const { chipFor, formatChip, formatCost } = require("../src/chat/pipeline");
 const { usdToMicros } = require("../src/util");
 
 const PASSWORD = "correct-horse-battery";
@@ -601,7 +601,7 @@ describe("integration: real gateway adapters (mock upstream)", () => {
     const api = 420 + 420;
     assert.equal(usdToMicros(done.api_cost_usd), api);
     assert.equal(usdToMicros(done.cost_usd), t.deps.credits.priceFor(api));
-    assert.equal(done.chip, "DeepSeek V4.1 Flash · low effort · $0.0011");
+    assert.equal(done.chip, "DeepSeek V4.1 Flash · low effort · $0.00109");
     assert.equal(before - balanceMicros(db, me.user.id), t.deps.credits.priceFor(api));
     const row = requestRow(db, done.request_id);
     assert.equal(row.upstream_provider, "MockProvider");
@@ -628,7 +628,9 @@ describe("integration: real gateway adapters (mock upstream)", () => {
     assert.equal(submit.body.prompt, "Draw a picture of a red fox in the snow");
     const model = t.deps.picker.candidates({ job: "image", user: { plan: "balanced" }, private: false }).find((m) => m.id === QWEN_IMAGE);
     assert.equal(usdToMicros(done.api_cost_usd), usdToMicros(model.price_per_unit) + 420);
-    assert.equal(done.chip, `Qwen Image 3 · $${(t.deps.credits.priceFor(usdToMicros(model.price_per_unit) + 420) / 1e6).toFixed(2)}`);
+    // The chip's cost, at 3 significant digits ($0.0525: the image plus the classifier's read).
+    assert.equal(done.chip, `Qwen Image 3 · ${formatCost(t.deps.credits.priceFor(usdToMicros(model.price_per_unit) + 420) / 1e6)}`);
+    assert.match(done.chip, / · \$0\.\d{4}$/);
     assertBooksBalanced(db);
   });
 

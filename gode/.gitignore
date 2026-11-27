@@ -5,3 +5,4 @@ data/*
 bench/results/
 bench/prompts.real.jsonl
 e2e/shots/
+preview/dist/

@@ -45,7 +45,7 @@ const MAX_USERS_LISTED = 50;
 const MAX_ADJUST_USD = 10_000;
 // Fields of a learner proposal an admin may send back to apply it as reviewed.
 const PROPOSAL_FIELDS = [
-  "job", "tier", "current_model_id", "proposed_model_id", "reason", "current_score", "proposed_score",
+  "job", "tier", "current_model_id", "proposed_model_id", "reason", "summary", "current_score", "proposed_score",
   "current_n", "proposed_n", "current_requests", "proposed_requests",
 ];
 
@@ -163,6 +163,8 @@ function checkProposals(list) {
       proposed_model_id: idField(p.proposed_model_id, `${where}.proposed_model_id`, { required: true }),
     };
     if (p.reason !== undefined && p.reason !== null) out.reason = stringField(p.reason, `${where}.reason`, { max: 1000 });
+    // The proposal as the learner returned it may be sent back as is: its display sentence is kept.
+    if (p.summary !== undefined && p.summary !== null) out.summary = stringField(p.summary, `${where}.summary`, { max: 1000 });
     for (const k of ["current_score", "proposed_score", "current_n", "proposed_n", "current_requests", "proposed_requests"]) {
       if (p[k] !== undefined && p[k] !== null) out[k] = numberField(p[k], `${where}.${k}`, { min: 0, max: 1e9 });
     }
@@ -337,9 +339,13 @@ function createAdminRoutes({ db, config, auth, classifier, credits, redactor }) 
     if (typeof credits?.adjust !== "function") throw new AppError(503, "unavailable", "Credit adjustments are not available.");
     // The ref names the admin who made the change (and their note) for the ledger's audit trail.
     const ref = `admin:${req.user.id}${note ? ` ${note}` : ""}`.slice(0, 240);
+    // A take-back stops at $0, so the change applied can be less than the one asked for: report
+    // it (the handler is synchronous, so nothing else touches the balance between the two reads).
+    const readMicros = () => Number(db.prepare("SELECT balance_micros FROM users WHERE id = ?").get(target.id).balance_micros);
+    const before = readMicros();
     const out = credits.adjust(target.id, micros, ref);
-    const balance = typeof out === "number" ? out : Number(out?.balance ?? db.prepare("SELECT balance_micros FROM users WHERE id = ?").get(target.id).balance_micros);
-    res.json({ balance_usd: microsToUsd(balance) });
+    const balance = typeof out === "number" ? out : Number(out?.balance ?? readMicros());
+    res.json({ balance_usd: microsToUsd(balance), applied_usd: microsToUsd(balance - before) });
   });
 
   router.get("/admin/catalog/export", (req, res) => {

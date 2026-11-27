@@ -264,7 +264,7 @@ test("formatChip and formatCost follow the chip rules", () => {
   assert.equal(formatChip("Claude Opus 5.5", "high", 0.04), "Claude Opus 5.5 · high effort · $0.04");
   assert.equal(formatChip("DeepSeek V4.1 Flash", "none", 0.0031), "DeepSeek V4.1 Flash · no thinking · $0.0031");
   assert.equal(formatChip("Mistral Large 4", "low", 1.2), "Mistral Large 4 · low effort · $1.20");
-  assert.equal(formatChip("FLUX.3 Klein", null, 0.0117), "FLUX.3 Klein · $0.01");
+  assert.equal(formatChip("FLUX.3 Klein", null, 0.0117), "FLUX.3 Klein · $0.0117");
   assert.equal(formatChip("FLUX.3 Klein", null, 0.0047), "FLUX.3 Klein · $0.0047");
 
   assert.equal(formatCost(0), "$0.00");
@@ -272,12 +272,16 @@ test("formatChip and formatCost follow the chip rules", () => {
   assert.equal(formatCost(0.0001), "$0.0001");
   assert.equal(formatCost(0.003), "$0.003");
   assert.equal(formatCost(0.0031), "$0.0031");
-  assert.equal(formatCost(0.00314), "$0.0031");
-  assert.equal(formatCost(0.00996), "$0.01"); // rounds up into the 2-decimal range
-  assert.equal(formatCost(0.045), "$0.05"); // no binary float surprise (0.045 * 100 = 4.4999...)
+  assert.equal(formatCost(0.00314), "$0.00314"); // 3 significant digits below $1
+  assert.equal(formatCost(0.000225), "$0.000225");
+  assert.equal(formatCost(0.024868), "$0.0249"); // agrees with the ledger's exact −$0.024868
+  assert.equal(formatCost(0.00996), "$0.00996");
+  assert.equal(formatCost(0.9996), "$1.00"); // rounds up into the cents range
+  assert.equal(formatCost(0.1), "$0.10"); // at least two decimals
+  assert.equal(formatCost(0.0450004), "$0.045"); // integer micro math, no binary float surprise
   assert.equal(formatCost(12.5), "$12.50");
 
-  assert.equal(chipFor({ label: "Qwen Image 3", job: "image", effort: "none", costUsd: 0.052 }), "Qwen Image 3 · $0.05");
+  assert.equal(chipFor({ label: "Qwen Image 3", job: "image", effort: "none", costUsd: 0.052 }), "Qwen Image 3 · $0.052");
   assert.equal(chipFor({ label: "Claude", job: "action", effort: "medium", costUsd: 0.02 }), "Claude · medium effort · $0.02");
 });
 
@@ -409,7 +413,7 @@ test("auto text via OpenRouter: PII redacted upstream, restored in deltas, forei
   assert.equal(r.done.cost_usd, 0.001092);
   assert.equal(r.done.api_cost_usd, 0.00084);
   assert.equal(r.done.balance_usd, (before - 1092) / 1e6);
-  assert.equal(r.done.chip, "DeepSeek V4.1 Flash · low effort · $0.0011");
+  assert.equal(r.done.chip, "DeepSeek V4.1 Flash · low effort · $0.00109");
   checkInvariants(h);
 });
 
@@ -571,10 +575,31 @@ test("media job via the real fal adapter: queue progress, aspect, generic prompt
   assert.equal(row.api_cost_micros, 40_000); // 1 image x $0.04, no classifier cost
   assert.equal(row.charged_micros, 52_000);
   assert.equal(r.done.cost_usd, 0.052);
-  assert.equal(r.done.chip, "Qwen Image 3 · $0.05");
+  assert.equal(r.done.chip, "Qwen Image 3 · $0.052");
   assert.equal(balance(h, user.id), before - 52_000);
   const [, answer] = messages(h, r.route.conversation_id);
   assert.deepEqual(answer.content.media, [{ type: "image", url: "https://v3.fal.media/files/mock/image.png", mime: "image/png" }]);
+  checkInvariants(h);
+});
+
+test("voice job: text to speech gets only the words to say, not the request around them", async () => {
+  up.reset();
+  const h = setup(upstreamEnv({ FAL_KEY: "fal-test-key" }));
+  const user = h.user();
+  // The app's own "Read it aloud" suggestion.
+  const r = await h.turn({ user, text: `Read this aloud in a warm voice: Good morning, everyone, and welcome! Mail ${EMAIL}` });
+  assertTerminal(r, "done");
+  assert.equal(r.route.job, "voice");
+  assert.ok(!r.route.context_included, "the words come from this message, not the history");
+  const submit = up.find("/fal/").find((req) => req.method === "POST");
+  // TTS models take `text` (params.prompt_field); the instruction is not read out, and the email
+  // is still swapped for a generic phrase.
+  assert.equal(submit.body.text, "Good morning, everyone, and welcome! Mail an email address");
+  assert.doesNotMatch(JSON.stringify(submit.body), /Read this aloud|warm voice/);
+  for (const req of up.requests) assert.ok(!containsPII(req.rawBody), `upstream ${req.path} received plaintext PII`);
+  // Priced on the characters spoken.
+  const row = requestRow(h, r.route.request_id);
+  assert.ok(row.media_units > 0);
   checkInvariants(h);
 });
 

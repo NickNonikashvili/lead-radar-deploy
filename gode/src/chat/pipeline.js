@@ -97,19 +97,23 @@ const MAP_KEY_RE = /^\[([A-Z][A-Z_]*)_(\d+)\]$/;
 // Pure helpers (exported for tests and for routes that render stored requests)
 
 /**
- * Customer-facing cost: 2 significant digits. $0.01 and up -> 2 decimals ("$0.04"); below that up
- * to 4 decimals ("$0.0031", "$0.003"); below $0.0001 -> "<$0.0001". Integer micro-USD math, so
- * float noise never flips a rounding.
+ * Customer-facing cost: 3 significant digits below $1 ("$0.0249", "$0.0521", "$0.0031",
+ * "$0.000225"), so the chip agrees with the ledger's exact amount; cents from $1 ("$1.20");
+ * "<$0.0001" below a hundredth of a cent; always at least two decimals ("$0.02", "$0.10").
+ * Integer micro-USD math, so float noise never flips a rounding. public/app.js formatCost follows
+ * the same rule (live chips, estimates).
  */
 function formatCost(costUsd) {
   const micros = Math.round(Number(costUsd) * 1e6);
   if (!Number.isFinite(micros) || micros <= 0) return "$0.00";
   if (micros < 100) return "<$0.0001";
-  if (micros < 10_000) {
-    const tenThousandths = Math.round(micros / 100);
-    if (tenThousandths < 100) return `$${(tenThousandths / 10_000).toFixed(4).replace(/0+$/, "")}`;
-  }
-  return `$${(Math.round(micros / 10_000) / 100).toFixed(2)}`;
+  if (micros >= 1_000_000) return `$${(Math.round(micros / 10_000) / 100).toFixed(2)}`;
+  const step = 10 ** Math.max(0, String(micros).length - 3);
+  const rounded = Math.round(micros / step) * step;
+  if (rounded >= 1_000_000) return "$1.00";
+  const text = (rounded / 1e6).toFixed(6).replace(/0+$/, "");
+  const decimals = text.length - text.indexOf(".") - 1;
+  return `$${decimals >= 2 ? text : text + "0".repeat(2 - decimals)}`;
 }
 
 /**
@@ -771,20 +775,26 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
    * become neutral phrases, because media models can't round-trip them, and a second generic pass
    * catches anything personal the classifier wrote itself. Without it: the latest text, generically
    * redacted. The classifier's duration_s is snapped onto the model's allowed durations.
+   * Text to speech says its whole prompt aloud, so a voice job sends only the words to speak
+   * (the classifier's speak_text: "Good morning" from "Read this aloud in a warm voice: Good
+   * morning"), redacted the same way.
    */
   async function buildMediaRequest(turn, model, c) {
     const mediaPrompt = typeof c.output?.media_prompt === "string" ? c.output.media_prompt.trim() : "";
+    const speakText = turn.job === "voice" && !mediaPrompt && typeof c.output?.speak_text === "string" ? c.output.speak_text.trim() : "";
     // The classifier writes media_prompt only for a follow-up that quotes earlier messages: the
     // media provider then gets those too (genericised), which the privacy badge discloses.
     turn.contextIncluded = Boolean(mediaPrompt);
+    // Both are written from the redacted text: placeholders, not real values.
+    const derived = mediaPrompt || speakText;
     if (turn.redactedSend) {
-      const source = mediaPrompt ? genericizePlaceholders(mediaPrompt) : turn.text;
+      const source = derived ? genericizePlaceholders(derived) : turn.text;
       const generic = await redactor.redactMessages([{ role: "user", content: source }], turn.map, { mode: "generic" });
       turn.prompt = generic.messages[0].content;
-      turn.redactions = mediaPrompt ? addCounts(placeholderCounts(mediaPrompt), generic.counts) : generic.counts || {};
+      turn.redactions = derived ? addCounts(placeholderCounts(derived), generic.counts) : generic.counts || {};
     } else {
       // Unredacted path (redaction off, or our own servers): put real values back.
-      turn.prompt = mediaPrompt ? redactor.restore(mediaPrompt, turn.map) : turn.text;
+      turn.prompt = derived ? redactor.restore(derived, turn.map) : turn.text;
       turn.redactions = {};
     }
     // A text-to-speech model with a length limit (params.max_chars) would refuse it upstream after

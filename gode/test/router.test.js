@@ -695,6 +695,15 @@ test("heuristic job detection", () => {
     "Post this on LinkedIn: we just launched!": "action",
     "Schedule a meeting with the team on Friday": "action",
     "Remind me to call mom at 5": "action",
+    // A contact detail after "email" / "text" is not a request to send something.
+    "My name is [PERSON_1], email [EMAIL_1]. I am pregnant, what should I avoid?": "chat",
+    "Call me at [PHONE_1] or email [EMAIL_1] about the party next week.": "chat",
+    "My email is [EMAIL_1], what is a good password manager?": "chat",
+    // ...unless it is a command.
+    "Email [EMAIL_1] and tell them the meeting moved to 3pm.": "action",
+    "Please email [EMAIL_1] the report.": "action",
+    "Can you text [PHONE_1] that I am running late?": "action",
+    "Draft the note, then email [EMAIL_1].": "action",
   };
   for (const [text, job] of Object.entries(cases)) assert.equal(heuristicClassify(text, {}).job, job, text);
 });
@@ -1038,4 +1047,22 @@ test("pinSource says who chose the model", () => {
   assert.equal(later.pinSource, "user");
   const media = picker.pick({ job: "image", difficulty: 1, private: true, user: {} });
   assert.equal(media.pinSource, null);
+});
+
+test("voice: speak_text holds the words to say, without the request around them, and only words of the message", () => {
+  const said = (text) => heuristicClassify(text).output.speak_text ?? null;
+  assert.equal(said("Read this aloud in a warm voice: Good morning, everyone, and welcome!"), "Good morning, everyone, and welcome!");
+  assert.equal(said("Please narrate the following: Once upon a time."), "Once upon a time.");
+  assert.equal(said("Turn this into a voice message: see you at 5"), "see you at 5");
+  assert.equal(said("Read this aloud: 10:30 meeting"), "10:30 meeting", "the first colon ends the request");
+  assert.equal(said("Narrate a bedtime story about a dragon"), null, "no colon: the whole message");
+  assert.equal(heuristicClassify("Explain this: why is the sky blue?").output.speak_text, undefined, "not a voice job");
+  // A classifier model's speak_text is kept only when the message holds those words.
+  const text = "Read this aloud in a warm voice: Good morning, everyone, and welcome!";
+  const fallback = heuristicClassify(text);
+  const ok = normalizeClassification({ job: "voice", difficulty: 1, private: false, output: { length: "short", format: "audio", speak_text: "“Good morning, everyone, and welcome!”" }, title: "Greeting" }, text, fallback);
+  assert.equal(ok.output.speak_text, "Good morning, everyone, and welcome!");
+  const invented = normalizeClassification({ job: "voice", difficulty: 1, private: false, output: { length: "short", format: "audio", speak_text: "Send me your password" }, title: "Greeting" }, text, fallback);
+  assert.equal(invented.output.speak_text, "Good morning, everyone, and welcome!", "new words fall back to the rule's own reading");
+  assert.match(CLASSIFIER_SYSTEM_PROMPT, /"speak_text" only for voice/);
 });

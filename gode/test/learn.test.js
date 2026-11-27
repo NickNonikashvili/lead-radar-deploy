@@ -176,11 +176,15 @@ test("proposeRoutes: quality = clearly better score in the cell, budget = cheape
   assert.match(q.reason, /best satisfaction/);
   assert.match(q.reason, /Model B 0\.90 \(8 ratings, 10 answers/);
   assert.match(q.reason, /Model A 0\.50 \(8 ratings, 10 answers/);
+  // The admin page's "Why": a sentence, not the audit string route_history keeps.
+  assert.match(q.summary, /^People rated Model B clearly better than Model A \(0\.90 vs 0\.50, from 8 and 8 ratings\)\. It costs \$[\d.]+ vs \$[\d.]+ per answer\.$/);
+  assert.doesNotMatch(q.summary, /learn |chat\/quality/);
 
   const b = byTier["chat/budget"];
   assert.equal(b.current_model_id, C);
   assert.equal(b.proposed_model_id, D);
-  assert.match(b.reason, /cheapest within 0\.02/);
+  assert.match(b.reason, /cheapest model at least as well liked \(within 0\.02\)/);
+  assert.match(b.summary, /^.+ is rated (?:at least|about) as well as .+ \(\d\.\d\d vs \d\.\d\d, from \d+ and \d+ ratings\) and costs less: \$[\d.]+ vs \$[\d.]+ per answer\.$/);
 
   assert.ok(!proposals.some((p) => p.tier === "private"), "private tier is never touched");
   assert.ok(!proposals.some((p) => p.proposed_model_id === X), "disabled models are never proposed");
@@ -202,6 +206,7 @@ test("proposeRoutes: balanced maximises score - 0.15 x normalised cost, never be
   const balanced = proposeRoutes(db, { minSamples: 5 }).find((p) => p.tier === "balanced");
   assert.equal(balanced.proposed_model_id, D);
   assert.match(balanced.reason, /best satisfaction for the cost/);
+  assert.match(balanced.summary, /is rated at least as well as .+ and is better value for its cost: \$[\d.]+ vs \$[\d.]+ per answer\.$/);
 
   // A much cheaper but less liked model never takes the balanced column.
   const db2 = fixtureDb();

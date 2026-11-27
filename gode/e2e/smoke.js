@@ -362,10 +362,15 @@ async function desktopFlow(browser, base) {
     assert.equal(await page.$$eval(".msg-assistant", (e) => e.length), 1, "replaced, not appended");
   });
 
-  await check("regenerate keeps the pinned model; thumbs up on the new answer", async () => {
-    await page.locator('.msg-assistant .action-btn[aria-label="Regenerate with the same model"]').last().click();
+  await check("regenerate keeps the pinned model (and keyboard focus); thumbs up on the new answer", async () => {
+    // By keyboard: the button goes away while the answer is rewritten, so the answer holds focus,
+    // then its new Regenerate button does (never <body>).
+    await page.locator('.msg-assistant .action-btn[aria-label="Regenerate with the same model"]').last().focus();
+    await page.keyboard.press("Enter");
     await page.waitForSelector(".msg-assistant.is-live");
+    assert.equal(await page.evaluate(() => document.activeElement.classList.contains("msg-assistant")), true, "focus on the live answer");
     await lastAnswerSettled(page);
+    await page.waitForFunction(() => document.activeElement && document.activeElement.getAttribute("aria-label") === "Regenerate with the same model");
     assert.match(await page.textContent(".msg-assistant .chip-text"), /^Claude Sonnet 5\.5 · /);
     await page.locator('.msg-assistant .action-btn[aria-label="Good answer"]').last().click();
     await page.waitForFunction(() => document.querySelector('.action-btn[aria-label="Good answer"]').getAttribute("aria-pressed") === "true");
@@ -398,7 +403,8 @@ async function desktopFlow(browser, base) {
     assert.ok(imageChips.every((c) => !/thinking|effort/.test(c)), `live media chips: ${JSON.stringify(live.chips)}`);
     const decoded = await page.$eval(".msg-assistant:last-child .media img", (img) => img.complete && img.naturalWidth > 0);
     assert.ok(decoded, "image decoded");
-    assert.equal(await page.textContent(".msg-assistant:last-child .chip-text"), "Qwen Image 3 · $0.05");
+    // $0.04 x 1.3 plus the classifier's read, at 3 significant digits.
+    assert.match(await page.textContent(".msg-assistant:last-child .chip-text"), /^Qwen Image 3 · \$0\.052\d?$/);
     await shot(page, "d-media-image");
   });
 
@@ -457,6 +463,51 @@ async function desktopFlow(browser, base) {
     assert.equal(last.request.status, "stopped");
     assert.ok(last.text.length > 0, "the partial text was kept");
     await shot(page, "d-stopped");
+  });
+
+  await check("a real Stop press (keyboard or mouse) never sends the composer's text: one POST, the draft stays", async () => {
+    // Its own tab, so the stopped (unstored) messages don't stay in the main page's new chat.
+    const tab = await ctx.newPage();
+    watch(tab, "desktop-stop");
+    const posts = [];
+    tab.on("request", (r) => {
+      if (r.method() === "POST" && new URL(r.url()).pathname === "/api/chat") posts.push(r.postDataJSON().text);
+    });
+    // Hold each answer back for a moment, so the press lands while it is still being routed.
+    await tab.route("**/api/chat", async (route) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.continue().catch(() => {});
+    });
+    try {
+      await tab.goto(base + "/#/");
+      await tab.waitForSelector(".empty-state");
+      // Keyboard: Enter on the focused Stop button. The question goes back to the composer, unsent.
+      await send(tab, "Explain how vaccines train the immune system");
+      await tab.waitForSelector(".send-btn.is-stop");
+      await tab.focus(".send-btn.is-stop");
+      await tab.keyboard.press("Enter");
+      await tab.waitForSelector(".msg-assistant .msg-stopped");
+      await tab.waitForTimeout(600);
+      assert.deepEqual(posts, ["Explain how vaccines train the immune system"], "the stopped question was not sent again");
+      assert.equal(await tab.inputValue("#composer-input"), "Explain how vaccines train the immune system");
+      // Mouse, past the double-click guard, with the next message half typed: it stays a draft.
+      posts.length = 0;
+      await tab.fill("#composer-input", "What is the boiling point of water?");
+      await tab.keyboard.press("Enter");
+      await tab.waitForSelector(".send-btn.is-stop");
+      await tab.fill("#composer-input", "Actually, make it about a ship cap");
+      await tab.waitForTimeout(700);
+      const box = await tab.locator(".send-btn.is-stop").boundingBox();
+      await tab.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await tab.mouse.down();
+      await tab.mouse.up();
+      await tab.waitForFunction(() => !document.querySelector(".send-btn.is-stop"));
+      await tab.waitForTimeout(600);
+      assert.deepEqual(posts, ["What is the boiling point of water?"], "the draft was not sent");
+      assert.equal(await tab.inputValue("#composer-input"), "Actually, make it about a ship cap");
+    } finally {
+      await tab.close();
+    }
   });
 
   await check("settings: plan and toggles are saved; strict privacy refuses media; transparency table", async () => {
