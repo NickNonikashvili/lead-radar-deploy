@@ -318,7 +318,7 @@ test("a stopped regenerate or switch says the earlier answer is kept and what th
   const pending = ui.stoppedAttemptNote({ model_label: "GPT-Image-2.6 Sunburst", media: true, cost_usd: null });
   assert.match(pending, /^You stopped the new answer from GPT-Image-2\.6 Sunburst, so the earlier answer is kept\. The stopped attempt is charged: providers bill a generation once it starts\.$/);
   assert.match(ui.stoppedAttemptNote({ model_label: "Qwen Image 3", media: true, cost_usd: 0.052065 }), /The stopped attempt cost \$0\.052065: providers bill a generation once it starts\.$/);
-  assert.match(ui.stoppedAttemptNote({ model_label: "DeepSeek V4.1 Flash", media: false, cost_usd: 0.000039 }), /cost \$0\.000039: it is charged for the words it had written\.$/);
+  assert.match(ui.stoppedAttemptNote({ model_label: "DeepSeek V4.1 Flash", media: false, cost_usd: 0.000039 }), /cost \$0\.000039: you pay for the words it had written\.$/);
   assert.match(ui.stoppedAttemptNote({ model_label: "X", media: true, cost_usd: 0 }), /The stopped attempt was not charged\.$/);
   // Screen readers hear it when the stream ends.
   const msg = { role: "assistant", text: "Old answer", request: { chip: "M · $0.05" }, stoppedAttempt: { model_label: "M2", media: false, cost_usd: null } };

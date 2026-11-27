@@ -64,7 +64,7 @@ const MODELS = (() => {
   const CLAUDE_NOTE =
     zdrVia("Amazon Bedrock, Google Vertex AI") +
     " Anthropic's own API keeps no prompts by default for this model (only Claude Fable and Mythos models require " +
-    "30-day retention). Content flagged by safety systems may be kept.";
+    "30-day retention). Content flagged by Anthropic's safety systems may be kept for up to 2 years.";
   const QWEN_TAIL = " Other requests may be served by any OpenRouter provider for this model, possibly Alibaba Cloud.";
   const MISTRAL_NOTE = zdrVia("Mistral AI, France") + " Mistral AI serves this model from the EU.";
   const OPENAI_DIRECT =

@@ -2378,7 +2378,7 @@
    */
   function stoppedAttemptNote(a) {
     const who = a && a.model_label ? ' from ' + a.model_label : '';
-    const why = a && a.media ? 'providers bill a generation once it starts' : 'it is charged for the words it had written';
+    const why = a && a.media ? 'providers bill a generation once it starts' : 'you pay for the words it had written';
     const cost = toNumber(a && a.cost_usd);
     const head = 'You stopped the new answer' + who + ', so the earlier answer is kept. ';
     if (cost === null) return head + 'The stopped attempt is charged: ' + why + '.';

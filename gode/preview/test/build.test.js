@@ -70,6 +70,9 @@ test("styles: the product's dark tokens apply under both theme guards, with colo
   assert.match(css, /\nbody:has\(\.app-shell\) \{ contain: layout; \}\n/);
   assert.doesNotMatch(css, /\nbody \{ contain:/);
   assert.match(css, /\.pack-grid \+ p\.muted\.small::after \{\n  content: "Gode preview: card payments are off; use Developer top-up below for free test credit\.";/);
+  // The app's "You pay securely on Stripe" line under the packs would contradict it: hidden, for
+  // screen readers too, with the note shown in its place.
+  assert.match(css, /\n\.pack-grid \+ p\.muted\.small \{ font-size: 0; visibility: hidden; \}\n\.pack-grid \+ p\.muted\.small::after \{\n  content: "[^"]+";\n  visibility: visible;/);
 });
 
 test("buildStyles refuses a stylesheet it does not understand instead of guessing", () => {

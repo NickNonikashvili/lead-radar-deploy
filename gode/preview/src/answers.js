@@ -720,7 +720,7 @@ function knownSample(lang, text, words, title) {
 }
 
 const COMPOUND_INTEREST =
-  "Here is the gist a real answer would cover: interest is money paid for letting a bank (or a loan) use your money. " +
+  "Here is the gist a real answer would cover: interest is what a bank pays you for keeping your money there (or what you pay when you borrow money). " +
   "**Compound** interest means you earn interest on your interest too. Put $100 away at 10% a year: after one year you " +
   "have $110; the next year you earn 10% of $110, so $121; then $133.10, and so on. The pile grows faster every year, " +
   "which is why starting early matters more than starting big.";

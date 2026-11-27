@@ -254,11 +254,15 @@ body:has(.app-shell) { contain: layout; }
   line-height: 1.45;
 }
 /* Preview only: the credit packs look live (as on a server with Stripe), so say before any click
-   that no card can be charged here and where free test credit comes from. */
+   that no card can be charged here and where free test credit comes from. The app's own line
+   under the packs ("You pay securely on Stripe...") would contradict it, so the note replaces it,
+   hidden the same way as .mock-note (out of the accessibility tree too). */
+.pack-grid + p.muted.small { font-size: 0; visibility: hidden; }
 .pack-grid + p.muted.small::after {
   content: "Gode preview: card payments are off; use Developer top-up below for free test credit.";
+  visibility: visible;
   display: block;
-  margin-top: 10px;
+  margin-top: 0;
   padding: 9px 12px;
   border: 1px solid var(--accent-soft-border);
   border-radius: var(--r-md);

@@ -1068,6 +1068,16 @@ async function moreChat(browser, base) {
     await go(page, "#/billing");
     await page.waitForSelector(".pack");
     assert.match(await after(".pack-grid + p.muted.small"), /Gode preview: card payments are off; use Developer top-up below for free test credit\./);
+    {
+      // The app's "You pay securely on Stripe" line is replaced by the note, for screen readers too.
+      const billingCdp = await page.context().newCDPSession(page);
+      const tree = await billingCdp.send("Accessibility.getFullAXTree");
+      const billingSaid = tree.nodes.filter((n) => !n.ignored && n.role && n.role.value === "StaticText").map((n) => (n.name && n.name.value) || "");
+      assert.ok(billingSaid.some((t) => /^Gode preview: card payments are off/.test(t)), "the preview's payment note is announced");
+      assert.deepEqual(billingSaid.filter((t) => /pay securely on Stripe/.test(t)), [], "the app's Stripe line is not");
+      await billingCdp.detach();
+      assert.equal(await page.$eval(".pack-grid + p.muted.small", (el) => getComputedStyle(el).visibility), "hidden");
+    }
     await page.focus('.pack:has-text("$5")');
     await page.keyboard.press("Enter");
     await page.waitForSelector(".card .field-error");
