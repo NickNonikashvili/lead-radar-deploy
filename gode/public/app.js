@@ -137,10 +137,14 @@
     return n + ' personal detail' + (n === 1 ? '' : 's') + ' hidden from the model';
   }
 
-  /** Chip while an answer is still being produced (or when the server sent none); done.chip wins. */
+  /**
+   * Chip while an answer is still being produced (or when the server sent none); done.chip wins.
+   * Media jobs have no thinking effort, so like the server's chip (chipFor) they leave it out.
+   */
   function liveChipText(request) {
     if (!request) return '';
-    const parts = [request.model_label || 'Model', effortText(request.effort)];
+    const parts = [request.model_label || 'Model'];
+    if (!MEDIA_JOBS.has(request.job)) parts.push(effortText(request.effort));
     if (toNumber(request.cost_usd) !== null) parts.push(formatCost(request.cost_usd));
     else if (toNumber(request.est_cost_usd) !== null) parts.push('est. ' + formatCost(request.est_cost_usd));
     return parts.join(' · ');
@@ -367,10 +371,20 @@
     const parser = createSSEParser((event, raw) => onEvent(event, safeJsonParse(raw, {}) || {}));
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      parser.push(decoder.decode(value, { stream: true }));
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        parser.push(decoder.decode(value, { stream: true }));
+      }
+    } catch (e) {
+      // Stop rejects the pending read with an AbortError: that is a stop, not an error.
+      if (e && e.name === 'AbortError') throw e;
+      // A dropped connection rejects read() with a browser-specific TypeError ("network error"):
+      // report it in our own words. Every complete event was already delivered (on its blank
+      // line); a half-received one is dropped rather than parsed, so a cut-off `done` can't settle
+      // the answer with missing numbers.
+      throw new ApiError(0, 'network', 'The connection dropped before the answer finished.');
     }
     parser.push(decoder.decode());
     parser.end();
@@ -380,14 +394,171 @@
   // Markdown-lite: block + inline parsing to plain tokens, rendered as React text (always escaped)
   // ---------------------------------------------------------------------------------------------
 
-  const FENCE_RE = /^\s{0,3}(```+|~~~+)\s*([\w+#.-]*)\s*$/;
-  const UL_RE = /^\s*[-*+]\s+(.*)$/;
-  const OL_RE = /^\s*(\d{1,9})[.)]\s+(.*)$/;
+  // Fences take any info string ("```python title=x.py"); the language is its first word. A backtick
+  // fence's info string may not contain a backtick, so "```x```" on one line stays inline code.
+  const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+  const LIST_RE = /^( *)([-*+]|\d{1,9}[.)])( +|$)(.*)$/;
   const HEADING_RE = /^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/;
   const HR_RE = /^\s{0,3}([-*_])(\s*\1){2,}\s*$/;
+  const QUOTE_RE = /^\s{0,3}>/;
+  const TABLE_SEP_RE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+  // Nesting is bounded so a hostile answer can't recurse the parser into a stack overflow.
+  const MAX_BLOCK_DEPTH = 8;
+
+  function fenceOpen(line) {
+    const m = line.match(FENCE_RE);
+    if (!m || (m[1][0] === '`' && m[2].includes('`'))) return null;
+    return { char: m[1][0], len: m[1].length, lang: m[2].trim().split(/\s+/)[0] || '' };
+  }
+
+  function isFenceClose(line, open) {
+    const m = line.match(/^ {0,3}(`{3,}|~{3,})\s*$/);
+    return Boolean(m && m[1][0] === open.char && m[1].length >= open.len);
+  }
+
+  /** Leading spaces, a tab counting as 4. */
+  function indentOf(line) {
+    let n = 0;
+    for (const ch of line) {
+      if (ch === ' ') n += 1;
+      else if (ch === '\t') n += 4 - (n % 4);
+      else break;
+    }
+    return n;
+  }
+
+  /** Drop up to `n` columns of leading whitespace. */
+  function dedent(line, n) {
+    let cols = 0;
+    let i = 0;
+    while (i < line.length && cols < n && (line[i] === ' ' || line[i] === '\t')) {
+      cols += line[i] === '\t' ? 4 - (cols % 4) : 1;
+      i++;
+    }
+    return line.slice(i);
+  }
+
+  /** A table row's cells: outer pipes dropped, split on pipes that are not escaped. */
+  function splitRow(line) {
+    let s = line.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
+    const cells = [];
+    let cur = '';
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === '\\' && s[i + 1] === '|') {
+        cur += '|';
+        i++;
+      } else if (s[i] === '|') {
+        cells.push(cur.trim());
+        cur = '';
+      } else cur += s[i];
+    }
+    cells.push(cur.trim());
+    return cells;
+  }
+
+  /** A GFM table starting at lines[i] (header + |---| row), or null. Rows end at a blank line. */
+  function parseTable(lines, i) {
+    const head = lines[i];
+    const sep = lines[i + 1];
+    if (!head.includes('|') || sep === undefined || !TABLE_SEP_RE.test(sep) || !sep.includes('-')) return null;
+    const header = splitRow(head);
+    const align = splitRow(sep).map((c) => (/^:-+:$/.test(c) ? 'center' : /-:$/.test(c) ? 'right' : /^:-/.test(c) ? 'left' : null));
+    if (header.length !== align.length) return null;
+    const rows = [];
+    let j = i + 2;
+    while (j < lines.length && lines[j].trim() && lines[j].includes('|') && !fenceOpen(lines[j])) {
+      const cells = splitRow(lines[j]);
+      // Missing cells are empty, extra ones are dropped (as GFM does).
+      rows.push(header.map((_, k) => cells[k] || ''));
+      j++;
+    }
+    return { block: { type: 'table', align, head: header, rows }, next: j };
+  }
+
+  function startsBlock(line) {
+    return Boolean(fenceOpen(line) || HEADING_RE.test(line) || HR_RE.test(line) || QUOTE_RE.test(line) || LIST_RE.test(line));
+  }
+
+  /**
+   * One list starting at lines[i]: items until a blank line that isn't followed by more of the list,
+   * or a line that belongs to neither the current item nor the list. Each item's lines are
+   * de-indented and parsed as blocks, so fences, tables and sub-lists inside an item work.
+   */
+  function parseList(lines, i, depth) {
+    const first = lines[i].match(LIST_RE);
+    const ordered = /\d/.test(first[2]);
+    const items = [];
+    let tight = true;
+    while (i < lines.length) {
+      const m = lines[i].match(LIST_RE);
+      if (!m || /\d/.test(m[2]) !== ordered || HR_RE.test(lines[i])) break;
+      const markerIndent = m[1].length;
+      // Content starts after the marker and its spaces (one space when there are more than four:
+      // then the rest is indented content, as in CommonMark).
+      const gap = m[3].length > 4 || !m[4] ? 1 : m[3].length;
+      const contentIndent = markerIndent + m[2].length + gap;
+      // Models often nest with two spaces under "1." (content at 3): accept that as a child too.
+      const childIndent = Math.min(contentIndent, markerIndent + 2);
+      const body = [m[4]];
+      let inFence = fenceOpen(m[4]);
+      i++;
+      while (i < lines.length) {
+        const line = lines[i];
+        if (inFence) {
+          body.push(dedent(line, contentIndent));
+          if (isFenceClose(dedent(line, contentIndent), inFence)) inFence = null;
+          i++;
+          continue;
+        }
+        if (!line.trim()) {
+          // A blank line continues the item only if indented content follows it.
+          let k = i + 1;
+          while (k < lines.length && !lines[k].trim()) k++;
+          if (k < lines.length && indentOf(lines[k]) >= childIndent) {
+            for (; i < k; i++) body.push('');
+            tight = false;
+            continue;
+          }
+          break;
+        }
+        const ind = indentOf(line);
+        if (ind >= childIndent) {
+          const d = dedent(line, Math.min(ind, contentIndent));
+          body.push(d);
+          inFence = fenceOpen(d);
+          i++;
+          continue;
+        }
+        // Lazy continuation: plain paragraph text right under the item's text.
+        if (!startsBlock(line) && body[body.length - 1].trim()) {
+          body.push(line.trim());
+          i++;
+          continue;
+        }
+        break;
+      }
+      items.push(parseBlocks(body.join('\n'), depth + 1));
+      // Another item of this list after a blank line: the list goes on (a "loose" list).
+      if (i < lines.length && !lines[i].trim()) {
+        let k = i;
+        while (k < lines.length && !lines[k].trim()) k++;
+        const next = k < lines.length && lines[k].match(LIST_RE);
+        if (next && /\d/.test(next[2]) === ordered && next[1].length <= markerIndent && !HR_RE.test(lines[k])) {
+          tight = false;
+          i = k;
+          continue;
+        }
+        break;
+      }
+    }
+    return { block: { type: ordered ? 'ol' : 'ul', start: ordered ? Number(first[2].slice(0, -1)) : 1, items, tight }, next: i };
+  }
 
   /** Split text into blocks. An unclosed fence (mid-stream) runs to the end as a code block. */
-  function parseBlocks(src) {
+  function parseBlocks(src, depth) {
+    const level = depth || 0;
     const lines = String(src || '').replace(/\r\n?/g, '\n').split('\n');
     const blocks = [];
     let para = [];
@@ -395,20 +566,22 @@
       if (para.length) blocks.push({ type: 'p', text: para.join('\n') });
       para = [];
     };
+    // Past the depth limit everything left is plain text: still readable, never recursed into.
+    if (level > MAX_BLOCK_DEPTH) return [{ type: 'p', text: lines.join('\n') }];
     let i = 0;
     while (i < lines.length) {
       const line = lines[i];
-      const fence = line.match(FENCE_RE);
+      const fence = fenceOpen(line);
       if (fence) {
         flush();
-        const marker = fence[1];
         const body = [];
+        const strip = indentOf(line);
         i++;
-        while (i < lines.length && !(lines[i].trim().startsWith(marker) && lines[i].trim().replace(/[`~]/g, '') === '')) {
-          body.push(lines[i]);
+        while (i < lines.length && !isFenceClose(lines[i], fence)) {
+          body.push(dedent(lines[i], strip));
           i++;
         }
-        blocks.push({ type: 'code', lang: fence[2] || '', code: body.join('\n'), closed: i < lines.length });
+        blocks.push({ type: 'code', lang: fence.lang, code: body.join('\n'), closed: i < lines.length });
         i++;
         continue;
       }
@@ -430,34 +603,28 @@
         i++;
         continue;
       }
-      const ul = line.match(UL_RE);
-      const ol = !ul && line.match(OL_RE);
-      if (ul || ol) {
+      const table = parseTable(lines, i);
+      if (table) {
         flush();
-        const ordered = Boolean(ol);
-        const items = [];
-        while (i < lines.length) {
-          const l = lines[i];
-          const m = ordered ? l.match(OL_RE) : l.match(UL_RE);
-          if (m) {
-            items.push(ordered ? m[2] : m[1]);
-            i++;
-          } else if (items.length && /^\s{2,}\S/.test(l)) {
-            items[items.length - 1] += '\n' + l.trim(); // indented continuation of the last item
-            i++;
-          } else break;
-        }
-        blocks.push({ type: ordered ? 'ol' : 'ul', start: ordered ? Number(ol[1]) : 1, items });
+        blocks.push(table.block);
+        i = table.next;
         continue;
       }
-      if (/^\s{0,3}>/.test(line)) {
+      if (LIST_RE.test(line) && /\S/.test(line.match(LIST_RE)[4] || '')) {
+        flush();
+        const list = parseList(lines, i, level);
+        blocks.push(list.block);
+        i = list.next;
+        continue;
+      }
+      if (QUOTE_RE.test(line)) {
         flush();
         const quote = [];
-        while (i < lines.length && /^\s{0,3}>/.test(lines[i])) {
+        while (i < lines.length && QUOTE_RE.test(lines[i])) {
           quote.push(lines[i].replace(/^\s{0,3}>\s?/, ''));
           i++;
         }
-        blocks.push({ type: 'quote', text: quote.join('\n') });
+        blocks.push({ type: 'quote', blocks: parseBlocks(quote.join('\n'), level + 1) });
         continue;
       }
       para.push(line);
@@ -467,14 +634,23 @@
     return blocks;
   }
 
-  // Alternatives, earliest match wins: `code`, [text](url), **bold**, bare URL, *em*, newline.
-  // No lookbehind: older Safari versions reject it and would refuse the whole script.
+  // Alternatives, earliest match wins: a backslash escape, ``code``/`code`, ![image](url) (shown as
+  // a link, never loaded), [text](url), **bold**, ~~strike~~, bare URL, *em* / _em_, newline.
+  // URLs may contain one level of balanced parentheses (Wikipedia links). Single-character
+  // emphasis needs a non-word character (or the start) before it and none after, so "2*x + 3*y"
+  // and snake_case stay as typed. The character before the emphasis is captured (no lookbehind:
+  // older Safari versions reject it and would refuse the whole script) and put back as text.
+  const URL_PART = '(?:[^()\\s]|\\([^()\\s]*\\))+';
   const INLINE_SOURCE =
-    '`([^`\\n]+)`' +
-    '|\\[([^\\]\\n]+)\\]\\(([^)\\s]+)\\)' +
+    '\\\\([!-/:-@\\[-`{-~])' +
+    '|``(?!`)([^\\n]*?[^`\\n])``(?!`)|`([^`\\n]+)`' +
+    '|!\\[([^\\]\\n]*)\\]\\((' + URL_PART + ')(?:\\s+"[^"\\n]*")?\\)' +
+    '|\\[([^\\]\\n]+)\\]\\((' + URL_PART + ')(?:\\s+"[^"\\n]*")?\\)' +
     '|\\*\\*(?=\\S)([\\s\\S]*?\\S)\\*\\*' +
-    '|(https?:\\/\\/[^\\s<>()]*[^\\s<>().,;:!?\'"\\])])' +
-    '|\\*(?=[^\\s*])([^*\\n]*?[^\\s*])\\*' +
+    '|~~(?=\\S)([^~\\n]*?\\S)~~' +
+    '|(https?:\\/\\/(?:[^\\s<>()]|\\([^\\s<>()]*\\))*(?:[^\\s<>().,;:!?\'"\\])]|\\([^\\s<>()]*\\)))' +
+    '|(^|[^\\w*\\\\])\\*(?=[^\\s*])([^*\\n]*?[^\\s*\\\\])\\*(?![\\w*])' +
+    '|(^|[^\\w\\\\])_(?=[^\\s_])([^_\\n]*?[^\\s_\\\\])_(?!\\w)' +
     '|\\n';
 
   function safeHref(url) {
@@ -488,20 +664,41 @@
     const re = new RegExp(INLINE_SOURCE, 'g');
     let last = 0;
     let m;
+    const pushText = (v) => {
+      if (!v) return;
+      const prev = out[out.length - 1];
+      if (prev && prev.t === 'text') prev.v += v;
+      else out.push({ t: 'text', v });
+    };
     while ((m = re.exec(src))) {
-      if (m.index > last) out.push({ t: 'text', v: src.slice(last, m.index) });
-      if (m[1] !== undefined) out.push({ t: 'code', v: m[1] });
-      else if (m[2] !== undefined) {
-        const href = safeHref(m[3]);
+      if (m.index > last) pushText(src.slice(last, m.index));
+      if (m[1] !== undefined) pushText(m[1]);
+      else if (m[2] !== undefined) out.push({ t: 'code', v: m[2].trim() || m[2] });
+      else if (m[3] !== undefined) out.push({ t: 'code', v: m[3] });
+      else if (m[5] !== undefined) {
+        // Images in model text are never loaded (a remote image would tell its host who is
+        // reading); they become a link the user can choose to open.
+        const href = safeHref(m[5]);
+        const label = 'Image' + (m[4] ? ': ' + m[4] : '');
+        out.push(href ? { t: 'link', href, children: [{ t: 'text', v: label }] } : { t: 'text', v: m[0] });
+      } else if (m[7] !== undefined) {
+        const href = safeHref(m[7]);
         // Unsafe schemes (javascript:, data:) are shown as plain text, never linked.
-        out.push(href ? { t: 'link', href, children: [{ t: 'text', v: m[2] }] } : { t: 'text', v: m[0] });
-      } else if (m[4] !== undefined) out.push({ t: 'strong', children: parseInline(m[4]) });
-      else if (m[5] !== undefined) out.push({ t: 'link', href: m[5], children: [{ t: 'text', v: m[5] }] });
-      else if (m[6] !== undefined) out.push({ t: 'em', children: parseInline(m[6]) });
-      else out.push({ t: 'br' });
+        if (href) out.push({ t: 'link', href, children: parseInline(m[6]).filter((tk) => tk.t !== 'link') });
+        else pushText(m[0]);
+      } else if (m[8] !== undefined) out.push({ t: 'strong', children: parseInline(m[8]) });
+      else if (m[9] !== undefined) out.push({ t: 'del', children: parseInline(m[9]) });
+      else if (m[10] !== undefined) out.push({ t: 'link', href: m[10], children: [{ t: 'text', v: m[10] }] });
+      else if (m[12] !== undefined) {
+        pushText(m[11]);
+        out.push({ t: 'em', children: parseInline(m[12]) });
+      } else if (m[14] !== undefined) {
+        pushText(m[13]);
+        out.push({ t: 'em', children: parseInline(m[14]) });
+      } else out.push({ t: 'br' });
       last = re.lastIndex;
     }
-    if (last < src.length) out.push({ t: 'text', v: src.slice(last) });
+    if (last < src.length) pushText(src.slice(last));
     return out;
   }
 
@@ -514,6 +711,8 @@
           return h('strong', { key: i }, renderTokens(tk.children));
         case 'em':
           return h('em', { key: i }, renderTokens(tk.children));
+        case 'del':
+          return h('del', { key: i }, renderTokens(tk.children));
         case 'link':
           return h('a', { key: i, href: tk.href, target: '_blank', rel: 'noopener noreferrer nofollow' }, renderTokens(tk.children));
         case 'br':
@@ -905,6 +1104,27 @@
     );
   }
 
+  /** A list item: its text inline when it is one paragraph of a tight list, else its blocks. */
+  function renderItem(blocks, tight, j) {
+    if (tight && blocks.length === 1 && blocks[0].type === 'p') return h('li', { key: j }, renderInline(blocks[0].text));
+    return h('li', { key: j, className: 'md-li-blocks' }, blocks.map(renderBlock));
+  }
+
+  function renderTable(b, i) {
+    const cell = (tag, text, k) => h(tag, { key: k, style: b.align[k] ? { textAlign: b.align[k] } : undefined }, renderInline(text));
+    // The wrapper scrolls sideways on narrow screens instead of widening the page.
+    return h(
+      'div',
+      { key: i, className: 'md-table-wrap' },
+      h(
+        'table',
+        { className: 'md-table' },
+        h('thead', null, h('tr', null, b.head.map((c, k) => cell('th', c, k)))),
+        b.rows.length > 0 && h('tbody', null, b.rows.map((r, j) => h('tr', { key: j }, r.map((c, k) => cell('td', c, k)))))
+      )
+    );
+  }
+
   function renderBlock(b, i) {
     switch (b.type) {
       case 'code':
@@ -912,11 +1132,13 @@
       case 'h':
         return h('h' + Math.min(b.level + 2, 6), { key: i, className: 'md-h md-h' + Math.min(b.level, 3) }, renderInline(b.text));
       case 'ul':
-        return h('ul', { key: i }, b.items.map((it, j) => h('li', { key: j }, renderInline(it))));
+        return h('ul', { key: i }, b.items.map((it, j) => renderItem(it, b.tight, j)));
       case 'ol':
-        return h('ol', { key: i, start: b.start !== 1 ? b.start : undefined }, b.items.map((it, j) => h('li', { key: j }, renderInline(it))));
+        return h('ol', { key: i, start: b.start !== 1 ? b.start : undefined }, b.items.map((it, j) => renderItem(it, b.tight, j)));
       case 'quote':
-        return h('blockquote', { key: i }, renderInline(b.text));
+        return h('blockquote', { key: i }, b.blocks.map(renderBlock));
+      case 'table':
+        return renderTable(b, i);
       case 'hr':
         return h('hr', { key: i });
       default:
@@ -971,14 +1193,20 @@
       phase: null,
       progress: null,
       error: null,
-      stopped: false,
+      // A partial answer the user stopped; the server kept it (request.status 'stopped').
+      stopped: Boolean(m.stopped) || Boolean(m.request && m.request.status === 'stopped'),
+      // User messages: false when the question has no current answer (it failed, was stopped
+      // before any text, or the page closed mid-answer).
+      answered: m.role === 'user' ? m.answered !== false : undefined,
     };
   }
 
-  function requestFromRoute(r) {
+  /** @param {string} [pickSource]  'user' when the user chose the model (manual pick, switch) */
+  function requestFromRoute(r, pickSource) {
     const model = r.model || {};
     return {
       id: r.request_id,
+      kind: r.kind,
       job: r.job,
       tier: r.tier,
       model_id: model.id,
@@ -994,7 +1222,12 @@
       redactions: r.redactions || {},
       feedback: null,
       pinned: Boolean(r.pinned),
+      pick_source: pickSource || (r.pick_source === 'user' ? 'user' : 'auto'),
       status: 'streaming',
+      classifier_model: r.classifier_model || null,
+      classifier_label: r.classifier_label || null,
+      classified_outside: Boolean(r.classified_outside),
+      context_included: Boolean(r.context_included),
     };
   }
 
@@ -1030,6 +1263,20 @@
         });
       case 'remove':
         return updateThread(state, a.key, (t) => t && Object.assign({}, t, { messages: t.messages.filter((m) => !a.msgKeys.includes(m.key)) }));
+      case 'prune_unsent':
+        // Failed sends the server never stored (out of credits, busy, privacy filter down): their
+        // text went back into the composer, so a new send replaces them.
+        return updateThread(state, a.key, (t) => {
+          if (!t) return t;
+          const drop = new Set();
+          t.messages.forEach((m) => {
+            if (m.role === 'assistant' && m.notStored && !m.phase) {
+              drop.add(m.key);
+              if (m.userKey) drop.add(m.userKey);
+            }
+          });
+          return drop.size ? Object.assign({}, t, { messages: t.messages.filter((m) => !drop.has(m.key)) }) : t;
+        });
       case 'rename': {
         const thread = state.threads[a.from];
         const stream = state.streams[a.from];
@@ -1051,12 +1298,22 @@
   }
 
   /**
-   * @param {{ current: { setUser, notify, onConversationCreated, onConversationTouched, onStreamSettled } }} hooksRef
+   * @param {{ current: { setUser, refreshUser, notify, restoreDraft, onConversationCreated, onConversationTouched, onStreamSettled } }} hooksRef
    */
   function useChatEngine(hooksRef) {
     const [state, dispatch] = useReducer(chatReducer, { threads: {}, streams: {} });
     const controllers = useRef(new Map()); // msgKey -> AbortController
-    const modelsCache = useRef(new Map()); // "job|conversation" -> { at, models }
+    const modelsCache = useRef(new Map()); // "job|conversation" -> { at, data }
+    // Bumped whenever the models a user may pick can have changed (a private answer made the chat
+    // private, a pin changed, a privacy setting changed), so open pickers fetch again.
+    const [modelsVersion, setModelsVersion] = useState(0);
+    const streamsRef = useRef(state.streams);
+    streamsRef.current = state.streams;
+
+    const invalidateModels = useCallback(() => {
+      modelsCache.current.clear();
+      setModelsVersion((v) => v + 1);
+    }, []);
 
     // Leaving the app (sign-out, account deleted) cancels every running answer.
     useEffect(() => () => controllers.current.forEach((c) => c.abort()), []);
@@ -1073,12 +1330,46 @@
       }
     }, []);
 
+    /**
+     * After Stop: the server keeps a partial answer (marked stopped, charged for what was made), so
+     * load the conversation again for its chip and cost. The server stores it as soon as it sees
+     * the client go, which can be a moment after the abort: look again a few times when the answer
+     * is expected (`msgId`) but not there yet. Never overwrites a thread that started a new answer.
+     */
+    const reloadAfterStop = useCallback((key, msgId) => {
+      if (!key || isDraftKey(key)) return;
+      let tries = 0;
+      const attempt = async () => {
+        tries += 1;
+        if (streamsRef.current[key]) return;
+        try {
+          const data = await api('/api/conversations/' + encodeURIComponent(key));
+          const messages = (data.messages || []).map(messageFromServer);
+          if (msgId && !messages.some((m) => m.id === msgId) && tries < 4) {
+            window.setTimeout(attempt, 500 * tries);
+            return;
+          }
+          if (!streamsRef.current[key]) dispatch({ type: 'load_ok', key, messages });
+        } catch (e) {
+          // Keep the local view (it already says "Stopped").
+        }
+      };
+      window.setTimeout(attempt, 300);
+    }, []);
+
     const runStream = useCallback(
-      async ({ threadKey, msgKey, kind, url, body, onRoute }) => {
+      async ({ threadKey, msgKey, kind, url, body, onRoute, sentText, pickSource }) => {
         const controller = new AbortController();
         controllers.current.set(msgKey, controller);
         const keyRef = { current: threadKey };
         let settled = false;
+        // The server stores the question in the same step that reserves credit, right before the
+        // route event. A failure before `route` means nothing was stored.
+        let routed = false;
+        let streamedText = false;
+        // A media job the provider started: a Stop now is charged and kept as a stopped answer.
+        let mediaStarted = false;
+        let answerId = null;
         dispatch({ type: 'stream_start', key: threadKey, kind, msgKey });
 
         // A regenerate/switch that fails or is stopped puts the previous (saved) answer back: the
@@ -1092,25 +1383,36 @@
 
         const handlers = {
           route(d) {
+            routed = true;
+            answerId = d.message_id || null;
             if (onRoute) onRoute(d, keyRef);
-            patch(keyRef.current, msgKey, {
+            patch(keyRef.current, msgKey, (m) => ({
               id: d.message_id || null,
               phase: MEDIA_JOBS.has(d.job) ? 'generating' : 'writing',
-              request: requestFromRoute(d),
-            });
+              // A regenerate keeps who chose the model; a switch or manual pick is the user's.
+              request: requestFromRoute(d, pickSource || (m.prev && m.prev.request && m.prev.request.pick_source) || null),
+            }));
+            // A private answer makes the whole conversation private (sticky): the models it may
+            // use now are fewer, so cached pickers are stale.
+            if (d.private) modelsCache.current.clear();
             hooksRef.current.onConversationTouched(d.conversation_id || keyRef.current, d.title);
           },
           delta(d) {
-            if (typeof d.text === 'string' && d.text) patch(keyRef.current, msgKey, (m) => ({ text: m.text + d.text, phase: 'writing' }));
+            if (typeof d.text === 'string' && d.text) {
+              streamedText = true;
+              patch(keyRef.current, msgKey, (m) => ({ text: m.text + d.text, phase: 'writing' }));
+            }
           },
           replace(d) {
             if (typeof d.text === 'string') patch(keyRef.current, msgKey, { text: d.text });
           },
           progress(d) {
+            if (d.status === 'running') mediaStarted = true;
             patch(keyRef.current, msgKey, { progress: { status: d.status, position: d.position } });
           },
           media(d) {
-            if (d && d.url) patch(keyRef.current, msgKey, (m) => ({ media: (m.media || []).concat({ type: d.type, url: d.url, mime: d.mime }) }));
+            // url null: the server can't serve this file (MediaItem says it could not be shown).
+            if (d && typeof d === 'object') patch(keyRef.current, msgKey, (m) => ({ media: (m.media || []).concat({ type: d.type, url: d.url || null, mime: d.mime }) }));
           },
           done(d) {
             settled = true;
@@ -1133,24 +1435,42 @@
           },
           error(d) {
             settled = true;
-            finish({ error: { code: d.code || 'error', message: d.error || 'Something went wrong.', kind } });
+            fail({ code: d.code || 'error', message: d.error || 'Something went wrong.', kind });
             if (d.code === 'insufficient_credits') hooksRef.current.refreshUser();
+            else if (toNumber(d.balance_usd) !== null) hooksRef.current.setUser({ balance_usd: d.balance_usd });
           },
         };
 
+        // A new question that never reached storage gives its text back to the composer (when the
+        // composer is empty), so out-of-credits or a busy chat doesn't cost the user their message.
+        function fail(error) {
+          const notStored = kind === 'chat' && !routed;
+          finish({ error, notStored });
+          if (notStored && sentText) hooksRef.current.restoreDraft(keyRef.current, sentText);
+        }
+
         try {
           await streamApi(url, body, { signal: controller.signal, onEvent: (event, data) => handlers[event] && handlers[event](data) });
-          if (!settled) finish({ error: { code: 'interrupted', message: 'The connection closed before the answer finished.', kind } });
+          if (!settled) fail({ code: 'interrupted', message: 'The connection closed before the answer finished.', kind });
         } catch (e) {
-          if (e && e.name === 'AbortError') finish(kind === 'chat' ? { stopped: true } : {});
-          else finish({ error: { code: e.code || 'error', message: e.message, kind } });
+          if (e && e.name === 'AbortError') {
+            finish(kind === 'chat' ? { stopped: true } : {});
+            if (routed) {
+              // Fetch the kept partial answer (chip, cost, "Stopped") and the new balance.
+              reloadAfterStop(keyRef.current, kind === 'chat' && (streamedText || mediaStarted) ? answerId : null);
+              hooksRef.current.refreshUser();
+            }
+          } else fail({ code: e.code || 'error', message: e.message, kind });
         } finally {
           controllers.current.delete(msgKey);
           dispatch({ type: 'stream_end', key: keyRef.current });
+          // Every answer can change what the pickers should offer: a private one makes the chat
+          // private for good, and any answer may pin its model. Cheap: the next open fetches.
+          invalidateModels();
           hooksRef.current.onStreamSettled(keyRef.current);
         }
       },
-      [patch, hooksRef]
+      [patch, hooksRef, reloadAfterStop, invalidateModels]
     );
 
     const send = useCallback(
@@ -1159,6 +1479,7 @@
         const userKey = localKey('u');
         const asstKey = localKey('a');
         const nowMs = Date.now();
+        dispatch({ type: 'prune_unsent', key: threadKey });
         dispatch({
           type: 'append',
           key: threadKey,
@@ -1172,6 +1493,8 @@
           msgKey: asstKey,
           kind: 'chat',
           url: '/api/chat',
+          sentText: text,
+          pickSource: modelId ? 'user' : null,
           body: { conversation_id: draft ? undefined : threadKey, text, model_id: modelId || undefined },
           onRoute(d, keyRef) {
             patch(keyRef.current, userKey, { id: d.user_message_id || null });
@@ -1194,6 +1517,19 @@
       [send]
     );
 
+    /**
+     * Answer a stored question that has no answer (shown "No answer" after a reload). Only for the
+     * conversation's last message: the server then answers that same question instead of storing
+     * it again (see pipeline prepareNew), so the local copy is replaced, not duplicated.
+     */
+    const answerAgain = useCallback(
+      (threadKey, userMsg, modelId) => {
+        dispatch({ type: 'remove', key: threadKey, msgKeys: [userMsg.key] });
+        send(threadKey, userMsg.text, modelId);
+      },
+      [send]
+    );
+
     const snapshot = (m) => ({ id: m.id, text: m.text, media: m.media, request: m.request, error: null, stopped: false, unsaved: false });
 
     const regenerate = useCallback(
@@ -1206,17 +1542,18 @@
 
     const switchModel = useCallback(
       (threadKey, msg, model) => {
-        modelsCache.current.clear(); // the conversation's pins change with a switch
+        invalidateModels(); // the conversation's pins change with a switch
         patch(threadKey, msg.key, { prev: snapshot(msg), text: '', media: [], request: null, error: null, stopped: false, unsaved: true, phase: 'routing', switchingTo: model.label });
         runStream({
           threadKey,
           msgKey: msg.key,
           kind: 'switch',
           url: '/api/messages/' + encodeURIComponent(msg.id) + '/switch',
+          pickSource: 'user',
           body: { model_id: model.id },
         });
       },
-      [patch, runStream]
+      [patch, runStream, invalidateModels]
     );
 
     const feedback = useCallback(
@@ -1254,16 +1591,24 @@
       [state.streams]
     );
 
-    const fetchModels = useCallback(async (job, conversationId) => {
-      const cacheKey = job + '|' + (conversationId || '');
+    /**
+     * { models, header } for a job (and conversation: its sticky privacy and pins apply). With the
+     * answer's message id the answer's own privacy applies too, exactly as the switch will apply it
+     * (a private image answer lists only the models the switch accepts).
+     */
+    const fetchModels = useCallback(async (job, conversationId, messageId) => {
+      const conv = conversationId && !isDraftKey(conversationId) ? conversationId : '';
+      const msg = conv && messageId ? messageId : '';
+      const cacheKey = job + '|' + conv + '|' + msg;
       const hit = modelsCache.current.get(cacheKey);
-      if (hit && Date.now() - hit.at < 60000) return hit.models;
+      if (hit && Date.now() - hit.at < 60000) return hit.data;
       const q = new URLSearchParams({ job });
-      if (conversationId && !isDraftKey(conversationId)) q.set('conversation_id', conversationId);
-      const data = await api('/api/models?' + q.toString());
-      const models = Array.isArray(data.models) ? data.models : [];
-      modelsCache.current.set(cacheKey, { at: Date.now(), models });
-      return models;
+      if (conv) q.set('conversation_id', conv);
+      if (msg) q.set('message_id', msg);
+      const res = await api('/api/models?' + q.toString());
+      const data = { models: Array.isArray(res.models) ? res.models : [], header: typeof res.header === 'string' ? res.header : null };
+      modelsCache.current.set(cacheKey, { at: Date.now(), data });
+      return data;
     }, []);
 
     return {
@@ -1272,6 +1617,7 @@
       loadThread,
       send,
       retry,
+      answerAgain,
       regenerate,
       switchModel,
       feedback,
@@ -1279,6 +1625,8 @@
       drop,
       abortThread,
       fetchModels,
+      modelsVersion,
+      invalidateModels,
     };
   }
 
@@ -1292,9 +1640,11 @@
     const verb = err && err.kind === 'regenerate' ? "Couldn't regenerate" : err && err.kind === 'switch' ? "Couldn't switch models" : null;
     switch (code) {
       case 'insufficient_credits':
-        return { title: "You're out of credits", body: 'Add credits to keep going. Every answer shows exactly what it cost.', cta: 'billing' };
+        // The question was not stored: once credits are added, Try again sends it as it was.
+        return { title: "You're out of credits", body: 'Add credits to keep going. Every answer shows exactly what it cost.', cta: 'billing', retry: true };
       case 'private_blocked':
-        return { title: 'Kept private, not sent', body: message || 'This looks private and no private model is available right now, so it was not sent to any AI provider.' };
+        // Not "sent to no AI provider": a classifier model may have read it (redacted) to decide.
+        return { title: 'Kept private, not sent', body: message || 'This looks private and no private model is available right now, so it was not sent to an AI model for an answer.' };
       case 'no_model':
         return { title: 'No model available', body: message || 'No model can do this job right now. Try again later.', retry: true };
       case 'rate_limited':
@@ -1304,19 +1654,27 @@
         return { title: verb || "The model didn't answer", body: "The AI provider had a problem, so you weren't charged for this. Try again or switch to another model.", detail: message, retry: true };
       case 'interrupted':
       case 'network':
-        return { title: verb || 'Connection lost', body: message, retry: true };
+        return { title: verb || 'Connection lost', body: message || 'The connection dropped before the answer finished.', retry: true };
       case 'bad_request':
         return { title: verb || "Couldn't send that", body: message };
+      case 'busy':
+        return { title: 'Still answering', body: message || 'Wait for the current answer to finish.', retry: true };
+      case 'redaction_unavailable':
+        return {
+          title: 'Privacy filter unavailable',
+          body: message || 'The privacy filter is unavailable right now, so nothing was sent. Try again in a minute.',
+          retry: true,
+        };
       default:
         return { title: verb || 'Something went wrong', body: message || 'Please try again.', retry: true };
     }
   }
 
-  function ErrorNotice({ error, onRetry }) {
+  function ErrorNotice({ error, onRetry, retryLabel }) {
     const copy = errorCopy(error);
     const actions = [];
     if (copy.cta === 'billing') actions.push(h('a', { key: 'buy', className: 'btn btn-primary btn-sm', href: '#/billing' }, h(Icon, { name: 'card', size: 15 }), 'Buy credits'));
-    if (copy.retry && onRetry) actions.push(h('button', { key: 'retry', type: 'button', className: 'btn btn-secondary btn-sm', onClick: onRetry }, h(Icon, { name: 'refresh', size: 15 }), 'Try again'));
+    if (copy.retry && onRetry) actions.push(h('button', { key: 'retry', type: 'button', className: 'btn btn-secondary btn-sm', onClick: onRetry }, h(Icon, { name: 'refresh', size: 15 }), retryLabel || 'Try again'));
     return h(
       Notice,
       { tone: copy.cta === 'billing' || error.code === 'private_blocked' ? 'warn' : 'error', title: copy.title, role: 'alert', actions: actions.length ? actions : null },
@@ -1325,18 +1683,67 @@
     );
   }
 
-  function PrivacyBadge({ request }) {
-    const self = request.model_region === 'self';
-    const label = self ? 'Ran on our servers' : request.private ? 'Private' : 'Zero retention';
-    const title = self
-      ? 'This answer ran on a model hosted by Gode. Nothing left our servers.'
-      : request.private
-        ? 'Treated as private: only zero-retention or self-hosted models were allowed.'
-        : 'Zero data retention: the provider does not keep this request.';
-    return h('span', { className: 'badge badge-private', title }, h(Icon, { name: 'lock', size: 13 }), label);
+  /**
+   * What this answer's privacy actually was. `zdr` is what the router required for it (strict
+   * privacy, or a private text request), so the lock only shows when zero retention was enforced.
+   * Private pictures, video, music and voice go to media providers without zero retention, after
+   * personal details are swapped for generic words: they get a different, unlocked badge.
+   */
+  function privacyBadgeFor(request) {
+    if (!request || !(request.private || request.zdr || request.model_region === 'self')) return null;
+    // A third-party classifier may have read the question (with personal details removed) before it
+    // was routed: then "no outside AI provider got it" would not be true, so the badge says who did.
+    const readFirst = request.classified_outside
+      ? ' To route it, ' + (request.classifier_label || request.classifier_model || 'an outside AI model') + ' read it first, with your personal details removed.'
+      : '';
+    if (request.model_region === 'self') {
+      return {
+        kind: 'self',
+        icon: 'server',
+        label: 'Ran on our servers',
+        title: request.private
+          ? readFirst
+            ? 'Treated as private: answered by a model hosted by Gode.' + readFirst
+            : 'Treated as private: this answer came from a model hosted by Gode, and no outside AI provider got the request.'
+          : 'This answer came from a model hosted by Gode.' + readFirst,
+      };
+    }
+    if (request.zdr) {
+      return {
+        kind: 'private',
+        icon: 'lock',
+        label: request.private ? 'Private' : 'Zero retention',
+        title: request.private
+          ? 'Treated as private: only zero-retention or self-hosted models were allowed, after your personal details were removed.' + readFirst
+          : 'Zero data retention: the provider does not keep this request.',
+      };
+    }
+    return {
+      kind: 'redacted',
+      icon: 'eye-off',
+      label: 'Private · details removed',
+      title:
+        'Treated as private: personal details were replaced with generic words before it was sent.' +
+        // A follow-up ("now make a video of it") quotes the earlier request so the result matches it.
+        (request.context_included ? ' It also included the earlier message it builds on, with the same details replaced.' : '') +
+        ' Media providers do not offer zero retention, so this one may keep the request.' +
+        readFirst,
+    };
   }
 
-  function SwitchMenu({ request, conversationId, disabled, fetchModels, onPick, children, label }) {
+  function PrivacyBadge({ request }) {
+    const badge = privacyBadgeFor(request);
+    if (!badge) return null;
+    return h(
+      'span',
+      { className: cx('badge', badge.kind === 'redacted' ? 'badge-redacted' : 'badge-private'), title: badge.title },
+      h(Icon, { name: badge.icon, size: 13 }),
+      badge.label,
+      h('span', { className: 'sr-only' }, '. ' + badge.title)
+    );
+  }
+
+  function SwitchMenu({ request, conversationId, messageId, disabled, fetchModels, onPick, children, label }) {
     const [open, setOpen] = useState(false);
     const [state, setState] = useState({ status: 'idle', models: [], error: null });
     const [placement, setPlacement] = useState({ up: false, maxHeight: 440 });
@@ -1363,9 +1770,9 @@
       const up = below < 320 && above > below;
       setPlacement({ up, maxHeight: Math.max(180, Math.min(440, up ? above : below)) });
       setState((s) => Object.assign({}, s, { status: 'loading', error: null }));
-      fetchModels(request.job === 'action' ? 'chat' : request.job, conversationId)
-        .then((models) => alive && setState({ status: 'ready', models, error: null }))
-        .catch((e) => alive && setState({ status: 'error', models: [], error: e }));
+      fetchModels(request.job === 'action' ? 'chat' : request.job, conversationId, messageId)
+        .then((data) => alive && setState({ status: 'ready', models: data.models, header: data.header, error: null }))
+        .catch((e) => alive && setState({ status: 'error', models: [], header: null, error: e }));
       return () => {
         alive = false;
       };
@@ -1398,7 +1805,14 @@
       }
     };
 
-    const picked = TIER_LABEL[request.tier] ? 'Picked for ' + (JOB_LABEL[request.job] || request.job).toLowerCase() + ' · ' + TIER_LABEL[request.tier].toLowerCase() + ' tier' : null;
+    // A model the user chose (switch, manual pick, or their pin) is "Your pick", never "Picked for
+    // chat · budget tier": the tier is only the column the router would have used.
+    const userPick = request.pick_source === 'user' || Boolean(state.header);
+    const picked = userPick
+      ? state.header || 'Your pick' + (request.pinned ? ', pinned for this chat' : '')
+      : TIER_LABEL[request.tier]
+        ? 'Picked for ' + (JOB_LABEL[request.job] || request.job).toLowerCase() + ' · ' + TIER_LABEL[request.tier].toLowerCase() + ' tier' + (request.pinned ? ', pinned for this chat' : '')
+        : null;
 
     return h(
       'div',
@@ -1433,7 +1847,7 @@
             'aria-label': 'Answer again with another model',
             onKeyDown: onMenuKey,
           },
-          h('div', { className: 'menu-head' }, h('span', null, 'Answer again with'), picked && h('span', { className: 'menu-sub' }, picked + (request.pinned ? ', pinned for this chat' : ''))),
+          h('div', { className: 'menu-head' }, h('span', null, 'Answer again with'), picked && h('span', { className: 'menu-sub' }, picked)),
           state.status === 'loading' && h('div', { className: 'menu-empty' }, h(Spinner, { size: 14 }), 'Finding models…'),
           state.status === 'error' && h('div', { className: 'menu-empty menu-error' }, state.error.message),
           state.status === 'ready' && !state.models.length && h('div', { className: 'menu-empty' }, 'No other model can do this right now.'),
@@ -1525,15 +1939,21 @@
     );
   }
 
-  function AssistantMessage({ msg, busy, conversationId, engine, threadKey }) {
+  function AssistantMessage({ msg, busy, conversationId, engine, threadKey, isLast, onAskAgain }) {
     // A failed send is re-sent; a failed regenerate is regenerated again. A failed switch has no
-    // retry button: the chip menu is right there to pick a model again.
+    // retry button: the chip menu is right there to pick a model again. A stored question is only
+    // re-sent while it is the conversation's last message (the server then answers that same
+    // question); an older one would be stored twice, so it goes back into the composer instead.
     const retryFor = (m) => {
       if (busy) return null;
-      if (m.error.kind === 'chat' && m.sentText) return () => engine.retry(threadKey, m);
-      if (m.error.kind === 'regenerate' && m.id && m.request) return () => engine.regenerate(threadKey, m);
+      if (m.error.kind === 'chat' && m.sentText) {
+        if (m.notStored || isLast) return { run: () => engine.retry(threadKey, m) };
+        return { run: () => onAskAgain(m.sentText), label: 'Ask again' };
+      }
+      if (m.error.kind === 'regenerate' && m.id && m.request) return { run: () => engine.regenerate(threadKey, m) };
       return null;
     };
+    const retry = msg.error ? retryFor(msg) : null;
     const req = msg.request;
     const live = Boolean(msg.phase);
     const hidden = countRedactions(req && req.redactions);
@@ -1557,10 +1977,11 @@
           h(
             'p',
             { className: 'msg-stopped' },
-            msg.text || (msg.media && msg.media.length) ? 'Stopped.' : 'Stopped before the answer started.',
-            msg.sentText && !busy && h('button', { type: 'button', className: 'link-btn', onClick: () => engine.retry(threadKey, msg) }, 'Try again')
+            h('span', { className: 'tag tag-stopped' }, 'Stopped'),
+            stoppedNote(msg),
+            msg.sentText && !busy && !msg.text && isLast && h('button', { type: 'button', className: 'link-btn', onClick: () => engine.retry(threadKey, msg) }, 'Try again')
           ),
-        msg.error && h(ErrorNotice, { error: msg.error, onRetry: retryFor(msg) }),
+        msg.error && h(ErrorNotice, { error: msg.error, onRetry: retry && retry.run, retryLabel: retry && retry.label }),
         req &&
           h(
             'div',
@@ -1573,6 +1994,7 @@
                 {
                   request: req,
                   conversationId,
+                  messageId: msg.id || null,
                   disabled: !canAct,
                   fetchModels: engine.fetchModels,
                   label: chipText,
@@ -1582,7 +2004,7 @@
                 h('span', { className: 'chip-text' }, chipText),
                 live && h('span', { className: 'chip-pulse', 'aria-hidden': 'true' })
               ),
-              (req.private || req.zdr) && h(PrivacyBadge, { request: req }),
+              h(PrivacyBadge, { request: req }),
               hidden > 0 && h('span', { className: 'badge badge-hidden', title: 'Replaced with placeholders before the request left Gode, then restored in this answer.' }, h(Icon, { name: 'eye-off', size: 13 }), hiddenDetailsText(hidden))
             ),
             saved && !live && h(MessageActions, { msg, disabled: !canAct, onFeedback: (v) => engine.feedback(threadKey, msg, v), onRegenerate: () => engine.regenerate(threadKey, msg) })
@@ -1591,11 +2013,43 @@
     );
   }
 
-  function UserMessage({ msg }) {
-    return h('div', { className: 'msg msg-user' }, h('div', { className: 'bubble' }, msg.text));
+  /**
+   * A question. One the server says has no answer (it failed, was stopped before any text, or the
+   * page closed mid-answer) is marked, with Try again when it is the last message (answered in
+   * place) or Ask again (back into the composer) when later messages followed it.
+   */
+  function UserMessage({ msg, isLast, busy, onAnswerAgain, onAskAgain }) {
+    return h(
+      'div',
+      { className: cx('msg', 'msg-user', msg.answered === false && 'is-unanswered') },
+      h('div', { className: 'bubble' }, msg.text),
+      msg.answered === false &&
+        h(
+          'p',
+          { className: 'msg-unanswered' },
+          h(Icon, { name: 'alert', size: 14 }),
+          'No answer.',
+          !busy &&
+            h(
+              'button',
+              { type: 'button', className: 'link-btn', onClick: () => (isLast ? onAnswerAgain(msg) : onAskAgain(msg.text)) },
+              isLast ? 'Try again' : 'Ask again'
+            )
+        )
+    );
   }
 
-  function EmptyState({ onPick, user }) {
+  /** The first-screen privacy line, only as strong as this server makes it true. */
+  function redactionLine(config) {
+    return config && config.presidio
+      ? 'Names, emails, phone numbers, card and ID numbers are hidden before anything leaves Gode (detection is best effort).'
+      : 'Emails, phone numbers, card and ID numbers are hidden before anything leaves Gode. Names are caught only when you introduce them, like “my name is …”.';
+  }
+
+  function EmptyState({ onPick, user, config }) {
+    // With auto-pick off the composer offers chat models only: a media request would just get a
+    // text answer, so media suggestions are not offered.
+    const suggestions = user.auto_pick ? SUGGESTIONS : SUGGESTIONS.filter((x) => !MEDIA_JOBS.has(x.job));
     return h(
       'div',
       { className: 'empty-state' },
@@ -1608,10 +2062,12 @@
           ? 'Ask anything, or ask for an image, video, music or a voice. Gode picks the best model for each job and shows what every answer cost.'
           : 'Auto-pick is off, so you choose the model below. Every answer shows what it cost.'
       ),
+      !user.auto_pick &&
+        h('p', { className: 'empty-note' }, 'Images, video, music and voice need auto-pick. ', h('a', { href: '#/settings' }, 'Turn it on in Settings')),
       h(
         'div',
         { className: 'suggestions' },
-        SUGGESTIONS.map((s) =>
+        suggestions.map((s) =>
           h(
             'button',
             { key: s.job, type: 'button', className: 'suggestion', onClick: () => onPick(s.text) },
@@ -1620,7 +2076,7 @@
           )
         )
       ),
-      h('p', { className: 'empty-privacy' }, h(Icon, { name: 'shield', size: 15 }), 'Names, emails, numbers and other personal details are hidden before anything leaves Gode. ', h('a', { href: '#/privacy' }, 'How it works'))
+      h('p', { className: 'empty-privacy' }, h(Icon, { name: 'shield', size: 15 }), redactionLine(config) + ' ', h('a', { href: '#/privacy' }, 'How it works'))
     );
   }
 
@@ -1634,20 +2090,35 @@
         'select',
         { id, className: 'select select-sm', value: value || '', onChange: (e) => onChange(e.target.value), disabled },
         !models.length && h('option', { value: '' }, 'Loading models…'),
-        models.map((m) => h('option', { key: m.id, value: m.id }, m.label + (m.zdr || m.self_hosted ? ' (zero retention)' : '')))
+        models.map((m) => h('option', { key: m.id, value: m.id }, m.label + (m.self_hosted ? ' (our servers)' : m.zdr ? ' (zero retention)' : '')))
       ),
       h('a', { className: 'model-picker-link', href: '#/settings' }, 'Turn on auto-pick')
     );
   }
 
-  function Composer({ value, onChange, onSubmit, onStop, streaming, inputRef, manual }) {
+  function Composer({ value, onChange, onSubmit, onStop, streaming, inputRef, manual, maxLength }) {
+    const btnRef = useRef(null);
+    // The Stop button had keyboard focus: when the answer ends it turns into a disabled Send
+    // button, which drops focus to <body>. Then focus goes back to the message box instead.
+    const stopFocused = useRef(false);
     useLayoutEffect(() => {
       const el = inputRef.current;
       if (!el) return;
       el.style.height = 'auto';
       el.style.height = Math.min(el.scrollHeight, 240) + 'px';
     }, [value, inputRef]);
-    const canSend = !streaming && value.trim().length > 0;
+    useEffect(() => {
+      if (streaming) return;
+      const had = stopFocused.current;
+      stopFocused.current = false;
+      const active = document.activeElement;
+      // Not on touch screens: focusing the box there would pop up the keyboard unasked.
+      const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      if (had && !touch && inputRef.current && (!active || active === document.body || active === btnRef.current)) inputRef.current.focus();
+    }, [streaming]); // eslint-disable-line react-hooks/exhaustive-deps
+    const max = maxLength || 32000;
+    const canSend = !streaming && value.trim().length > 0 && value.length <= max;
+    const nearLimit = value.length > max * 0.9;
     const onKeyDown = (e) => {
       // Enter sends; Shift+Enter adds a newline; never send mid IME composition.
       if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -1674,7 +2145,7 @@
           className: 'composer-input',
           rows: 1,
           value,
-          maxLength: 50000,
+          maxLength: max,
           placeholder: streaming ? 'Gode is answering… you can type your next message.' : 'Message Gode',
           onChange: (e) => onChange(e.target.value),
           onKeyDown,
@@ -1684,16 +2155,62 @@
           'div',
           { className: 'composer-row' },
           manual,
-          h('span', { id: 'composer-hint', className: 'composer-hint' }, streaming ? 'Answering…' : 'Enter to send · Shift+Enter for a new line'),
+          h(
+            'span',
+            { id: 'composer-hint', className: cx('composer-hint', nearLimit && 'is-limit') },
+            nearLimit
+              ? value.length.toLocaleString() + ' / ' + max.toLocaleString() + ' characters'
+              : streaming
+                ? 'Answering…'
+                : 'Enter to send · Shift+Enter for a new line'
+          ),
+          // One element for both states (React keeps the same <button>), so focus tracking holds.
           streaming
-            ? h('button', { type: 'button', className: 'send-btn is-stop', onClick: onStop, 'aria-label': 'Stop answering', title: 'Stop' }, h(Icon, { name: 'stop', size: 18 }))
-            : h('button', { type: 'submit', className: 'send-btn', disabled: !canSend, 'aria-label': 'Send message', title: 'Send' }, h(Icon, { name: 'arrow-up', size: 18 }))
+            ? h(
+                'button',
+                {
+                  ref: btnRef,
+                  type: 'button',
+                  className: 'send-btn is-stop',
+                  onClick: onStop,
+                  onFocus: () => (stopFocused.current = true),
+                  onBlur: (e) => {
+                    // Focus moved elsewhere on purpose (not lost because the button changed).
+                    if (e.relatedTarget) stopFocused.current = false;
+                  },
+                  'aria-label': 'Stop answering',
+                  title: 'Stop',
+                },
+                h(Icon, { name: 'stop', size: 18 })
+              )
+            : h('button', { ref: btnRef, type: 'submit', className: 'send-btn', disabled: !canSend, 'aria-label': 'Send message', title: 'Send' }, h(Icon, { name: 'arrow-up', size: 18 }))
         )
       )
     );
   }
 
-  function ChatView({ engine, threadKey, user, draft, setDraft }) {
+  /** The line under a stopped answer. A media job stopped after it started is charged: say why. */
+  function stoppedNote(msg) {
+    if (msg.text || (msg.media && msg.media.length)) return 'You stopped this answer. It is kept as far as it got.';
+    const req = msg.request;
+    if (req && MEDIA_JOBS.has(req.job) && toNumber(req.cost_usd) > 0) {
+      return 'You stopped this after the provider had started making it. Providers bill a generation once it starts, so it was charged.';
+    }
+    return 'Stopped before the answer started.';
+  }
+
+  /** What a screen reader hears when an answer ends (errors are announced by their role=alert). */
+  function announcementFor(msg) {
+    if (!msg || msg.role !== 'assistant' || msg.phase || msg.error) return '';
+    const req = msg.request;
+    const chip = req ? req.chip || liveChipText(req) : '';
+    if (msg.stopped) return 'Answer stopped.' + (chip ? ' ' + chip : '');
+    if (req && MEDIA_JOBS.has(req.job)) return (JOB_LABEL[req.job] || 'Media') + ' ready.' + (chip ? ' ' + chip : '');
+    const text = String(msg.text || '').replace(/\s+/g, ' ').trim();
+    return 'Answer ready.' + (chip ? ' ' + chip + '.' : '') + (text ? ' ' + (text.length > 200 ? text.slice(0, 200) + '…' : text) : '');
+  }
+
+  function ChatView({ engine, threadKey, user, config, draft, setDraft }) {
     const thread = engine.threads[threadKey];
     const stream = engine.streams[threadKey];
     const draftMode = isDraftKey(threadKey);
@@ -1702,7 +2219,10 @@
     const inputRef = useRef(null);
     const [models, setModels] = useState([]);
     const [modelId, setModelIdState] = useState(() => readLocal('gode.manualModel'));
+    const [announce, setAnnounce] = useState('');
+    const wasStreaming = useRef(false);
     const notify = useToast();
+    const conversationId = draftMode ? null : threadKey;
 
     useEffect(() => {
       if (!draftMode && (!thread || (thread.status === 'error' && !thread.messages.length && thread.error.status !== 404))) engine.loadThread(threadKey);
@@ -1710,13 +2230,16 @@
       if (inputRef.current && window.matchMedia('(min-width: 861px)').matches) inputRef.current.focus();
     }, [threadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Manual mode: the composer offers a model select (chat candidates).
+    // Manual mode: the composer offers a model select (chat candidates) for THIS conversation, so
+    // its sticky privacy applies: once a chat went private only private-safe models are listed.
+    // Fetched again when the chat, a privacy setting or the conversation's privacy changes
+    // (modelsVersion), and the choice falls back to the first allowed model.
     useEffect(() => {
       if (user.auto_pick) return undefined;
       let alive = true;
       engine
-        .fetchModels('chat', null)
-        .then((list) => {
+        .fetchModels('chat', conversationId)
+        .then(({ models: list }) => {
           if (!alive) return;
           setModels(list);
           setModelIdState((cur) => (list.some((m) => m.id === cur) ? cur : list[0] ? list[0].id : null));
@@ -1725,7 +2248,25 @@
       return () => {
         alive = false;
       };
-    }, [user.auto_pick]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [user.auto_pick, conversationId, engine.modelsVersion, user.strict_privacy, user.eu_only]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Announce the finished answer once (a polite live region), not every streamed piece. The
+    // region is cleared first so the same words twice in a row are still read out.
+    useEffect(() => {
+      const streaming = Boolean(stream);
+      if (wasStreaming.current && !streaming) {
+        const list = (engine.threads[threadKey] || { messages: [] }).messages;
+        const text = announcementFor(list[list.length - 1]);
+        setAnnounce('');
+        if (text) {
+          const t = window.setTimeout(() => setAnnounce(text), 60);
+          wasStreaming.current = streaming;
+          return () => window.clearTimeout(t);
+        }
+      }
+      wasStreaming.current = streaming;
+      return undefined;
+    }, [Boolean(stream), threadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const setModelId = (id) => {
       setModelIdState(id);
@@ -1753,6 +2294,12 @@
       setDraft('');
     };
 
+    /** Put an earlier question back into the composer, to send it again at the end. */
+    const askAgain = (text) => {
+      setDraft(text);
+      if (inputRef.current) inputRef.current.focus();
+    };
+
     const messages = thread ? thread.messages : [];
     const loading = !draftMode && (!thread || (thread.status === 'loading' && !messages.length));
     let body;
@@ -1766,16 +2313,27 @@
     } else if (!messages.length) {
       body = h(EmptyState, {
         user,
+        config,
         onPick: (text) => {
           setDraft(text);
           if (inputRef.current) inputRef.current.focus();
         },
       });
     } else {
-      body = messages.map((m) =>
+      // "Last" is the last question/answer pair: a question with nothing after it, or the answer
+      // that ends the list.
+      const lastIndex = messages.length - 1;
+      body = messages.map((m, i) =>
         m.role === 'user'
-          ? h(UserMessage, { key: m.key, msg: m })
-          : h(AssistantMessage, { key: m.key, msg: m, busy: Boolean(stream), conversationId: draftMode ? null : threadKey, engine, threadKey })
+          ? h(UserMessage, {
+              key: m.key,
+              msg: m,
+              isLast: i === lastIndex,
+              busy: Boolean(stream),
+              onAnswerAgain: (um) => engine.answerAgain(threadKey, um, user.auto_pick ? null : modelId),
+              onAskAgain: askAgain,
+            })
+          : h(AssistantMessage, { key: m.key, msg: m, busy: Boolean(stream), conversationId, engine, threadKey, isLast: i === lastIndex, onAskAgain: askAgain })
       );
     }
 
@@ -1783,6 +2341,7 @@
       'div',
       { className: 'chat' },
       h('div', { className: 'messages', ref: scrollRef, onScroll }, h('div', { className: cx('messages-inner', !messages.length && 'is-empty') }, body)),
+      h('div', { className: 'sr-only', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' }, announce),
       h(Composer, {
         value: draft,
         onChange: setDraft,
@@ -1790,6 +2349,7 @@
         onStop: () => engine.stop(threadKey),
         streaming: Boolean(stream),
         inputRef,
+        maxLength: toNumber(config && config.text_max) || 32000,
         manual: user.auto_pick ? null : h(ModelPicker, { models, value: modelId, onChange: setModelId }),
       })
     );
@@ -1917,61 +2477,173 @@
   // Settings
   // ---------------------------------------------------------------------------------------------
 
+  const LOG_PAGE = 50;
+
+  /** "Classified by": the model that read the message to route it, or Gode's own rules. */
+  function classifierText(r) {
+    if (!r.classifier_model) return null; // a regenerate/switch reused the earlier decision
+    return r.classifier_label || r.classifier_model;
+  }
+
   function TransparencyLog() {
-    const [state, setState] = useState({ status: 'loading', rows: [], error: null });
+    const [state, setState] = useState({ status: 'loading', rows: [], error: null, more: false, next: null, loadingMore: false });
     const load = useCallback(async () => {
       setState((s) => Object.assign({}, s, { status: 'loading', error: null }));
       try {
-        const data = await api('/api/transparency?limit=50');
-        setState({ status: 'ready', rows: data.requests || [], error: null });
+        const data = await api('/api/transparency?limit=' + LOG_PAGE);
+        setState({ status: 'ready', rows: data.requests || [], error: null, more: Boolean(data.has_more), next: data.next_before || null, loadingMore: false });
       } catch (e) {
-        setState({ status: 'error', rows: [], error: e });
+        setState({ status: 'error', rows: [], error: e, more: false, next: null, loadingMore: false });
       }
     }, []);
+    // Older rows, keyset-paged (?before=<id of the last row shown>), appended below.
+    const loadMore = async () => {
+      if (!state.next || state.loadingMore) return;
+      setState((s) => Object.assign({}, s, { loadingMore: true }));
+      try {
+        const data = await api('/api/transparency?limit=' + LOG_PAGE + '&before=' + encodeURIComponent(state.next));
+        setState((s) => {
+          const seen = new Set(s.rows.map((r) => r.id));
+          const rows = s.rows.concat((data.requests || []).filter((r) => !seen.has(r.id)));
+          return Object.assign({}, s, { rows, more: Boolean(data.has_more), next: data.next_before || null, loadingMore: false });
+        });
+      } catch (e) {
+        setState((s) => Object.assign({}, s, { loadingMore: false, error: e }));
+      }
+    };
     useEffect(() => {
       load();
     }, [load]);
+    const COLUMNS = ['Time', 'Job', 'Model', 'Cost', 'Hidden details', 'Zero retention', 'Gateway / provider', 'Classified by'];
     return h(
       'section',
       { className: 'card', 'aria-labelledby': 'log-title' },
       h(
         'div',
         { className: 'card-head' },
-        h('div', null, h('h2', { id: 'log-title', className: 'card-title' }, 'Transparency log'), h('p', { className: 'card-sub' }, 'Every request you made: which model got it, where it ran, whether the provider keeps it, and what it cost. We never log the text itself.')),
+        h(
+          'div',
+          null,
+          h('h2', { id: 'log-title', className: 'card-title' }, 'Transparency log'),
+          h(
+            'p',
+            { className: 'card-sub' },
+            'Every request you made: which model got it, where it ran, whether the provider keeps it, what it cost, and which classifier read it to pick the model (with your personal details removed). We never log the text itself.'
+          )
+        ),
         h('button', { type: 'button', className: 'btn btn-secondary btn-sm', onClick: load, disabled: state.status === 'loading' }, h(Icon, { name: 'refresh', size: 15 }), 'Refresh')
       ),
       state.status === 'error'
         ? h(LoadError, { error: state.error, onRetry: load })
         : h(
-            'div',
-            { className: 'table-wrap' },
+            Fragment,
+            null,
             h(
-              'table',
-              { className: 'table table-compact table-log' },
-              // Cost sits next to the model so it stays in view when a narrow card scrolls the table.
-              h('thead', null, h('tr', null, ['Time', 'Job', 'Model', 'Cost', 'Hidden details', 'Zero retention', 'Gateway / provider'].map((c) => h('th', { key: c, scope: 'col', className: c === 'Cost' ? 'num' : undefined }, c)))),
+              'div',
+              { className: 'table-wrap' },
               h(
-                'tbody',
-                null,
-                state.status === 'loading' && !state.rows.length && h(EmptyRow, { colSpan: 7 }, h(Spinner, { size: 14 }), ' Loading…'),
-                state.status === 'ready' && !state.rows.length && h(EmptyRow, { colSpan: 7 }, 'No requests yet. Send a message and it shows up here.'),
-                state.rows.map((r) => {
-                  const hidden = countRedactions(r.redactions);
-                  return h(
-                    'tr',
-                    { key: r.id, className: r.status === 'error' ? 'is-error' : undefined },
-                    h('td', { className: 'nowrap' }, formatDateTime(r.created_at)),
-                    h('td', null, JOB_LABEL[r.job] || r.job || '—', r.private ? h('span', { className: 'tag tag-private' }, 'private') : null),
-                    h('td', { className: 'nowrap' }, r.model_label || '—', r.status === 'error' ? h('span', { className: 'tag tag-error' }, 'failed') : null),
-                    h('td', { className: 'num' }, formatPrecise(r.cost_usd)),
-                    h('td', null, hidden ? String(hidden) : h('span', { className: 'muted' }, '0')),
-                    h('td', null, r.zdr ? h('span', { className: 'yes' }, h(Icon, { name: 'lock', size: 13 }), 'Yes') : h('span', { className: 'muted' }, 'No')),
-                    h('td', null, [r.gateway, r.upstream_provider].filter(Boolean).join(' → ') || '—')
-                  );
-                })
+                'table',
+                { className: 'table table-compact table-log' },
+                // Cost sits next to the model so it stays in view when a narrow card scrolls the table.
+                h('thead', null, h('tr', null, COLUMNS.map((c) => h('th', { key: c, scope: 'col', className: c === 'Cost' ? 'num' : undefined }, c)))),
+                h(
+                  'tbody',
+                  null,
+                  state.status === 'loading' && !state.rows.length && h(EmptyRow, { colSpan: COLUMNS.length }, h(Spinner, { size: 14 }), ' Loading…'),
+                  state.status === 'ready' && !state.rows.length && h(EmptyRow, { colSpan: COLUMNS.length }, 'No requests yet. Send a message and it shows up here.'),
+                  state.rows.map((r) => {
+                    const hidden = countRedactions(r.redactions);
+                    const classifier = classifierText(r);
+                    return h(
+                      'tr',
+                      { key: r.id, className: r.status === 'error' ? 'is-error' : undefined },
+                      h('td', { className: 'nowrap' }, formatDateTime(r.created_at)),
+                      h('td', null, JOB_LABEL[r.job] || r.job || '—', r.private ? h('span', { className: 'tag tag-private' }, 'private') : null),
+                      h(
+                        'td',
+                        { className: 'nowrap' },
+                        r.model_label || '—',
+                        r.status === 'error' ? h('span', { className: 'tag tag-error' }, 'failed') : r.status === 'stopped' ? h('span', { className: 'tag tag-stopped' }, 'stopped') : null
+                      ),
+                      h('td', { className: 'num' }, formatPrecise(r.cost_usd)),
+                      h('td', null, hidden ? String(hidden) : h('span', { className: 'muted' }, '0')),
+                      h('td', null, r.zdr ? h('span', { className: 'yes' }, h(Icon, { name: 'lock', size: 13 }), 'Yes') : h('span', { className: 'muted' }, 'No')),
+                      h('td', null, [r.gateway, r.upstream_provider].filter(Boolean).join(' → ') || '—'),
+                      h('td', { className: 'nowrap' }, classifier ? (r.classifier_model === 'heuristic' ? h('span', { className: 'muted' }, classifier) : classifier) : h('span', { className: 'muted' }, '—'))
+                    );
+                  })
+                )
               )
-            )
+            ),
+            (state.more || state.loadingMore) &&
+              h(
+                'div',
+                { className: 'card-actions' },
+                h('button', { type: 'button', className: 'btn btn-secondary btn-sm', onClick: loadMore, disabled: state.loadingMore }, state.loadingMore ? h(Spinner, { size: 14 }) : null, state.loadingMore ? 'Loading…' : 'Show older requests')
+              ),
+            state.error && state.status === 'ready' && h('p', { className: 'field-error', role: 'alert' }, state.error.message)
           )
+    );
+  }
+
+  /** Change the password: the current one again, then the new one twice. Other devices sign out. */
+  function ChangePassword() {
+    const notify = useToast();
+    const [form, setForm] = useState({ current: '', next: '', again: '' });
+    const [error, setError] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const set = (k) => (e) => setForm(Object.assign({}, form, { [k]: e.target.value }));
+    const submit = async (e) => {
+      e.preventDefault();
+      if (!form.current || !form.next) return setError('Enter your current password and a new one.');
+      if (form.next.length < 8) return setError('Use at least 8 characters for the new password.');
+      if (form.next !== form.again) return setError('The two new passwords are not the same.');
+      setBusy(true);
+      setError(null);
+      try {
+        // A wrong current password must show here, not sign the user out: no global 401 redirect.
+        const data = await api('/api/me/password', { method: 'POST', body: { current: form.current, next: form.next }, redirectOn401: false });
+        setForm({ current: '', next: '', again: '' });
+        const n = Number(data.signed_out_sessions) || 0;
+        notify('Password changed' + (n ? '. Signed out ' + n + ' other device' + (n === 1 ? '' : 's') + '.' : '.'));
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setBusy(false);
+      }
+      return undefined;
+    };
+    const input = (id, label, key, autoComplete) =>
+      h(
+        'div',
+        { className: 'field' },
+        h('label', { htmlFor: id, className: 'field-label' }, label),
+        h('input', {
+          id,
+          type: 'password',
+          className: cx('input', error && 'is-invalid'),
+          autoComplete,
+          value: form[key],
+          onChange: set(key),
+          maxLength: 200,
+          'aria-invalid': Boolean(error),
+          'aria-describedby': error ? 'password-error' : undefined,
+        })
+      );
+    return h(
+      'section',
+      { className: 'card', 'aria-labelledby': 'password-title' },
+      h('h2', { id: 'password-title', className: 'card-title' }, 'Password'),
+      h('p', { className: 'card-sub' }, 'Changing it signs you out on every other device. Use at least 8 characters, and not a common password.'),
+      h(
+        'form',
+        { className: 'password-form', onSubmit: submit, noValidate: true },
+        input('password-current', 'Current password', 'current', 'current-password'),
+        input('password-next', 'New password', 'next', 'new-password'),
+        input('password-again', 'New password again', 'again', 'new-password'),
+        error && h('p', { id: 'password-error', className: 'field-error', role: 'alert' }, error),
+        h('div', { className: 'card-actions' }, h('button', { type: 'submit', className: 'btn btn-secondary', disabled: busy }, busy ? 'Changing…' : 'Change password'))
+      )
     );
   }
 
@@ -2001,7 +2673,11 @@
       'section',
       { className: 'card card-danger', 'aria-labelledby': 'danger-title' },
       h('h2', { id: 'danger-title', className: 'card-title' }, 'Delete everything'),
-      h('p', { className: 'card-sub' }, 'Permanently deletes your account, every chat, your settings and your request history. Your remaining credit is forfeited. This cannot be undone.'),
+      h(
+        'p',
+        { className: 'card-sub' },
+        'Permanently deletes your account, every chat, your settings and your request history from our live database. Backups made before that still contain them, encrypted, until those backups expire. Your remaining credit is forfeited. We keep only a one-way fingerprint of your email address, so it can’t claim the welcome credit twice. This cannot be undone.'
+      ),
       !open
         ? h('button', { type: 'button', className: 'btn btn-danger-outline', onClick: () => setOpen(true) }, h(Icon, { name: 'trash', size: 16 }), 'Delete my account and data')
         : h(
@@ -2042,7 +2718,7 @@
     );
   }
 
-  function SettingsView({ user, setUser, onDeleted }) {
+  function SettingsView({ user, config, setUser, onDeleted, onSettingsChanged }) {
     const notify = useToast();
     const update = async (patch) => {
       const before = {};
@@ -2051,6 +2727,8 @@
       try {
         const data = await api('/api/me', { method: 'PATCH', body: patch });
         if (data.user) setUser(data.user);
+        // Strict privacy and EU-only change which models may answer: cached pickers are stale.
+        if (onSettingsChanged) onSettingsChanged();
         notify('Saved');
       } catch (e) {
         setUser(before);
@@ -2094,7 +2772,14 @@
           'section',
           { className: 'card', 'aria-labelledby': 'privacy-title' },
           h('h2', { id: 'privacy-title', className: 'card-title' }, 'Privacy'),
-          h('p', { className: 'card-sub' }, 'Personal details are always hidden before a request leaves Gode. These options go further. ', h('a', { href: '#/privacy' }, 'Read our privacy promise')),
+          h(
+            'p',
+            { className: 'card-sub' },
+            config && config.presidio
+              ? 'Personal details such as names, emails and numbers are hidden before a request leaves Gode. These options go further. '
+              : 'Emails, phone, card and ID numbers are always hidden before a request leaves Gode; names only when you introduce them. These options go further. ',
+            h('a', { href: '#/privacy' }, 'Read our privacy promise')
+          ),
           h(Toggle, {
             id: 'strict-privacy',
             label: 'Strict privacy',
@@ -2118,6 +2803,7 @@
           })
         ),
         h(TransparencyLog),
+        h(ChangePassword),
         h(DeleteEverything, { onDeleted })
       )
     );
@@ -2140,7 +2826,7 @@
     const load = useCallback(async () => {
       try {
         const data = await api('/api/billing/ledger');
-        setLedger({ status: 'ready', entries: data.entries || [], error: null });
+        setLedger({ status: 'ready', entries: data.entries || [], held: toNumber(data.held_usd) || 0, error: null });
         if (toNumber(data.balance_usd) !== null) setUser({ balance_usd: data.balance_usd });
         return data;
       } catch (e) {
@@ -2183,9 +2869,10 @@
     const devTopup = async (e) => {
       e.preventDefault();
       const usd = Number(topup);
-      // Same bounds as the server (POST /api/billing/dev-topup accepts up to $100).
-      if (!Number.isFinite(usd) || usd <= 0 || usd > 100) {
-        setTopupState({ busy: false, error: 'Enter an amount between $0.01 and $100.' });
+      // Same bounds as the server (POST /api/billing/dev-topup): more than $0 (at least one
+      // micro-dollar, $0.000001) and at most $100.
+      if (!Number.isFinite(usd) || Math.round(usd * 1e6) < 1 || usd > 100) {
+        setTopupState({ busy: false, error: 'Enter an amount above $0 and up to $100.' });
         return;
       }
       setTopupState({ busy: true, error: null });
@@ -2193,7 +2880,8 @@
         const data = await api('/api/billing/dev-topup', { method: 'POST', body: { usd } });
         if (toNumber(data.balance_usd) !== null) setUser({ balance_usd: data.balance_usd });
         setTopupState({ busy: false, error: null });
-        notify('Added ' + formatMoney(usd) + ' of test credit');
+        // Exact: a $0.005 top-up must not read "Added $0.01".
+        notify('Added ' + formatPrecise(usd) + ' of test credit');
         load();
       } catch (err) {
         setTopupState({ busy: false, error: err.message });
@@ -2239,7 +2927,11 @@
           'section',
           { className: 'card balance-hero' },
           h('div', null, h('span', { className: 'balance-hero-label' }, 'Your balance'), h('span', { className: 'balance-hero-value' }, formatBalance(user.balance_usd))),
-          h('p', { className: 'balance-hero-note' }, 'Every answer shows exactly what it cost on its chip.')
+          // Credit on hold for answers still running: already out of the balance, and whatever the
+          // answer doesn't use comes back when it finishes.
+          ledger.held > 0
+            ? h('p', { className: 'balance-hero-note' }, formatPrecise(ledger.held) + ' pending for an answer in progress. What it doesn’t use comes back when it finishes.')
+            : h('p', { className: 'balance-hero-note' }, 'Every answer shows exactly what it cost on its chip.')
         ),
         h(
           'section',
@@ -2284,7 +2976,7 @@
               'form',
               { className: 'inline-form', onSubmit: devTopup, noValidate: true },
               h('label', { htmlFor: 'topup', className: 'sr-only' }, 'Amount in US dollars'),
-              h('span', { className: 'input-prefix' }, '$', h('input', { id: 'topup', className: 'input', type: 'number', min: '0.01', max: '100', step: '0.01', inputMode: 'decimal', value: topup, onChange: (e) => setTopup(e.target.value), 'aria-invalid': Boolean(topupState.error) })),
+              h('span', { className: 'input-prefix' }, '$', h('input', { id: 'topup', className: 'input', type: 'number', min: '0', max: '100', step: 'any', inputMode: 'decimal', value: topup, onChange: (e) => setTopup(e.target.value), 'aria-invalid': Boolean(topupState.error) })),
               h('button', { type: 'submit', className: 'btn btn-secondary', disabled: topupState.busy }, topupState.busy ? 'Adding…' : 'Add test credit')
             ),
             topupState.error && h('p', { className: 'field-error', role: 'alert' }, topupState.error)
@@ -2334,14 +3026,14 @@
 
   function AdminOverview({ labels }) {
     const [days, setDays] = useState(28);
-    const [state, setState] = useState({ status: 'loading', gate: null, models: [], error: null });
+    const [state, setState] = useState({ status: 'loading', gate: null, models: [], presidio: null, lastRun: null, error: null });
     const load = useCallback(async () => {
       setState((s) => Object.assign({}, s, { status: 'loading', error: null }));
       try {
         const data = await api('/api/admin/stats?days=' + days);
-        setState({ status: 'ready', gate: data.gate || {}, models: data.models || [], error: null });
+        setState({ status: 'ready', gate: data.gate || {}, models: data.models || [], presidio: data.presidio || null, lastRun: data.last_learn_run || null, error: null });
       } catch (e) {
-        setState({ status: 'error', gate: null, models: [], error: e });
+        setState({ status: 'error', gate: null, models: [], presidio: null, lastRun: null, error: e });
       }
     }, [days]);
     useEffect(() => {
@@ -2349,9 +3041,20 @@
     }, [load]);
     const g = state.gate || {};
     const rows = useMemo(() => [...state.models].sort((a, b) => JOBS.indexOf(a.job) - JOBS.indexOf(b.job) || b.n - a.n), [state.models]);
+    const presidioDown = state.presidio && state.presidio.state === 'down';
+    const lastRun = state.lastRun;
     return h(
       Fragment,
       null,
+      presidioDown &&
+        h(
+          Notice,
+          { tone: 'error', title: 'The Presidio privacy filter is down', role: 'alert' },
+          state.presidio.failMode === 'open'
+            ? 'Prompts are being sent with the built-in checks only (PRESIDIO_FAIL_MODE=open), so names may get through. The privacy page has stopped naming Presidio until it is back.'
+            : 'Prompts are refused until it is back (PRESIDIO_FAIL_MODE=closed): users see “The privacy filter is unavailable right now”. Check the analyzer service.',
+          state.presidio.downSince ? ' Down since ' + formatDateTime(state.presidio.downSince) + '.' : null
+        ),
       h(
         'div',
         { className: 'section-bar' },
@@ -2367,7 +3070,13 @@
         : h(
             'div',
             { className: cx('stat-grid', state.status === 'loading' && 'is-loading') },
-            h(StatCard, { label: 'Auto-pick on', value: formatPct(g.auto_pick_on_pct), hint: (g.users ?? 0) + ' active user' + (g.users === 1 ? '' : 's') }),
+            // The gate figure: active users who never picked a model by hand in the window. The
+            // current-setting snapshot misses everyone who turned auto-pick off and then left.
+            h(StatCard, {
+              label: 'Kept auto-pick',
+              value: formatPct(g.auto_pick_kept_pct ?? g.auto_pick_on_pct),
+              hint: (g.users ?? 0) + ' active user' + (g.users === 1 ? '' : 's') + (toNumber(g.auto_pick_on_pct) !== null ? ' · on now ' + formatPct(g.auto_pick_on_pct) : ''),
+            }),
             h(StatCard, { label: 'Override rate', value: formatRate(g.override_rate), hint: 'Auto-picked answers switched to another model' }),
             h(StatCard, { label: 'Gross margin', value: formatPct(g.gross_margin_pct), hint: 'Charged minus API cost', tone: g.credits_cover_api_costs === false ? 'bad' : null }),
             h(StatCard, { label: 'Thumbs-up rate', value: formatRate(g.thumbs_up_rate), hint: 'Of answers that were rated' }),
@@ -2375,10 +3084,28 @@
             h(StatCard, {
               label: 'API cost vs charged',
               value: formatPrecise(g.api_cost_usd) + ' → ' + formatPrecise(g.charged_usd),
-              hint: g.credits_cover_api_costs === false ? 'Charged less than the API cost!' : 'What providers billed us, then what users paid',
+              hint:
+                (g.credits_cover_api_costs === false ? 'Charged less than the API cost!' : 'What providers billed us, then what balances paid (free credit included)') +
+                (toNumber(g.failed_api_cost_usd) ? ' · ' + formatPrecise(g.failed_api_cost_usd) + ' on failed or stopped requests' : ''),
               tone: g.credits_cover_api_costs === false ? 'bad' : null,
+            }),
+            // Free credit (signup bonus, test top-ups) also pays for answers: only purchases are cash.
+            h(StatCard, {
+              label: 'Purchases vs API cost',
+              value: formatPrecise(g.purchases_usd) + ' vs ' + formatPrecise(g.api_cost_usd),
+              hint:
+                (g.cash_covers_api_costs === false ? 'Purchases do not cover the API cost' : 'Cash in, against what providers billed us') +
+                (toNumber(g.free_credit_share_pct) !== null ? ' · free credit ' + formatPct(g.free_credit_share_pct) + ' of credit given' : ''),
+              tone: g.cash_covers_api_costs === false ? 'bad' : null,
             })
           ),
+      lastRun &&
+        h(
+          'p',
+          { className: 'muted small' },
+          'Last learner run: ' + formatDateTime(lastRun.created_at) + ' (' + (lastRun.source === 'schedule' ? 'weekly schedule' : lastRun.source) + '), ' +
+            lastRun.proposals + ' proposal' + (lastRun.proposals === 1 ? '' : 's') + (lastRun.applied ? ', ' + lastRun.applied + ' applied' : ', none applied') + '.'
+        ),
       h('h2', { className: 'section-title' }, 'Per-model results'),
       h(
         'div',
@@ -2508,9 +3235,13 @@
           JOBS.map((job) =>
             h(
               'tr',
-              { key: job },
-              h('th', { scope: 'row' }, h('span', { className: 'job-name' }, JOB_LABEL[job]), h('span', { className: 'job-kind' }, job === 'action' ? 'routes as chat' : MEDIA_JOBS.has(job) ? 'media' : 'text')),
-              TIERS.map((tier) => h(RouteCell, { key: tier, job, tier, route: byKey[job + '/' + tier], models, onSaved }))
+              { key: job, className: job === 'action' ? 'is-readonly' : undefined },
+              h('th', { scope: 'row' }, h('span', { className: 'job-name' }, JOB_LABEL[job]), h('span', { className: 'job-kind' }, job === 'action' ? 'uses Chat routes' : MEDIA_JOBS.has(job) ? 'media' : 'text')),
+              // Phase 1 answers action requests with the Chat row (the picker never reads these
+              // cells, and the API refuses edits), so they are shown, not editable.
+              job === 'action'
+                ? h('td', { colSpan: TIERS.length, className: 'route-cell route-readonly muted' }, 'Uses the Chat row in phase 1. Edit the Chat row to change how action requests are answered.')
+                : TIERS.map((tier) => h(RouteCell, { key: tier, job, tier, route: byKey[job + '/' + tier], models, onSaved }))
             )
           )
         )
@@ -2520,13 +3251,16 @@
 
   function LearnPanel({ labels, onApplied }) {
     const notify = useToast();
-    const [state, setState] = useState({ s: 'idle', proposals: [], applied: null, error: null });
+    const [state, setState] = useState({ s: 'idle', proposals: [], applied: null, runId: null, error: null });
     const run = async (apply) => {
       setState((st) => Object.assign({}, st, { s: apply ? 'applying' : 'running', error: null }));
       try {
-        const data = await api('/api/admin/learn', { method: 'POST', body: { apply } });
+        // Apply sends the reviewed run's id, so exactly the proposals on screen are applied (not a
+        // fresh computation that may differ from what the admin looked at).
+        const body = apply && state.runId ? { apply: true, run_id: state.runId } : { apply };
+        const data = await api('/api/admin/learn', { method: 'POST', body });
         const proposals = data.proposals || [];
-        setState({ s: 'done', proposals, applied: apply ? Number(data.applied) || 0 : null, error: null });
+        setState({ s: 'done', proposals, applied: apply ? Number(data.applied) || 0 : null, runId: data.run_id || null, error: null });
         if (apply) {
           notify('Applied ' + (Number(data.applied) || 0) + ' route change' + (Number(data.applied) === 1 ? '' : 's'));
           onApplied();
@@ -2784,10 +3518,117 @@
     );
   }
 
+  /** One account in the admin user list, with a credit adjustment (+ adds, − takes back). */
+  function AdminUserRow({ user, onBalance }) {
+    const notify = useToast();
+    const [usd, setUsd] = useState('');
+    const [note, setNote] = useState('');
+    const [status, setStatus] = useState({ s: 'idle', msg: null });
+    const apply = async (e) => {
+      e.preventDefault();
+      const n = Number(usd);
+      if (!usd.trim() || !Number.isFinite(n) || n === 0) {
+        setStatus({ s: 'error', msg: 'Enter an amount, e.g. 5 or -2.50.' });
+        return;
+      }
+      setStatus({ s: 'saving', msg: null });
+      try {
+        const data = await api('/api/admin/users/' + encodeURIComponent(user.id) + '/credit', { method: 'POST', body: note.trim() ? { usd: n, note: note.trim() } : { usd: n } });
+        onBalance(user.id, data.balance_usd);
+        setUsd('');
+        setNote('');
+        setStatus({ s: 'idle', msg: null });
+        notify((n > 0 ? 'Added ' : 'Took back ') + formatPrecise(Math.abs(n)) + '. New balance ' + formatBalance(data.balance_usd) + '.');
+      } catch (err) {
+        setStatus({ s: 'error', msg: err.message });
+      }
+    };
+    return h(
+      'tr',
+      { className: status.s === 'error' ? 'is-error' : undefined },
+      h('td', null, h('span', { className: 'model-name' }, user.email), user.is_admin ? h('span', { className: 'tag' }, 'admin') : null),
+      h('td', { className: 'num' }, formatBalance(user.balance_usd)),
+      h('td', { className: 'nowrap' }, formatDateTime(user.created_at)),
+      h(
+        'td',
+        null,
+        h(
+          'form',
+          { className: 'adjust-form', onSubmit: apply, noValidate: true },
+          h('input', { className: 'input input-sm input-num', type: 'number', step: 'any', inputMode: 'decimal', value: usd, onChange: (e) => setUsd(e.target.value), placeholder: '± USD', 'aria-label': 'Credit change in US dollars for ' + user.email }),
+          h('input', { className: 'input input-sm', type: 'text', value: note, maxLength: 200, onChange: (e) => setNote(e.target.value), placeholder: 'Note (optional)', 'aria-label': 'Note for ' + user.email }),
+          h('button', { type: 'submit', className: 'btn btn-secondary btn-xs', disabled: status.s === 'saving' }, status.s === 'saving' ? 'Saving…' : 'Apply')
+        ),
+        status.s === 'error' && h('span', { className: 'row-status bad', role: 'alert' }, status.msg)
+      )
+    );
+  }
+
+  /** Find accounts by email and adjust their credit (refunds, goodwill). The balance never goes below $0. */
+  function AdminUsers() {
+    const [query, setQuery] = useState('');
+    const [state, setState] = useState({ status: 'loading', users: [], error: null });
+    const search = useCallback(async (q) => {
+      setState((st) => Object.assign({}, st, { status: 'loading', error: null }));
+      try {
+        const data = await api('/api/admin/users' + (q ? '?email=' + encodeURIComponent(q) : ''));
+        setState({ status: 'ready', users: data.users || [], error: null });
+      } catch (e) {
+        setState({ status: 'error', users: [], error: e });
+      }
+    }, []);
+    useEffect(() => {
+      search('');
+    }, [search]);
+    const onBalance = (id, balance) => setState((st) => Object.assign({}, st, { users: st.users.map((u) => (u.id === id ? Object.assign({}, u, { balance_usd: balance }) : u)) }));
+    return h(
+      'section',
+      { 'aria-labelledby': 'users-title' },
+      h(
+        'div',
+        { className: 'section-bar' },
+        h('h2', { id: 'users-title', className: 'section-title' }, 'Users'),
+        h(
+          'form',
+          {
+            className: 'filters',
+            role: 'search',
+            onSubmit: (e) => {
+              e.preventDefault();
+              search(query.trim());
+            },
+          },
+          h('input', { className: 'input input-sm', type: 'search', placeholder: 'Search by email', value: query, onChange: (e) => setQuery(e.target.value), 'aria-label': 'Search users by email' }),
+          h('button', { type: 'submit', className: 'btn btn-secondary btn-sm' }, 'Search')
+        )
+      ),
+      h('p', { className: 'muted small' }, 'Credit changes are written to the ledger as adjustments, with your account and the note as the reference. A negative amount takes credit back, never below $0.'),
+      state.status === 'error'
+        ? h(LoadError, { error: state.error, onRetry: () => search(query.trim()) })
+        : h(
+            'div',
+            { className: 'table-wrap' },
+            h(
+              'table',
+              { className: 'table table-compact table-users' },
+              h('thead', null, h('tr', null, ['Email', 'Balance', 'Joined', 'Adjust credit'].map((c) => h('th', { key: c, scope: 'col', className: c === 'Balance' ? 'num' : undefined }, c)))),
+              h(
+                'tbody',
+                null,
+                state.status === 'loading' && !state.users.length && h(EmptyRow, { colSpan: 4 }, h(Spinner, { size: 14 }), ' Loading…'),
+                state.status === 'ready' && !state.users.length && h(EmptyRow, { colSpan: 4 }, 'No users match.'),
+                state.users.map((u) => h(AdminUserRow, { key: u.id, user: u, onBalance }))
+              )
+            )
+          )
+    );
+  }
+
   const ADMIN_TABS = [
     { id: 'overview', label: 'Overview' },
     { id: 'routing', label: 'Routing' },
     { id: 'catalog', label: 'Catalog' },
+    { id: 'users', label: 'Users' },
   ];
 
   function AdminView() {
@@ -2832,6 +3673,7 @@
 
     let content;
     if (tab === 'overview') content = h(AdminOverview, { labels });
+    else if (tab === 'users') content = h(AdminUsers);
     else if (catalog.status === 'error') content = h(LoadError, { error: catalog.error, onRetry: load });
     else if (catalog.status === 'loading') content = h('div', { className: 'page-loading' }, h(Spinner, { size: 20, label: 'Loading' }));
     else if (tab === 'routing')
@@ -2856,7 +3698,7 @@
       h(
         'div',
         { className: 'page-inner' },
-        h('header', { className: 'page-head' }, h('h1', null, 'Admin'), h('p', null, 'Routing table, model catalog and the numbers that decide phase 2.')),
+        h('header', { className: 'page-head' }, h('h1', null, 'Admin'), h('p', null, 'Routing table, model catalog, accounts and the numbers that decide phase 2.')),
         h(
           'div',
           { className: 'tabs', role: 'tablist', 'aria-label': 'Admin sections', onKeyDown: onTabKey },
@@ -2887,14 +3729,35 @@
   // Privacy (in-app #/privacy and the standalone /privacy.html share this content)
   // ---------------------------------------------------------------------------------------------
 
+  /**
+   * The deployment facts the privacy promises depend on, from /api/public/providers. Until they
+   * load (or if they can't), the most conservative values: no self-hosted model, no Presidio,
+   * an unknown classifier. The page never promises more than the server says it does.
+   */
+  function privacyFacts(data) {
+    const d = data || {};
+    const c = d.classifier && typeof d.classifier === 'object' ? d.classifier : null;
+    return {
+      known: Boolean(data),
+      selfhosted: d.selfhosted === true,
+      presidio: d.presidio === true || Boolean(d.redaction && d.redaction.presidio === true),
+      redaction: !(d.redaction && d.redaction.enabled === false),
+      privateFallback: d.private_fallback === 'block' ? 'block' : 'zdr',
+      mediaProxy: d.media_proxy === true,
+      classifier: c ? { label: String(c.label || 'a classifier model'), zdr: Boolean(c.zdr), region: c.region || null, selfHosted: Boolean(c.self_hosted) } : null,
+      classifierKnown: Boolean(data) && 'classifier' in d,
+    };
+  }
+
   function usePublicProviders() {
-    const [state, setState] = useState({ status: 'loading', models: [], presidio: false, error: null });
+    const [state, setState] = useState({ status: 'loading', models: [], presidio: false, facts: privacyFacts(null), error: null });
     const load = useCallback(async () => {
       try {
         const data = await api('/api/public/providers', { redirectOn401: false });
-        setState({ status: 'ready', models: data.models || [], presidio: Boolean(data.redaction && data.redaction.presidio), error: null });
+        const facts = privacyFacts(data);
+        setState({ status: 'ready', models: data.models || [], presidio: facts.presidio, facts, error: null });
       } catch (e) {
-        setState({ status: 'error', models: [], presidio: false, error: e });
+        setState({ status: 'error', models: [], presidio: false, facts: privacyFacts(null), error: e });
       }
     }, []);
     useEffect(() => {
@@ -2947,46 +3810,104 @@
     );
   }
 
-  const PROMISES = [
-    {
-      icon: 'user',
-      title: 'AI companies never learn who you are',
-      body: 'Every request goes out under Gode’s own account. We never send your name, email or account details to a model provider, so they see “Gode”, not you.',
-    },
-    {
-      icon: 'eye-off',
-      title: 'Personal details are removed before anything leaves',
-      body: 'Names, email addresses, phone numbers, card and bank numbers, ID numbers and passwords are swapped for placeholders like [PERSON_1] before a request is sent. The real values are put back into the answer on our side, and answers are checked so a model can’t echo sensitive data back.',
-    },
-    {
-      icon: 'lock',
-      title: 'Zero data retention where it’s offered',
-      body: 'Some providers promise not to keep your request at all. Each model below is marked. Turn on Strict privacy in Settings and Gode only uses zero-retention or self-hosted models.',
-    },
-    {
-      icon: 'server',
-      title: 'Sensitive requests stay on our servers',
-      body: 'When a request looks private, such as money, health, passwords or legal matters, Gode sends it to an open-weight model on servers we control, so it never leaves. If that model is unavailable, we only fall back to a zero-retention model, after removing your personal details.',
-    },
-    {
-      icon: 'shield',
-      title: 'Your chats are encrypted',
-      body: 'Conversations are stored encrypted with a key that belongs to your account. Our logs never contain the text of your requests, only which model answered, what it cost and how many details were hidden.',
-    },
-    {
-      icon: 'trash',
-      title: 'Delete everything, any time',
-      body: 'One button in Settings permanently deletes your account, every chat and your request history.',
-    },
-    {
-      icon: 'eye',
-      title: 'See where every request went',
-      body: 'Your transparency log in Settings lists the model, provider, retention and cost of every request you have made.',
-    },
-  ];
+  /** How the classifier hop reads on the privacy page (it sees messages before routing). */
+  function classifierSentence(f) {
+    if (!f.classifierKnown) {
+      return ' To pick a model, a classifier reads each message first (with your personal details removed); messages our own checks flag as private only go to one on our servers.';
+    }
+    if (!f.classifier) return ' To decide, Gode uses its own rules on our servers: no outside classifier reads your messages.';
+    if (f.classifier.selfHosted) return ' To decide, Gode reads each message with a classifier model on our own servers.';
+    const where = [f.classifier.zdr ? 'zero retention' : 'its provider may keep requests', f.classifier.region && REGION_LABEL[f.classifier.region]].filter(Boolean).join(', ');
+    return (
+      ' To decide, our own checks read each message first. Messages they don’t flag are also read by a classifier model (' +
+      f.classifier.label +
+      ', ' +
+      where +
+      '), with your personal details removed, to pick the best model. Messages our checks flag as private, and every later message in that chat, never go to it.'
+    );
+  }
+
+  /** The promise cards, each only as strong as this server makes it true (see privacyFacts). */
+  function promisesFor(f) {
+    const names = !f.redaction
+      ? {
+          title: 'Personal-detail removal is off on this server',
+          body: 'This server sends your messages to the model as you wrote them. Leave out anything you want to keep to yourself.',
+        }
+      : f.presidio
+        ? {
+            title: 'Personal details are removed before anything leaves',
+            body: 'Names, email addresses, phone numbers, card and bank numbers, ID numbers and passwords are swapped for placeholders like [PERSON_1] before a request is sent. Detection is automatic and best effort, so an unusual name can slip through. The real values are put back into the answer on our side, and answers are checked so a model can’t echo sensitive data back.',
+          }
+        : {
+            title: 'Personal details are removed before anything leaves',
+            body: 'Email addresses, phone numbers, card and bank numbers, ID numbers and passwords are swapped for placeholders like [EMAIL_1] before a request is sent. Names are only caught when you introduce them (“my name is …”); other names reach the model as written. The real values are put back into the answer on our side, and answers are checked so a model can’t echo sensitive data back.',
+          };
+    let sensitive;
+    const lead = 'When a request looks private, such as money, health, passwords or legal matters, ';
+    if (f.selfhosted) {
+      sensitive = {
+        title: 'Sensitive requests stay on our servers',
+        body:
+          lead +
+          'Gode answers it with an open-weight model on servers we control, so the text doesn’t go to an outside AI company. ' +
+          (f.privateFallback === 'block'
+            ? 'If that model is unavailable, the request is refused rather than sent elsewhere.'
+            : 'If that model is unavailable, it only goes to a zero-retention model, after your personal details are removed.'),
+      };
+    } else if (f.privateFallback === 'block') {
+      sensitive = {
+        title: 'Sensitive requests are not sent out',
+        body: lead + 'this server refuses it rather than send it to an outside AI company, because no model of our own is running right now.',
+      };
+    } else {
+      sensitive = {
+        title: 'Sensitive requests only go to zero-retention models',
+        body:
+          lead +
+          'Gode sends it only to a zero-retention model, after removing your personal details. ' +
+          (f.known ? 'This server has no model of its own running right now, so that outside AI company still sees the redacted text.' : 'Unless we run the model ourselves, that AI company still sees the redacted text.'),
+      };
+    }
+    sensitive.body +=
+      ' Private pictures, video, music and voice are different: they go to media providers that may keep them, with personal details replaced by generic words like “a person”. A follow-up such as “now make a video of it” also carries the earlier message it refers to, with the same details replaced. Turn on Strict privacy to refuse those instead.' +
+      classifierSentence(f);
+    return [
+      {
+        icon: 'user',
+        title: 'AI companies never learn who you are',
+        body:
+          'Every request goes out under Gode’s own account. We never send your name, email or account details to a model provider, so they see “Gode”, not you.' +
+          (f.mediaProxy ? ' Generated pictures, video and audio are fetched through our server, so media hosts don’t see your IP address either.' : ''),
+      },
+      Object.assign({ icon: 'eye-off' }, names),
+      {
+        icon: 'lock',
+        title: 'Zero data retention where it’s offered',
+        body: 'Some providers promise not to keep your request at all. Each model below is marked. Turn on Strict privacy in Settings and Gode only uses zero-retention or self-hosted models.',
+      },
+      Object.assign({ icon: 'server' }, sensitive),
+      {
+        icon: 'shield',
+        title: 'Your chats are encrypted',
+        body: 'Conversations are stored encrypted with a key that belongs to your account. Our logs never contain the text of your requests, only which model answered, what it cost and how many details were hidden.',
+      },
+      {
+        icon: 'trash',
+        title: 'Delete everything, any time',
+        body: 'One button in Settings permanently deletes your account, every chat and your request history from our live database. Backups made before that still contain them, encrypted, until those backups expire. We keep only a one-way fingerprint of your email address, so the welcome credit can’t be claimed twice.',
+      },
+      {
+        icon: 'eye',
+        title: 'See where every request went',
+        body: 'Your transparency log in Settings lists the model, provider, retention and cost of every request you have made, and which classifier read it.',
+      },
+    ];
+  }
 
   function PrivacyContent({ inApp }) {
     const [providers, reload] = usePublicProviders();
+    const promises = promisesFor(providers.facts);
     return h(
       'div',
       { className: 'privacy' },
@@ -3000,7 +3921,7 @@
       h(
         'ul',
         { className: 'promise-grid' },
-        PROMISES.map((p) =>
+        promises.map((p) =>
           h(
             'li',
             { key: p.title, className: 'promise' },
@@ -3013,14 +3934,14 @@
       h(
         Notice,
         { tone: 'warn', title: 'What we can’t promise' },
-        'Unless a request runs on a model we host ourselves, the AI company that runs the model still sees the text of that request, with your personal details removed. Zero retention means they don’t keep it, not that they never see it.'
+        'Unless a request runs on a model we host ourselves, the AI company that runs the model still sees the text of that request, with your personal details removed. Zero retention means they don’t keep it, not that they never see it. Removing personal details is automatic and can miss something.'
       ),
       providers.status === 'ready' &&
         h(
           'p',
           { className: 'muted small detection-note' },
           'Personal details are detected on our own servers using ',
-          providers.presidio ? 'Microsoft Presidio together with our built-in checks' : 'our built-in checks',
+          providers.presidio ? 'Microsoft Presidio together with our built-in checks' : 'our built-in checks (names only when you introduce them, like “my name is …”)',
           '. Nothing is sent to a third party to find them.'
         ),
       h(
@@ -3115,7 +4036,7 @@
           { className: 'auth-points' },
           h('li', null, h(Icon, { name: 'sparkle', size: 18 }), h('span', null, h('strong', null, 'Auto-picks the best model. '), 'Easy questions go to fast, cheap models; hard ones get the strongest.')),
           h('li', null, h(Icon, { name: 'card', size: 18 }), h('span', null, h('strong', null, 'Honest cost. '), 'Every answer shows the model, effort and exactly what it cost.')),
-          h('li', null, h(Icon, { name: 'shield', size: 18 }), h('span', null, h('strong', null, 'Private by default. '), 'Your personal details are stripped before anything leaves.'))
+          h('li', null, h(Icon, { name: 'shield', size: 18 }), h('span', null, h('strong', null, 'Private by default. '), 'Emails, phone numbers and other personal details are stripped before anything leaves.'))
         ),
         h(
           'div',
@@ -3132,7 +4053,7 @@
           { className: 'auth-card' },
           h('div', { className: 'auth-card-brand' }, h(Brand, { size: 30 })),
           h('h2', null, signup ? 'Create your account' : 'Welcome back'),
-          h('p', { className: 'muted' }, signup ? 'Free to start. You get a little credit to try it.' : 'Log in to pick up where you left off.'),
+          h('p', { className: 'muted' }, signup ? 'Free to start. New accounts get a little credit to try it (once per email address).' : 'Log in to pick up where you left off.'),
           h(
             'div',
             { className: 'auth-tabs', role: 'group', 'aria-label': 'Sign up or log in' },
@@ -3179,7 +4100,7 @@
                 h('button', { type: 'button', className: 'input-action', onClick: () => setShow((s) => !s), 'aria-label': show ? 'Hide password' : 'Show password', 'aria-pressed': show }, h(Icon, { name: show ? 'eye-off' : 'eye', size: 17 }))
               ),
               errors.password,
-              signup ? 'At least 8 characters.' : null
+              signup ? 'At least 8 characters, and not a common password.' : null
             ),
             h('button', { type: 'submit', className: 'btn btn-primary btn-block btn-lg', disabled: busy }, busy ? h(Spinner, { size: 16 }) : null, busy ? (signup ? 'Creating account…' : 'Logging in…') : signup ? 'Create account' : 'Log in')
           ),
@@ -3201,6 +4122,8 @@
     const [draftKey, setDraftKey] = useState(() => localKey('draft'));
     const [drafts, setDrafts] = useState({});
     const [drawer, setDrawer] = useState(false);
+    const mainRef = useRef(null);
+    const menuBtnRef = useRef(null);
     const activeKey = route.page === 'chat' ? route.conversationId || draftKey : null;
     const activeKeyRef = useRef(activeKey);
     activeKeyRef.current = activeKey;
@@ -3230,6 +4153,10 @@
       setUser,
       refreshUser,
       notify,
+      // A send the server never stored gives its text back, unless the user already typed more.
+      restoreDraft(key, text) {
+        setDrafts((d) => (d[key] && d[key].trim() ? d : Object.assign({}, d, { [key]: text })));
+      },
       onConversationCreated(id, title, fromDraft) {
         upsertConversation(id, title);
         setDrafts((d) => {
@@ -3251,13 +4178,40 @@
     };
     const engine = useChatEngine(hooksRef);
 
-    useEffect(() => setDrawer(false), [route.page, route.conversationId]);
+    /**
+     * Close the phone drawer. `refocus`: hand focus back to the menu button (Escape, the scrim, the
+     * close button). Navigating closes it without that: the new page keeps focus, and focus left
+     * on a link inside the now-hidden drawer moves to the page instead.
+     */
+    const closeDrawer = useCallback((refocus) => {
+      // Un-inert at once: the menu button lives in the page behind the drawer.
+      if (mainRef.current) mainRef.current.inert = false;
+      setDrawer(false);
+      window.setTimeout(() => {
+        const sidebar = document.getElementById('sidebar');
+        const inside = sidebar && sidebar.contains(document.activeElement);
+        const content = document.getElementById('main');
+        if (refocus && menuBtnRef.current && menuBtnRef.current.offsetParent !== null) menuBtnRef.current.focus();
+        else if (inside && content && window.matchMedia('(max-width: 860px)').matches) content.focus({ preventScroll: true });
+      }, 0);
+    }, []);
+    useEffect(() => closeDrawer(false), [route.page, route.conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => {
+      // While the drawer is open the page behind it is inert (no Tab stops, hidden from screen
+      // readers), so focus stays in the drawer; its first control takes focus.
+      const main = mainRef.current;
+      if (main) main.inert = drawer;
       if (!drawer) return undefined;
-      const onKey = (e) => e.key === 'Escape' && setDrawer(false);
+      const sidebar = document.getElementById('sidebar');
+      const first = sidebar && sidebar.querySelector('.sidebar-close, button, a[href]');
+      if (first) first.focus();
+      const onKey = (e) => e.key === 'Escape' && closeDrawer(true);
       document.addEventListener('keydown', onKey);
-      return () => document.removeEventListener('keydown', onKey);
-    }, [drawer]);
+      return () => {
+        document.removeEventListener('keydown', onKey);
+        if (main) main.inert = false;
+      };
+    }, [drawer, closeDrawer]);
 
     const current = route.conversationId ? convs.items.find((c) => c.id === route.conversationId) : null;
     const title = route.page === 'chat' ? (current && current.title) || 'New chat' : PAGE_TITLE[route.page];
@@ -3266,10 +4220,17 @@
     }, [title]);
 
     const newChat = () => {
-      if (route.page === 'chat' && !route.conversationId && !(engine.threads[draftKey] && engine.threads[draftKey].messages.length)) {
+      // The current new-chat draft is reused while it has no messages, from any page, so text typed
+      // there and not sent yet is still in the composer. Only a draft that became a chat is replaced.
+      const used = engine.threads[draftKey] && engine.threads[draftKey].messages.length;
+      if (!used) {
         setDrawer(false);
-        const el = document.getElementById('composer-input');
-        if (el) el.focus();
+        if (route.page === 'chat' && !route.conversationId) {
+          const el = document.getElementById('composer-input');
+          if (el) el.focus();
+        } else {
+          navigate('#/');
+        }
         return;
       }
       setDraftKey(localKey('draft'));
@@ -3301,7 +4262,7 @@
     };
 
     let main;
-    if (route.page === 'settings') main = h(SettingsView, { user, setUser, onDeleted: () => onSignedOut({ deleted: true }) });
+    if (route.page === 'settings') main = h(SettingsView, { user, config, setUser, onDeleted: () => onSignedOut({ deleted: true }), onSettingsChanged: engine.invalidateModels });
     else if (route.page === 'billing') main = h(BillingView, { user, config, setUser, route });
     else if (route.page === 'admin')
       main = user.is_admin
@@ -3313,6 +4274,7 @@
         engine,
         threadKey: activeKey,
         user,
+        config,
         draft: drafts[activeKey] || '',
         setDraft: (v) => setDrafts((d) => Object.assign({}, d, { [activeKey]: v })),
       });
@@ -3332,7 +4294,21 @@
     return h(
       'div',
       { className: 'app-shell' },
-      h('a', { href: '#main', className: 'skip-link' }, 'Skip to content'),
+      // The app routes on the hash, so "#main" must not reach the router (it would open a new
+      // chat): the link only moves focus.
+      h(
+        'a',
+        {
+          href: '#main',
+          className: 'skip-link',
+          onClick: (e) => {
+            e.preventDefault();
+            const content = document.getElementById('main');
+            if (content) content.focus();
+          },
+        },
+        'Skip to content'
+      ),
       h(Sidebar, {
         user,
         config,
@@ -3344,16 +4320,16 @@
         onNewChat: newChat,
         onDelete: deleteConversation,
         onLogout: logout,
-        onClose: () => setDrawer(false),
+        onClose: () => closeDrawer(true),
       }),
-      drawer && h('div', { className: 'scrim', onClick: () => setDrawer(false), 'aria-hidden': 'true' }),
+      drawer && h('div', { className: 'scrim', onClick: () => closeDrawer(true), 'aria-hidden': 'true' }),
       h(
         'div',
-        { className: 'main' },
+        { className: 'main', ref: mainRef },
         h(
           'header',
           { className: 'topbar' },
-          h('button', { type: 'button', className: 'icon-btn menu-btn', 'aria-label': 'Open menu', 'aria-controls': 'sidebar', 'aria-expanded': drawer, onClick: () => setDrawer(true) }, h(Icon, { name: 'menu', size: 20 })),
+          h('button', { ref: menuBtnRef, type: 'button', className: 'icon-btn menu-btn', 'aria-label': 'Open menu', 'aria-controls': 'sidebar', 'aria-expanded': drawer, onClick: () => setDrawer(true) }, h(Icon, { name: 'menu', size: 20 })),
           h('h1', { className: 'topbar-title' }, title),
           h('div', { className: 'topbar-right' }, modePill, h('a', { className: 'topbar-balance', href: '#/billing', title: 'Balance' }, formatBalance(user.balance_usd)))
         ),
@@ -3427,6 +4403,8 @@
 
   const lib = {
     createSSEParser,
+    streamApi,
+    ApiError,
     parseBlocks,
     parseInline,
     safeHref,
@@ -3444,6 +4422,14 @@
     errorCopy,
     chatReducer,
     requestFromRoute,
+    messageFromServer,
+    privacyBadgeFor,
+    stoppedNote,
+    privacyFacts,
+    promisesFor,
+    announcementFor,
+    classifierText,
+    redactionLine,
   };
 
   // Lets node:test exercise the pure helpers without a browser; the browser never has `module`.

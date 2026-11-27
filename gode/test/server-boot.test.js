@@ -92,6 +92,27 @@ test("boot repairs catalog rows whose privacy flags the gateway can't enforce", 
   }
 });
 
+test("start() runs the weekly learner schedule when LEARN_SCHEDULE=weekly, and not otherwise", async (t) => {
+  const on = await start({ ...baseEnv(tempDb(t)), LEARN_SCHEDULE: "weekly" }, { log: captureLogger() });
+  try {
+    // The handle start() wired up: one due-check stores a 'schedule' run, the next one is not due.
+    const ran = on.learner.tick();
+    assert.ok(ran && Number.isInteger(ran.id));
+    const rows = on.deps.db.prepare("SELECT source, applied FROM learn_runs").all().map((r) => ({ ...r }));
+    assert.deepEqual(rows, [{ source: "schedule", applied: 0 }]);
+    assert.equal(on.learner.tick(), null);
+  } finally {
+    await on.close();
+  }
+  const off = await start(baseEnv(tempDb(t)), { log: captureLogger() });
+  try {
+    assert.equal(off.learner.tick(), null);
+    assert.equal(off.deps.db.prepare("SELECT COUNT(*) AS n FROM learn_runs").get().n, 0);
+  } finally {
+    await off.close();
+  }
+});
+
 test("close() stops the background timers: the process can exit", async (t) => {
   const file = tempDb(t);
   const s = await start({ ...baseEnv(file), LEARN_SCHEDULE: "weekly" }, { log: captureLogger() });

@@ -37,7 +37,9 @@
 //   GET  /fal/<owner>/<app>/requests/<id> -> result by endpoint id: "video"/"veo"/"wan"/"ltx" -> video.url;
 //        "tts"/"speech"/"voice" -> audio.url (+duration); "music"/"audio"/"lyria"/"song" -> audio.url;
 //        else images[] with width/height. scenario.fal.result overrides the body.
-//   PUT  /fal/<owner>/<app>/requests/<id>/cancel -> 200 {status:"OK"} (400 ALREADY_COMPLETED if done)
+//   PUT  /fal/<owner>/<app>/requests/<id>/cancel -> 200 {status:"OK"} while queued, 202
+//        {status:"CANCELLATION_REQUESTED"} once IN_PROGRESS was reported, 400 ALREADY_COMPLETED if
+//        done; scenario.fal.cancel forces "ok" | "requested" | "completed" | "not_found" | "error"
 //   POST /analyze (Presidio) -> EMAIL_ADDRESS entities found by a simple regex; GET /health.
 //   POST /v1/checkout/sessions (Stripe, form-encoded, needs Authorization) -> { id: "cs_test_...", url, ... }
 //
@@ -60,6 +62,7 @@
 //   fal_result_error      result GET answers 422 {detail:[{loc,msg,type}]}
 //   fal_no_media          result 200 without any media field
 //   fal_stuck             status stays IN_PROGRESS forever (timeout/abort/cancel tests)
+//   fal_queued            status stays IN_QUEUE forever (a stop before the job ran)
 //   fal_submit_error      submit answers 401 {detail, type:"rejected_key"}
 //   (option) setScenario({ fal: { foreignUrls: true } }): submit returns URLs on another host
 //   (option) fal.statusFailures { [n]: status | "reset" }: status poll n (1-based, per request) fails
@@ -146,6 +149,7 @@ const PRESETS = {
   fal_result_error: { fal: { mode: "result_error" } },
   fal_no_media: { fal: { mode: "no_media" } },
   fal_stuck: { fal: { mode: "stuck" } },
+  fal_queued: { fal: { mode: "queued" } },
   fal_submit_error: { fal: { mode: "submit_error", status: 401 } },
   presidio_down: { presidio: { mode: "error" } },
   presidio_slow: { presidio: { mode: "slow" } },
@@ -394,8 +398,17 @@ function handleFal(req, res, pathname, body, sc, state, baseUrl) {
 
   if (action === "/cancel") {
     if (req.method !== "PUT") return sendJSON(res, 405, { detail: "Method Not Allowed" });
-    if (r.completed) return sendJSON(res, 400, { status: "ALREADY_COMPLETED" });
+    // scenario.fal.cancel forces an answer: "ok" | "requested" | "completed" | "not_found" | "error".
+    const forced = sc.fal.cancel;
+    if (forced === "error") return sendJSON(res, 500, { detail: "Internal Server Error" });
+    if (forced === "not_found") return sendJSON(res, 404, { status: "NOT_FOUND" });
+    if (r.completed || forced === "completed") {
+      r.completed = true;
+      return sendJSON(res, 400, { status: "ALREADY_COMPLETED" });
+    }
     r.cancelled = true;
+    // Like fal: a job that started running can only be asked to stop (and may still be billed).
+    if (forced === "requested" || (forced !== "ok" && r.lastStatus === "IN_PROGRESS")) return sendJSON(res, 202, { status: "CANCELLATION_REQUESTED" });
     return sendJSON(res, 200, { status: "OK" });
   }
   if (action === "/status") {
@@ -406,8 +419,9 @@ function handleFal(req, res, pathname, body, sc, state, baseUrl) {
       r.completed = true;
       return sendJSON(res, 200, { status: "COMPLETED", ...urls, error: "Request cancelled", error_type: "client_cancelled", metrics: {} });
     }
-    if (sc.fal.mode === "stuck" || r.polls <= sc.fal.polls) {
-      const inQueue = sc.fal.mode !== "stuck" && r.polls === 1;
+    if (sc.fal.mode === "stuck" || sc.fal.mode === "queued" || r.polls <= sc.fal.polls) {
+      const inQueue = sc.fal.mode === "queued" || (sc.fal.mode !== "stuck" && r.polls === 1);
+      r.lastStatus = inQueue ? "IN_QUEUE" : "IN_PROGRESS";
       return sendJSON(res, 202, inQueue ? { status: "IN_QUEUE", queue_position: 0, ...urls, logs: null } : { status: "IN_PROGRESS", ...urls, logs: null });
     }
     r.completed = true;

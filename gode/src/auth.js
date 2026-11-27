@@ -14,11 +14,14 @@
 // plain-named cookie for the parent domain, but not a __Host- one, which is why production uses
 // __Host-gode_session (see the middleware).
 //
-// Admins: with ADMIN_EMAILS set, exactly the listed addresses are admins, re-checked on every
-// request, so removing an address revokes admin at once. Without it, the first account becomes
-// admin only when FIRST_USER_ADMIN is on (the default outside production); in production use
-// `node scripts/make-admin.js <email>`. Emails are not verified, so a listed address can be
-// registered by someone else before its owner does: sign up with it right after deploying.
+// Admins: with ADMIN_EMAILS set, only listed addresses can be admins, re-checked on every request,
+// so removing an address revokes admin at once. Emails are not verified, so a listed address could
+// be registered by someone else before its owner does: in production (ADMIN_EMAILS_AUTO_GRANT off)
+// a listed account is an admin only after an operator confirmed it with
+// `node scripts/make-admin.js <email>`, and every signup of a listed address is logged (account id
+// only). Outside production listed addresses are admins from signup. Without ADMIN_EMAILS, the first
+// account becomes admin only when FIRST_USER_ADMIN is on (the default outside production); in
+// production use scripts/make-admin.js.
 const net = require("net");
 const { newId, now, microsToUsd, usdToMicros, AppError } = require("./util");
 const { hashPassword, verifyPassword, needsRehash, randomToken, sha256 } = require("./crypto");
@@ -45,6 +48,20 @@ const HASH_CONCURRENCY = 2;
 // Hash jobs allowed to wait; beyond that a login or signup is refused at once (503) instead of
 // queueing without bound under a flood.
 const HASH_QUEUE_MAX = 64;
+// "Delete everything": the user's requests folded into per-UTC-day totals (usage_archive) before
+// the rows go. The WHERE keeps SQLite from reading ON CONFLICT as a join constraint.
+const ARCHIVE_USAGE_SQL = `
+  INSERT INTO usage_archive (day, requests, auto, manual, switches, api_micros, failed_api_micros, charged_micros, up, down)
+  SELECT (created_at / 86400000) * 86400000 AS d, COUNT(*),
+         SUM(kind = 'auto'), SUM(kind = 'manual'), SUM(kind = 'switch'),
+         SUM(api_cost_micros), SUM(CASE WHEN status <> 'ok' THEN api_cost_micros ELSE 0 END), SUM(charged_micros),
+         SUM(CASE WHEN feedback = 1 THEN 1 ELSE 0 END), SUM(CASE WHEN feedback = -1 THEN 1 ELSE 0 END)
+    FROM requests WHERE user_id = ? GROUP BY d
+  ON CONFLICT(day) DO UPDATE SET
+    requests = requests + excluded.requests, auto = auto + excluded.auto, manual = manual + excluded.manual,
+    switches = switches + excluded.switches, api_micros = api_micros + excluded.api_micros,
+    failed_api_micros = failed_api_micros + excluded.failed_api_micros,
+    charged_micros = charged_micros + excluded.charged_micros, up = up + excluded.up, down = down + excluded.down`;
 // HMAC label of the one-bonus-per-email fingerprints (bonus_claims.email_hmac).
 const BONUS_HMAC_LABEL = "signup-bonus-email";
 
@@ -299,7 +316,7 @@ function appendSetCookie(res, value) {
  *   accepted because an earlier draft of the contract used it.
  */
 function createAuth(deps, ...rest) {
-  const { db, config, keyring, credits } =
+  const { db, config, keyring, credits, logger = console } =
     deps && typeof deps.prepare === "function" ? { db: deps, config: rest[0], keyring: rest[1], credits: rest[2] } : deps || {};
   if (!db || typeof db.prepare !== "function" || typeof db.tx !== "function") throw new TypeError("createAuth: db is required");
   if (!config || typeof config !== "object") throw new TypeError("createAuth: config is required");
@@ -310,6 +327,8 @@ function createAuth(deps, ...rest) {
   const sessionMs = sessionDays * DAY_MS;
   const adminEmails = new Set((config.adminEmails || []).map((e) => String(e).trim().toLowerCase()).filter(Boolean));
   const firstUserAdmin = Boolean(config.firstUserAdmin);
+  // Configs built by hand (tests) may lack the key: then the production default applies.
+  const adminAutoGrant = config.adminEmailsAutoGrant !== undefined ? Boolean(config.adminEmailsAutoGrant) : !config.production;
   const signupBonusMicros = usdToMicros(config.billing?.signupCreditUsd || 0);
   const bonusDailyCap = Math.max(0, Math.floor(Number(config.billing?.signupBonusDailyCap) || 0));
   if (credits && signupBonusMicros > 0 && typeof keyring.hmac !== "function") {
@@ -320,6 +339,13 @@ function createAuth(deps, ...rest) {
   // TODO(next release): drop the legacy name. Until then a pre-rename production cookie still
   // signs in, and is re-issued under the __Host- name on first use (see middleware).
   const legacyCookieName = cookieSecure ? SESSION_COOKIE : null;
+  // sessions.cookie records the name each session was issued under ('host' | 'plain'; NULL for rows
+  // made before the column existed, all issued as gode_session). A genuine legacy cookie can only
+  // hold a 'plain' or NULL session. A 'host' token under the old name is someone's own token,
+  // which they can read from their own Set-Cookie, tossed in from a sibling subdomain: the legacy
+  // path ignores it. This is a fact stored with the session, not the boot time of the process, so a
+  // restart does not make post-rename tokens tossable again.
+  const issuedAs = cookieSecure ? "host" : "plain";
   const hashJobs = createJobQueue({ concurrency: HASH_CONCURRENCY, maxQueue: HASH_QUEUE_MAX });
   // Pay the one-off dummy hash at boot, not on the first unknown-email login.
   getDummyHash().catch(() => {});
@@ -336,10 +362,12 @@ function createAuth(deps, ...rest) {
     bonusClaimed: db.prepare("SELECT 1 AS hit FROM bonus_claims WHERE email_hmac = ?"),
     bonusClaimsSince: db.prepare("SELECT COUNT(*) AS n FROM bonus_claims WHERE created_at >= ?"),
     insertBonusClaim: db.prepare("INSERT INTO bonus_claims (email_hmac, created_at) VALUES (?, ?)"),
-    insertSession: db.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)"),
+    insertSession: db.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at, cookie) VALUES (?, ?, ?, ?, ?)"),
     sessionUser: db.prepare(
-      "SELECT s.expires_at AS session_expires_at, u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?"
+      "SELECT s.expires_at AS session_expires_at, s.cookie AS session_cookie, u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?"
     ),
+    // Once a legacy cookie has been moved to the __Host- name, the old name no longer works for it.
+    markSessionHost: db.prepare("UPDATE sessions SET cookie = 'host' WHERE token_hash = ?"),
     deleteSession: db.prepare("DELETE FROM sessions WHERE token_hash = ?"),
     deleteOtherSessions: db.prepare("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?"),
     deleteAllSessions: db.prepare("DELETE FROM sessions WHERE user_id = ?"),
@@ -353,18 +381,20 @@ function createAuth(deps, ...rest) {
 
   /** Admin for a new account. Call inside the signup transaction (the user count must be exact). */
   function adminAtSignup(email) {
-    if (adminEmails.size) return isAdminEmail(email);
+    if (adminEmails.size) return adminAutoGrant && isAdminEmail(email);
     return firstUserAdmin && stmt.countUsers.get().n === 0;
   }
 
   /**
-   * With ADMIN_EMAILS set, the list is the truth: bring the stored flag in line (a write only when it
-   * changed) and return the row as it should be seen. Without it, the stored flag stands
+   * With ADMIN_EMAILS set, the list is the ceiling: an unlisted account is never an admin. A listed
+   * one is an admin when auto-grant is on, else only once an operator confirmed it (the stored flag,
+   * set by scripts/make-admin.js). The stored flag is brought in line (a write only when it changed)
+   * and the row returned as it should be seen. Without ADMIN_EMAILS, the stored flag stands
    * (FIRST_USER_ADMIN or scripts/make-admin.js set it).
    */
   function syncAdmin(row) {
     if (!row || !adminEmails.size) return row;
-    const want = isAdminEmail(row.email) ? 1 : 0;
+    const want = isAdminEmail(row.email) && (adminAutoGrant || Number(row.is_admin) === 1) ? 1 : 0;
     if (Number(row.is_admin) === want) return row;
     stmt.setAdmin.run(want, row.id);
     return { ...row, is_admin: want };
@@ -418,6 +448,12 @@ function createAuth(deps, ...rest) {
     });
     const user = toUser(stmt.userById.get(id));
     Object.defineProperty(user, "signupBonusMicros", { value: bonusMicros, enumerable: false });
+    if (isAdminEmail(normalized)) {
+      // An ADMIN_EMAILS address was registered: the operator should know, in case it was not them
+      // (emails are not verified). The account id only, never the address.
+      const what = adminAutoGrant ? "granted admin" : "not an admin until confirmed with scripts/make-admin.js";
+      logger?.warn?.(`[auth] account ${id} signed up with an ADMIN_EMAILS address (${what})`);
+    }
     return user;
   }
 
@@ -475,7 +511,7 @@ function createAuth(deps, ...rest) {
     if (typeof userId !== "string" || !userId) throw new TypeError("createSession: userId is required");
     const token = randomToken(32);
     const t = now();
-    stmt.insertSession.run(sha256(token), userId, t, t + sessionMs);
+    stmt.insertSession.run(sha256(token), userId, t, t + sessionMs, issuedAs);
     // Housekeeping on an indexed path, so expired rows do not pile up for active users.
     stmt.deleteExpiredForUser.run(userId, t);
     return token;
@@ -486,7 +522,11 @@ function createAuth(deps, ...rest) {
     return stmt.deleteSession.run(sha256(token)).changes > 0;
   }
 
-  function userFromToken(token) {
+  /**
+   * @param {{ legacyName?: boolean }} [opts]  the token came under the old plain cookie name: only a
+   *   session that was issued under that name (cookie 'plain' or NULL) counts
+   */
+  function userFromToken(token, { legacyName = false } = {}) {
     if (!isTokenShaped(token)) return null;
     const hash = sha256(token);
     const row = stmt.sessionUser.get(hash);
@@ -495,7 +535,8 @@ function createAuth(deps, ...rest) {
       stmt.deleteSession.run(hash);
       return null;
     }
-    const { session_expires_at: _ignored, ...userRow } = row;
+    if (legacyName && row.session_cookie === "host") return null;
+    const { session_expires_at: _expires, session_cookie: _cookie, ...userRow } = row;
     return toUser(syncAdmin(userRow));
   }
 
@@ -527,10 +568,10 @@ function createAuth(deps, ...rest) {
    * The session among `tokens` (cookie values in header order), or null. Two different users'
    * valid sessions in one request is the signature of a tossed cookie: neither is used.
    */
-  function resolveSession(tokens) {
+  function resolveSession(tokens, opts) {
     const found = new Map(); // user id -> { user, token }
     for (const token of tokens.slice(0, MAX_SESSION_CANDIDATES)) {
-      const user = userFromToken(token);
+      const user = userFromToken(token, opts);
       if (user && !found.has(user.id)) found.set(user.id, { user, token });
     }
     if (found.size > 1) return { conflict: true };
@@ -556,14 +597,16 @@ function createAuth(deps, ...rest) {
         // The legacy name only counts when no current cookie is valid: a tossed plain-name cookie
         // can never override a real __Host- session.
         if (!hit && legacy.length) {
-          hit = resolveSession(legacy);
+          hit = resolveSession(legacy, { legacyName: true });
           fromLegacy = Boolean(hit && !hit.conflict);
         }
         if (hit && !hit.conflict) {
           req.user = hit.user;
           req.sessionToken = hit.token;
           if (fromLegacy) {
-            // Same session, new name; the old Path=/ cookie is dropped.
+            // Same session, new name; the old Path=/ cookie is dropped, and the session is marked
+            // as issued under the __Host- name, so the old name stops working for it.
+            stmt.markSessionHost.run(sha256(hit.token));
             setCookie(res, hit.token);
             appendSetCookie(res, `${legacyCookieName}=; ${cookieAttributes(0)}`);
           }
@@ -604,7 +647,9 @@ function createAuth(deps, ...rest) {
    * deleted explicitly rather than trusting ON DELETE CASCADE alone, so this still holds on a
    * connection opened without PRAGMA foreign_keys, and we can report exact counts.
    * bonus_claims rows stay too: they hold only a keyed fingerprint of the address, and stop the
-   * same address from collecting a second signup bonus.
+   * same address from collecting a second signup bonus. The requests rows go, but first their
+   * per-day totals (counts and amounts only) are added to usage_archive, so the gate metrics keep
+   * the API cost those requests caused, like the ledger keeps the purchases that paid for them.
    */
   function deleteEverything(userId) {
     if (typeof userId !== "string" || !userId) throw new AppError(400, "bad_request", "userId is required");
@@ -612,6 +657,8 @@ function createAuth(deps, ...rest) {
       const row = db.prepare("SELECT id, wrapped_dek FROM users WHERE id = ?").get(userId);
       if (!row) throw new AppError(404, "not_found", "Account not found.");
       const run = (sql) => db.prepare(sql).run(userId).changes;
+      // Before the requests rows go (same transaction).
+      run(ARCHIVE_USAGE_SQL);
       const counts = {
         ledger_unlinked: run("UPDATE ledger SET user_id = NULL WHERE user_id = ?"),
         // Messages in the user's conversations, plus any stray row that names the user directly.
@@ -746,19 +793,36 @@ function expandIPv6(addr) {
  * billions of fresh rate-limit buckets.
  */
 function ipPrefix(ip) {
+  return networkOf(ip, { v4Octets: 4, v6Hextets: 4 });
+}
+
+/**
+ * The wider network group of an address: its IPv4 /24 or IPv6 /48. One site or customer often holds
+ * a whole /48 (65,536 /64s), so per-email "under attack" rules count groups, not /64s.
+ */
+function ipGroup(ip) {
+  return networkOf(ip, { v4Octets: 3, v6Hextets: 3 });
+}
+
+function networkOf(ip, { v4Octets, v6Hextets }) {
   let a = String(ip || "").trim();
   if (!a) return null;
   a = a.replace(/^\[(.*)\]$/, "$1").replace(/%.*$/, ""); // brackets, zone id
   const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(a);
   if (mapped) a = mapped[1];
-  if (net.isIPv4(a)) return a;
+  if (net.isIPv4(a)) return v4Octets >= 4 ? a : `${a.split(".").slice(0, v4Octets).join(".")}.0/${v4Octets * 8}`;
   const groups = expandIPv6(a);
-  return groups ? `${groups.slice(0, 4).join(":")}::/64` : a;
+  return groups ? `${groups.slice(0, v6Hextets).join(":")}::/${v6Hextets * 16}` : a;
 }
 
 /** The rate-limit key of a request's client (see ipPrefix). Needs 'trust proxy' behind a proxy. */
 function ipKey(req) {
   return ipPrefix(req.ip || req.socket?.remoteAddress) || "unknown";
+}
+
+/** The network group of a request's client (see ipGroup). */
+function ipGroupKey(req) {
+  return ipGroup(req.ip || req.socket?.remoteAddress) || "unknown";
 }
 
 /**
@@ -768,7 +832,9 @@ function ipKey(req) {
  *   key defaults to ipKey(req) (IPv6 by /64); a falsy key skips limiting for that request. Behind
  *   a reverse proxy req.ip is only the client when express 'trust proxy' is set.
  * Besides the middleware (which counts every request), limiter.peek(key) / limiter.hit(key) let a
- * route count only some outcomes, e.g. failed logins.
+ * route count only some outcomes, e.g. failed logins. A route that must count an attempt before an
+ * await (so concurrent attempts see each other) hits first and takes it back with limiter.undo(key)
+ * when the outcome turns out not to count; limiter.clear(key) forgets a key's window.
  */
 function rateLimit({ windowMs, max, key, maxKeys = 50_000 } = {}) {
   if (!Number.isFinite(windowMs) || windowMs <= 0) throw new TypeError("rateLimit: windowMs must be a positive number");
@@ -833,6 +899,16 @@ function rateLimit({ windowMs, max, key, maxKeys = 50_000 } = {}) {
   limiter.hit = (k) => {
     if (!k) return;
     windowFor(String(k), now()).count += 1;
+  };
+  /** Take back one event counted for `k` in its live window (never below zero). */
+  limiter.undo = (k) => {
+    if (!k) return;
+    const entry = hits.get(String(k));
+    if (entry && entry.resetAt > now() && entry.count > 0) entry.count -= 1;
+  };
+  /** Forget `k`'s window. */
+  limiter.clear = (k) => {
+    if (k) hits.delete(String(k));
   };
   limiter.max = max;
   limiter.reset = () => hits.clear();
@@ -931,6 +1007,8 @@ module.exports = {
   bonusEmailKey,
   ipKey,
   ipPrefix,
+  ipGroup,
+  ipGroupKey,
   checkpointWal,
   cspFor,
   SESSION_COOKIE,

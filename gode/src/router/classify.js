@@ -2,7 +2,7 @@
 // A small cheap model does the work (one JSON call per request); a keyword heuristic stands in
 // whenever that model is unavailable, slow, or returns something unusable, so routing never waits
 // on or fails because of the classifier. The text is already redacted when it gets here.
-const { JOBS, TEXT_JOBS, CLASSIFIER_MODEL_CANDIDATES, getModel, getRoutes, listModels } = require("../seed/catalog");
+const { JOBS, TEXT_JOBS, CLASSIFIER_MODEL_CANDIDATES, getModel, getRoutes, listModels, onOwnServers, textRates } = require("../seed/catalog");
 const { isSensitive: builtinIsSensitive } = require("../redact");
 const { usdToMicros } = require("../util");
 const { clampDifficulty, isMediaJob } = require("./effort");
@@ -23,8 +23,6 @@ const FORMATS = ["text", "markdown", "list", "table", "code", "json", "image", "
 const ASPECTS = ["1:1", "4:3", "3:4", "3:2", "2:3", "4:5", "5:4", "16:9", "9:16", "21:9"];
 const DURATION_LIMITS = { video: [1, 30], music: [5, 300] };
 const DEFAULT_VIDEO_SECONDS = 5;
-// Regions an EU-only user's text may be processed in (same rule as the picker).
-const EU_REGIONS = ["eu", "self"];
 // A media follow-up ("now make a video of it") is short; the earlier request it points at is
 // folded into media_prompt, at most this many user messages back and this many characters.
 const FOLLOW_UP_MAX_CHARS = 160;
@@ -586,7 +584,12 @@ function nonNegInt(v) {
   return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
 }
 
-/** Provider-reported cost wins; otherwise tokens x catalog prices (USD per 1M tokens). */
+/**
+ * Provider-reported cost wins; otherwise tokens x catalog prices (USD per 1M tokens), with the
+ * model's params.pricing applied exactly as for answers (src/seed/catalog.js textRates): cached
+ * input tokens at cached_in, prompts above the long-context threshold at the long rate. Direct
+ * OpenAI (gpt-6-luna) reports no cost, so these rates are what we pay there.
+ */
 function usageFrom(usage, model) {
   const inputTokens = nonNegInt(usage?.inputTokens);
   const outputTokens = nonNegInt(usage?.outputTokens);
@@ -595,9 +598,11 @@ function usageFrom(usage, model) {
   if (typeof reported === "number" && Number.isFinite(reported) && reported >= 0) {
     costMicros = usdToMicros(reported);
   } else {
+    const cached = Math.min(inputTokens, nonNegInt(usage?.cachedTokens));
+    const rates = textRates(model, inputTokens);
     // tokens x (USD / 1M tokens) x (1M micros / USD) = tokens x price. Ceil: never under-bill; the
     // epsilon keeps float noise (12.0000001) from adding a micro-dollar.
-    const raw = inputTokens * (Number(model.price_in) || 0) + outputTokens * (Number(model.price_out) || 0);
+    const raw = (inputTokens - cached) * (rates.in ?? 0) + cached * (rates.cachedIn ?? 0) + outputTokens * (rates.out ?? 0);
     costMicros = Math.max(0, Math.ceil(raw - 1e-6));
   }
   return { inputTokens, outputTokens, costMicros };
@@ -670,7 +675,9 @@ function createClassifier({ config, db, providers, redactor = null, timeoutMs = 
    * and a last resort otherwise (e.g. a deployment with no outside text gateway).
    */
   function selfHostedIds() {
-    const isSelf = (m) => m && m.self_hosted && m.jobs.some((j) => TEXT_JOBS.includes(j));
+    // By gateway, never the editable self_hosted flag: only these may classify a prompt already
+    // known to be private.
+    const isSelf = (m) => onOwnServers(m) && m.jobs.some((j) => TEXT_JOBS.includes(j));
     const configured = config?.router?.classifierModelId;
     const ordered = [];
     if (typeof configured === "string" && isSelf(getModel(db, configured.trim()))) ordered.push(configured.trim());
@@ -696,9 +703,9 @@ function createClassifier({ config, db, providers, redactor = null, timeoutMs = 
       if (!model || !model.enabled) continue;
       // Media gateways have no JSON completion.
       if (!model.jobs.some((j) => TEXT_JOBS.includes(j))) continue;
-      if (selfHostedOnly && !model.self_hosted) continue;
-      if (zdrOnly && !(model.zdr || model.self_hosted)) continue;
-      if (euOnly && !(model.self_hosted || EU_REGIONS.includes(model.region))) continue;
+      if (selfHostedOnly && !onOwnServers(model)) continue;
+      if (zdrOnly && !(model.zdr || onOwnServers(model))) continue;
+      if (euOnly && !(onOwnServers(model) || model.region === "eu")) continue;
       if (!providers.isAvailable(model)) continue;
       return model;
     }

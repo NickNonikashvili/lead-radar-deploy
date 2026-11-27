@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Privacy · Gode</title>
-    <meta name="description" content="What Gode can honestly promise about your data: providers never learn who you are, personal details are removed before anything leaves, zero retention where offered, and the one thing we can't promise." />
+    <meta name="description" content="What Gode can honestly promise about your data: providers never learn who you are, personal details are removed before anything leaves, zero retention where offered, and what we can't promise." />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#f7f7f4" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0f1110" media="(prefers-color-scheme: dark)" />
@@ -15,9 +15,10 @@
     <script src="/app.js" defer></script>
   </head>
   <body data-page="privacy">
-    <!-- app.js renders the same page (PrivacyContent) over this and adds the live provider table.
-         This static copy keeps the promise readable without JavaScript: keep it in sync with
-         PROMISES in app.js. -->
+    <!-- app.js renders the same page (PrivacyContent) over this and adds the live provider table,
+         wording each promise from what this server actually runs (/api/public/providers). This
+         static copy keeps the promise readable without JavaScript, so it uses the most
+         conservative wording (promisesFor(privacyFacts(null)) in app.js): keep the two in sync. -->
     <div id="root">
       <div class="public-page">
         <header class="public-bar">
@@ -45,15 +46,15 @@
               </li>
               <li class="promise">
                 <h2>Personal details are removed before anything leaves</h2>
-                <p>Names, email addresses, phone numbers, card and bank numbers, ID numbers and passwords are swapped for placeholders like [PERSON_1] before a request is sent. The real values are put back into the answer on our side, and answers are checked so a model can’t echo sensitive data back.</p>
+                <p>Email addresses, phone numbers, card and bank numbers, ID numbers and passwords are swapped for placeholders like [EMAIL_1] before a request is sent. Names are only caught when you introduce them (“my name is …”); other names reach the model as written. The real values are put back into the answer on our side, and answers are checked so a model can’t echo sensitive data back.</p>
               </li>
               <li class="promise">
                 <h2>Zero data retention where it’s offered</h2>
                 <p>Some providers promise not to keep your request at all. Each model below is marked. Turn on Strict privacy in Settings and Gode only uses zero-retention or self-hosted models.</p>
               </li>
               <li class="promise">
-                <h2>Sensitive requests stay on our servers</h2>
-                <p>When a request looks private, such as money, health, passwords or legal matters, Gode sends it to an open-weight model on servers we control, so it never leaves. If that model is unavailable, we only fall back to a zero-retention model, after removing your personal details.</p>
+                <h2>Sensitive requests only go to zero-retention models</h2>
+                <p>When a request looks private, such as money, health, passwords or legal matters, Gode sends it only to a zero-retention model, after removing your personal details. Unless we run the model ourselves, that AI company still sees the redacted text. Private pictures, video, music and voice are different: they go to media providers that may keep them, with personal details replaced by generic words like “a person”. A follow-up such as “now make a video of it” also carries the earlier message it refers to, with the same details replaced. Turn on Strict privacy to refuse those instead. To pick a model, a classifier reads each message first (with your personal details removed); messages our own checks flag as private only go to one on our servers.</p>
               </li>
               <li class="promise">
                 <h2>Your chats are encrypted</h2>
@@ -61,17 +62,17 @@
               </li>
               <li class="promise">
                 <h2>Delete everything, any time</h2>
-                <p>One button in Settings permanently deletes your account, every chat and your request history.</p>
+                <p>One button in Settings permanently deletes your account, every chat and your request history from our live database. Backups made before that still contain them, encrypted, until those backups expire. We keep only a one-way fingerprint of your email address, so the welcome credit can’t be claimed twice.</p>
               </li>
               <li class="promise">
                 <h2>See where every request went</h2>
-                <p>Your transparency log in Settings lists the model, provider, retention and cost of every request you have made.</p>
+                <p>Your transparency log in Settings lists the model, provider, retention and cost of every request you have made, and which classifier read it.</p>
               </li>
             </ul>
             <div class="notice notice-warn">
               <div class="notice-body">
                 <strong class="notice-title">What we can’t promise</strong>
-                <div class="notice-text">Unless a request runs on a model we host ourselves, the AI company that runs the model still sees the text of that request, with your personal details removed. Zero retention means they don’t keep it, not that they never see it.</div>
+                <div class="notice-text">Unless a request runs on a model we host ourselves, the AI company that runs the model still sees the text of that request, with your personal details removed. Zero retention means they don’t keep it, not that they never see it. Removing personal details is automatic and can miss something.</div>
               </div>
             </div>
             <noscript>

@@ -657,6 +657,9 @@ test("COOKIE_SECURE: a pre-rename gode_session cookie still works once and moves
   const ctx = setup({ COOKIE_SECURE: "1" });
   const user = await ctx.auth.signup({ email: "a@example.com", password: PW });
   const token = ctx.auth.createSession(user.id);
+  // Made by the release before the rename (migration 3 leaves those rows' cookie NULL): the only
+  // way a genuine plain-name cookie can exist in secure mode.
+  ctx.db.prepare("UPDATE sessions SET cookie = NULL WHERE token_hash = ?").run(sha256(token));
   await withServer(ctx, {}, async ({ port }) => {
     const res = await request(port, "GET", "/api/me", { headers: { cookie: `${SESSION_COOKIE}=${token}` } });
     assert.equal(res.status, 200);
@@ -666,6 +669,20 @@ test("COOKIE_SECURE: a pre-rename gode_session cookie still works once and moves
     assert.equal(legacy.value, "");
     assert.ok(legacy.attrs.includes("Max-Age=0"), "old cookie dropped");
   });
+});
+
+test("COOKIE_SECURE: a session made by this release is never accepted under the old name (tossed into a signed-out browser)", async () => {
+  const ctx = setup({ COOKIE_SECURE: "1" });
+  const mallory = await ctx.auth.signup({ email: "mallory@example.com", password: PW });
+  // Mallory logs in herself, reads her own fresh token and plants it as gode_session on the
+  // victim's browser from a sibling subdomain. The victim has no session of their own.
+  const malloryToken = ctx.auth.createSession(mallory.id);
+  await withServer(ctx, {}, async ({ port }) => {
+    const res = await request(port, "GET", "/api/me", { headers: { cookie: `${SESSION_COOKIE}=${malloryToken}` } });
+    assert.equal(res.status, 401, "never signed in as Mallory");
+    assert.equal(sessionCookieFrom(res.setCookies, HOST_SESSION_COOKIE)?.value || "", "", "nothing re-issued under the __Host- name");
+  });
+  assert.equal(ctx.auth.userFromToken(malloryToken).id, mallory.id, "her session itself still works under the right name");
 });
 
 test("COOKIE_SECURE: a tossed plain-name cookie never overrides the real __Host- session", async () => {

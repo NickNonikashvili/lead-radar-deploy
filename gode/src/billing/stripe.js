@@ -18,7 +18,8 @@ const MICROS_PER_MINOR_UNIT = 10_000;
 const FULFILMENT_EVENTS = new Set(["checkout.session.completed", "checkout.session.async_payment_succeeded"]);
 // Marks our own Checkout Sessions. Informational for now: sessions created before it existed live
 // up to 24 h, so the webhook relies on metadata.user_id + metadata.credit_micros (which a Payment
-// Link URL cannot set) and on the amount being one of our packs.
+// Link URL cannot set) matching the amount paid. Not on the amount being one of the CURRENT packs:
+// a pack removed while its Checkout Session was open (up to 24 h) must still be credited.
 const SESSION_MARKER = "credit_pack";
 // Stripe's zero- and three-decimal currencies. A pack price in these would be off by 100x or 10x.
 const NOT_TWO_DECIMAL = new Set(
@@ -191,8 +192,11 @@ function createStripe(config, credits, db, { log = console } = {}) {
 
   /**
    * Credit to grant for a paid session, or null. The amount comes from what was actually paid, and
-   * must match both the credit our checkout recorded in metadata and one of the configured packs:
-   * anything else is not one of our credit packs (another product on the same Stripe account).
+   * must match the credit our checkout recorded in metadata: anything else is not one of our credit
+   * packs (another product on the same Stripe account). It need not be one of today's CREDIT_PACKS:
+   * the metadata already proves Gode created the session, and a customer who paid for a pack that
+   * was removed while their Checkout Session was open is owed the credit (the event is marked as
+   * seen, so a skipped payment could never be credited by a retry later).
    */
   function creditFromSession(event, session) {
     let minor = session.amount_total;
@@ -214,10 +218,6 @@ function createStripe(config, credits, db, { log = console } = {}) {
     const claimed = session.metadata?.credit_micros;
     if (claimed === undefined || claimed === null || Number(claimed) !== credit) {
       warn("amount paid does not match the session's credit pack; no credit granted, check in Stripe", event, session);
-      return null;
-    }
-    if (!billing.packsUsd.some((p) => Math.round(p * 100) * MICROS_PER_MINOR_UNIT === credit)) {
-      warn("amount paid is not one of the credit packs; no credit granted, check in Stripe", event, session);
       return null;
     }
     return credit;

@@ -734,8 +734,21 @@ function absorbCluster(cluster) {
     changed = false;
     for (const a of cluster) {
       for (const b of cluster) {
-        if (a === b || a.absorbed || b.absorbed || a.type === b.type) continue;
+        if (a === b || a.absorbed || b.absorbed) continue;
         if (b.end <= a.start || b.start >= a.end) continue; // no overlap
+        if (a.type === b.type) {
+          // Same-type spans were merged before, so only one that grew here can overlap another of
+          // its type ("SECRET + PERSON" now reaching the next SECRET): merge again, or the ranking
+          // below would drop one of them and expose the part only it covered.
+          a.start = Math.min(a.start, b.start);
+          a.end = Math.max(a.end, b.end);
+          a.score = Math.max(a.score, b.score);
+          a.literal = a.literal && b.literal;
+          a.known = a.known && b.known;
+          b.absorbed = true;
+          changed = true;
+          continue;
+        }
         if (!isRisky(a) && !isRisky(b)) continue;
         // h absorbs x: h is the high-risk one, or the winner when both are.
         const [h, x] = isRisky(a) && (!isRisky(b) || beats(a, b) <= 0) ? [a, b] : [b, a];

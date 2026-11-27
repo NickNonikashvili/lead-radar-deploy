@@ -78,6 +78,11 @@ function loadConfig(env = process.env) {
     // "First account becomes admin" bootstrap. Only used when ADMIN_EMAILS is empty; off in
     // production unless explicitly enabled (use `node scripts/make-admin.js <email>` instead).
     firstUserAdmin: bool(env.FIRST_USER_ADMIN, !production),
+    // With ADMIN_EMAILS set: does a listed address become admin by itself when it signs up? Emails
+    // are not verified, so anyone could register a listed address first. Off in production: an
+    // operator confirms each listed account once with `node scripts/make-admin.js <email>`. Removing
+    // an address from ADMIN_EMAILS still revokes admin at once either way.
+    adminEmailsAutoGrant: bool(env.ADMIN_EMAILS_AUTO_GRANT, !production),
 
     gateways: {
       openrouter: {

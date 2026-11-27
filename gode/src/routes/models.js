@@ -9,7 +9,7 @@
 // rest cheapest first. `header` is the menu's subtitle when the router did not pick the model:
 // "Your pick, pinned for this chat" after a switch or a manual pick.
 const express = require("express");
-const { JOBS } = require("../seed/catalog");
+const { JOBS, onOwnServers } = require("../seed/catalog");
 const { AppError } = require("../util");
 const { idField, badRequest } = require("./validate");
 const { findOwnConversation, readPins } = require("./conversations");
@@ -24,7 +24,7 @@ function menuModel(m) {
     vendor: m.vendor,
     region: m.region,
     zdr: m.zdr,
-    self_hosted: m.self_hosted,
+    self_hosted: onOwnServers(m),
     price_in: m.price_in,
     price_out: m.price_out,
     price_unit: m.price_unit,

@@ -80,10 +80,9 @@ describe("media proxy", () => {
     ]);
     const r = await alice.c.json("GET", `/api/conversations/${convId}`);
     const answer = r.body.messages.find((m) => m.id === messageId);
-    assert.deepEqual(
-      answer.media.map((m) => m.url),
-      [`/api/media/${messageId}/0`, "data:image/png;base64,AAAA", "https://elsewhere.example/x.png"]
-    );
+    // A host outside MEDIA_PROXY_HOSTS gets no URL at all: the CSP would block it and loading it
+    // directly would hand the host the viewer's IP (the UI says the file can't be shown).
+    assert.deepEqual(answer.media.map((m) => m.url), [`/api/media/${messageId}/0`, "data:image/png;base64,AAAA", null]);
     assert.equal(r.body.messages.find((m) => m.id === userMessageId).answered, true);
     assert.ok(!r.text.includes("v3.fal.media"), "the browser is never told the media host's URL");
   });
@@ -167,4 +166,20 @@ test("with MEDIA_PROXY off the conversation shows the upstream URL and the route
   } finally {
     await t.close();
   }
+});
+
+test("publicMediaUrl: proxied, inline, unlisted (null, host logged once without the path) and proxy off", () => {
+  const { publicMediaUrl } = require("../src/media");
+  const on = { privacy: { mediaProxy: true, mediaProxyHosts: ["fal.media"] } };
+  const off = { privacy: { mediaProxy: false, mediaProxyHosts: ["fal.media"] } };
+  const lines = [];
+  const logger = { warn: (s) => lines.push(String(s)) };
+  assert.equal(publicMediaUrl(on, "m1", 0, "https://v3.fal.media/a.png", { logger }), "/api/media/m1/0");
+  assert.equal(publicMediaUrl(on, "m1", 1, "data:image/png;base64,AA", { logger }), "data:image/png;base64,AA");
+  assert.equal(publicMediaUrl(on, "m1", 2, "https://storage.unlisted-cdn.example/secret/path.png", { logger }), null);
+  assert.equal(publicMediaUrl(on, "m2", 0, "https://storage.unlisted-cdn.example/other.png", { logger }), null);
+  assert.equal(lines.length, 1, "once per host");
+  assert.match(lines[0], /storage\.unlisted-cdn\.example/);
+  assert.doesNotMatch(lines[0], /secret|path\.png/);
+  assert.equal(publicMediaUrl(off, "m1", 0, "https://storage.unlisted-cdn.example/x.png", { logger }), "https://storage.unlisted-cdn.example/x.png");
 });

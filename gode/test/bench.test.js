@@ -799,7 +799,7 @@ describe("scripts/learn.js", { skip: !realModulesPresent() && "router modules no
     assert.match(lines, /Requests\s+1,200/);
     assert.match(lines, /API cost \(what we paid\)\s+\$1\.5000 \(\$0\.1000 on failed or stopped requests\)/);
     assert.match(lines, /Free credit granted.*\$1\.2500 \(100\.0% of credit granted\)/);
-    assert.match(lines, /auto-pick kept on by 33\.3% of active users; credits cover API costs: yes; purchases cover API costs: NO\./);
+    assert.match(lines, /auto-pick kept on by 33\.3% of active users; charges \(incl\. free credit\) cover API costs: yes; purchases cover API costs: NO\./);
     assert.match(learn.formatGate({ users: 0, requests: 0, api_cost_usd: 0, charged_usd: 0 }, { days: 7 }).join("\n"), /n\/a \(no requests\)/);
 
     assert.match(learn.formatProposals([], { minSamples: 20 }).join("\n"), /No routing changes proposed \(a routing cell changes only when .* at least 20 ratings in that cell\)/);

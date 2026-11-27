@@ -37,18 +37,27 @@ const MINUTE = 60 * 1000;
 const RATE_LIMITS = {
   // Sign-up and log-in requests, per client network.
   auth: { windowMs: 15 * MINUTE, max: 20 },
-  // FAILED log-ins per email + client network (counted by routes/auth.js after a 401). Only
-  // failures count, and only from that network, so a stranger can't lock the owner out.
+  // FAILED log-ins per email + client network (counted by routes/auth.js). Only failures count,
+  // and only on that network.
   authEmail: { windowMs: 15 * MINUTE, max: 10 },
-  // FAILED log-ins per email from anywhere: a much higher ceiling against guessing spread over
-  // many networks.
+  // FAILED log-ins per email from anywhere. Past this the account is under attack: log-ins are
+  // still checked from network groups (IPv4 /24, IPv6 /48) that have not failed for this email in
+  // the window, so the owner's right password from their own network is not refused, while each
+  // group that failed waits for the window to end (one guess per group per hour).
   authEmailGlobal: { windowMs: 60 * MINUTE, max: 100 },
+  // Marks a network group that failed a log-in for an email (one failure fills it).
+  authEmailGroup: { windowMs: 60 * MINUTE, max: 1 },
+  // Distinct failing network groups per email. Past this (a botnet, not a person with a few
+  // addresses) every log-in for the email is refused until the window ends.
+  authEmailGroups: { windowMs: 60 * MINUTE, max: 1000 },
   // New accounts (and sign-ups for addresses that already have one) per client network per day.
   signup: { windowMs: 24 * 60 * MINUTE, max: 10 },
   // Chat, regenerate and switch, per user.
   chat: { windowMs: MINUTE, max: 30 },
   // Password confirmation ("delete everything", password change), per user.
   password: { windowMs: 15 * MINUTE, max: 10 },
+  // Stripe Checkout sessions, per user: each one is a real Stripe API write.
+  checkout: { windowMs: 15 * MINUTE, max: 10 },
 };
 
 const REQUIRED_DEPS = ["db", "config", "keyring", "redactor", "providers", "classifier", "picker", "credits", "stripe", "auth", "pipeline"];
@@ -104,9 +113,9 @@ function createApp(deps = {}) {
   const limiters = {};
   for (const [name, dflt] of Object.entries(RATE_LIMITS)) {
     const opts = { ...dflt, ...(deps.rateLimits?.[name] || {}) };
-    // authEmail, authEmailGlobal and signup are counted by routes/auth.js with explicit keys
-    // (peek/hit); `auth` uses the default client-network key.
-    if (name === "chat" || name === "password") {
+    // authEmail*, and signup are counted by routes/auth.js with explicit keys (peek/hit/undo);
+    // `auth` uses the default client-network key.
+    if (name === "chat" || name === "password" || name === "checkout") {
       opts.key = (req) => (req.user ? `user:${req.user.id}` : null);
     }
     limiters[name] = rateLimit(opts);

@@ -136,7 +136,7 @@ const MIGRATIONS = [
     api_cost_micros INTEGER NOT NULL DEFAULT 0,  -- what the providers charged us (incl. classifier)
     charged_micros INTEGER NOT NULL DEFAULT 0,   -- what we charged the user
     latency_ms INTEGER,
-    status TEXT NOT NULL DEFAULT 'ok',      -- ok | error
+    status TEXT NOT NULL DEFAULT 'ok',      -- ok | error | stopped (a Stop after text: partial answer kept)
     error_code TEXT,
     redactions TEXT NOT NULL DEFAULT '{}',  -- JSON counts by entity type, e.g. {"PERSON":2}
     feedback INTEGER,                       -- 1 = thumbs up, -1 = thumbs down, NULL = none
@@ -196,6 +196,37 @@ const MIGRATIONS = [
     proposals TEXT NOT NULL DEFAULT '[]',
     applied INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL
+  );
+  `,
+
+  // 3: the cookie name each session was issued under, media prompts that quote earlier messages,
+  //    and the usage totals of deleted accounts
+  `
+  -- 'host' = __Host-gode_session (COOKIE_SECURE), 'plain' = gode_session. NULL: made before this
+  -- column existed, when production still issued gode_session. In secure mode the old name is
+  -- accepted only for 'plain' and NULL rows, so a token issued under the __Host- name can never be
+  -- tossed into a browser under the old name from a sibling subdomain (src/auth.js).
+  ALTER TABLE sessions ADD COLUMN cookie TEXT;
+
+  -- 1: a media prompt built from earlier messages too (a follow-up such as "now make a video of
+  -- it" quotes the request it refers to). The privacy badge says so.
+  ALTER TABLE requests ADD COLUMN context_included INTEGER NOT NULL DEFAULT 0;
+
+  -- Per-UTC-day totals of the requests of accounts that were deleted ("delete everything" removes
+  -- their requests rows). Counts and amounts only, no user, conversation or model: the gate
+  -- metrics (src/router/learn.js) add them back, so deleting accounts can't make API cost vanish
+  -- while their purchases stay in the ledger.
+  CREATE TABLE usage_archive (
+    day INTEGER PRIMARY KEY,                -- start of the UTC day of the requests, epoch ms
+    requests INTEGER NOT NULL DEFAULT 0,
+    auto INTEGER NOT NULL DEFAULT 0,
+    manual INTEGER NOT NULL DEFAULT 0,
+    switches INTEGER NOT NULL DEFAULT 0,
+    api_micros INTEGER NOT NULL DEFAULT 0,
+    failed_api_micros INTEGER NOT NULL DEFAULT 0,
+    charged_micros INTEGER NOT NULL DEFAULT 0,
+    up INTEGER NOT NULL DEFAULT 0,
+    down INTEGER NOT NULL DEFAULT 0
   );
   `,
 ];

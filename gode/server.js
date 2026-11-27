@@ -3,8 +3,8 @@
 //   node server.js            (npm start; npm run dev for mock mode with test credit)
 //
 // start(env) is exported for tests: it boots the whole app on config.port (PORT=0 picks a free
-// port) and resolves to { url, server, app, deps, close }. Running this file directly also loads
-// .env, starts listening and shuts down cleanly on SIGINT/SIGTERM.
+// port) and resolves to { url, server, app, deps, config, close, learner }. Running this file
+// directly also loads .env, starts listening and shuts down cleanly on SIGINT/SIGTERM.
 const http = require("http");
 const { loadConfig } = require("./src/config");
 const { openDb } = require("./src/db");
@@ -25,6 +25,7 @@ const STREAM_DRAIN_MS = 5_000;
 const CLOSE_TIMEOUT_MS = 10_000;
 // How often stale credit holds are swept (holds older than STALE_HOLD_MINUTES, never a live one).
 const HOLD_SWEEP_MS = 5 * 60 * 1000;
+const PRESIDIO_PROBE_MS = 20_000;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"]);
 
 /**
@@ -114,6 +115,13 @@ async function start(env = process.env, { log = console, createPipeline } = {}) 
       }
     }, HOLD_SWEEP_MS);
     sweep.unref?.();
+    // While the Presidio analyzer is down, probe its health so the next prompt uses it as soon as it
+    // is back instead of waiting out the redactor's circuit breaker.
+    const presidioProbe = setInterval(() => {
+      if (redactor.presidioStatus?.().state !== "down") return;
+      redactor.presidioHealth?.().catch(() => {});
+    }, PRESIDIO_PROBE_MS);
+    presidioProbe.unref?.();
     const learner = startLearnScheduler({ db, config, logger: log });
 
     let closing = null;
@@ -122,6 +130,7 @@ async function start(env = process.env, { log = console, createPipeline } = {}) 
       if (closing) return closing;
       closing = (async () => {
         clearInterval(sweep);
+        clearInterval(presidioProbe);
         learner?.stop?.();
         const serverClosed = new Promise((resolve) => server.close(() => resolve()));
         server.closeIdleConnections?.();
@@ -140,7 +149,8 @@ async function start(env = process.env, { log = console, createPipeline } = {}) 
       return closing;
     }
 
-    return { url, server, app, deps, config, close };
+    // learner: the weekly schedule handle ({ stop, tick }), for tests and status checks.
+    return { url, server, app, deps, config, close, learner };
   } catch (err) {
     db.close();
     throw err;

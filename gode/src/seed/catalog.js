@@ -737,6 +737,20 @@ function textRates(model, inputTokens = 0) {
 }
 
 /**
+ * Whether a model runs on our own servers. Decided by the gateway, never by the editable
+ * self_hosted flag: privacy decisions (unredacted text, private routing, the classifier for
+ * private prompts) must not trust a flag an admin edit or an old row could get wrong.
+ */
+function onOwnServers(model) {
+  return Boolean(model) && model.gateway === "selfhosted";
+}
+
+/** Safe for private text: zero-retention, or on our own servers. */
+function privateSafe(model) {
+  return Boolean(model) && (Boolean(model.zdr) || onOwnServers(model));
+}
+
+/**
  * Problems with a model as a whole (admin edits, imports). The gateway rules guard privacy:
  * the pipeline sends unredacted text only to the selfhosted gateway, and the picker treats zdr and
  * self_hosted models as safe for private requests, so neither flag may claim more than the gateway
@@ -893,6 +907,8 @@ module.exports = {
   validateParams,
   durationFor,
   textRates,
+  onOwnServers,
+  privateSafe,
   upsertModel,
   setRoute,
   seedCatalog,

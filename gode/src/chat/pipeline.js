@@ -22,6 +22,11 @@
 //   { text, stopped: true } and charged for what was produced (provider usage if reported, else the
 //   estimated input plus the streamed text), never more than the hold. A stopped regenerate/switch
 //   is charged but keeps the old answer.
+// - Stop of a media job that the provider had already started: charged at its estimate (capped at
+//   the hold) and stored as an empty { text: "", media: [], stopped: true } answer, because the
+//   provider bills a started generation (fal answers the cancel with CANCELLATION_REQUESTED or
+//   ALREADY_COMPLETED; the adapter reports it as err.upstreamBilled). Still queued (fal: cancel
+//   200 OK): free. A job that finished anyway is kept and billed like any finished generation.
 // - Stop before any delta, a server shutdown, or an upstream error: the hold is released (the user
 //   pays nothing); requests.api_cost_micros still records our estimated upstream spend.
 // - An answer that finished upstream but could not be stored (conversation deleted mid-answer) is
@@ -34,6 +39,8 @@ const { sha256 } = require("../crypto");
 const { MEDIA_JOBS, durationFor, textRates } = require("../seed/catalog");
 const { sanitizeTitle } = require("../router/classify");
 const { routeJob } = require("../router/pick");
+const { EFFORTS } = require("../router/effort");
+const { resolveEffort } = require("../providers/effort-map");
 const { ceilMicros } = require("../billing/credits");
 const { checkMaxChars } = require("../providers/fal");
 const redact = require("../redact");
@@ -45,12 +52,16 @@ const TITLE_MAX_CHARS = 120;
 const CAPTION_MAX_CHARS = 500;
 const MEDIA_TYPES = new Set(["image", "video", "audio"]);
 const MEDIA_HISTORY_LABEL = { image: "[generated image]", video: "[generated video]", audio: "[generated audio]" };
+// A stopped media answer has no text or media; the model still sees that something answered.
+const STOPPED_HISTORY_LABEL = "[stopped before it was ready]";
 
 // Display estimate only (the `est.` on the live chip): a typical answer for the classifier's
 // expected length plus a reasoning allowance for the effort. The credit hold always covers the full
 // MAX_OUTPUT_TOKENS, so an answer can never overspend.
 const EXPECTED_OUTPUT_TOKENS = Object.freeze({ short: 300, medium: 900, long: 2500 });
 const REASONING_ALLOWANCE_TOKENS = Object.freeze({ none: 0, low: 300, medium: 1000, high: 2500 });
+// Upstream levels outside Gode's vocabulary, as the picker reports them.
+const GODE_EFFORT = Object.freeze({ minimal: "low", xhigh: "high", max: "high" });
 
 // Media units for the credit hold, when the catalog params don't say. fal's usual clip is 5 s and
 // its square_hd preset is 1024 x 1024 (about 1.05 megapixels).
@@ -118,6 +129,20 @@ function chipFor({ label, job, effort, costUsd }) {
   return formatChip(label, isMediaJob(job) ? null : effort || "none", costUsd);
 }
 
+/**
+ * Who read a question to route it, for the privacy badge: classifier_model (a models.id, 'heuristic',
+ * or null when a regenerate/switch reused an earlier decision), its label, and classified_outside:
+ * true when a third-party model saw the (redacted) text, which a "ran on our servers" badge must not
+ * hide. `model` is the classifier's catalog row ({ label, gateway }) when known; a model missing
+ * from the catalog counts as outside unless its id names the selfhosted gateway.
+ */
+function classifierFacts(modelId, model) {
+  if (typeof modelId !== "string" || !modelId) return { classifier_model: null, classifier_label: null, classified_outside: false };
+  if (modelId === "heuristic") return { classifier_model: "heuristic", classifier_label: "Gode's own rules", classified_outside: false };
+  const gateway = model?.gateway || modelId.split(":")[0];
+  return { classifier_model: modelId, classifier_label: model?.label || modelId, classified_outside: gateway !== "selfhosted" };
+}
+
 /** Opaque per-conversation id for gateway stickiness (prompt caching). Never identifies the user. */
 function sessionIdFor(conversationId) {
   return sha256(`gode-session:${conversationId}`).slice(0, 32);
@@ -135,7 +160,7 @@ function buildSystemPrompt({ date, placeholders = false, action = false } = {}) 
 function historyContent(content) {
   const text = typeof content?.text === "string" ? content.text : "";
   const media = Array.isArray(content?.media) ? content.media : [];
-  if (!media.length) return text;
+  if (!media.length) return text || (content?.stopped === true ? STOPPED_HISTORY_LABEL : text);
   const labels = [...new Set(media.map((m) => MEDIA_HISTORY_LABEL[m?.type] || "[generated media]"))].join(" ");
   return text ? `${labels} ${text}` : labels;
 }
@@ -184,6 +209,29 @@ function estimateMediaUnits(model, prompt, params = {}) {
     default: // request, song
       return 1;
   }
+}
+
+/** The Gode effort `model` really runs `effort` at (a mandatory-reasoning model runs 'none' as 'low'). */
+function effectiveEffort(model, effort) {
+  if (!model?.supports_reasoning) return "none";
+  const sent = resolveEffort(model, effort);
+  if (!sent) return effort;
+  return EFFORTS.includes(sent) ? sent : GODE_EFFORT[sent] || effort;
+}
+
+/**
+ * The highest effort, at most `effort`, whose reasoning allowance still leaves `minAnswer` tokens of
+ * a `cap`-token max_tokens for the answer (reasoning tokens count against max_tokens on OpenAI-style
+ * APIs, so thinking alone could use up a small cap and bill an empty answer), or null when not even
+ * the model's lowest level fits.
+ */
+function effortForCap(model, effort, cap, minAnswer) {
+  if (!model?.supports_reasoning) return effort;
+  const fits = (e) => (REASONING_ALLOWANCE_TOKENS[effectiveEffort(model, e)] ?? 0) + minAnswer <= cap;
+  for (let i = Math.max(0, EFFORTS.indexOf(effort)); i >= 0; i--) {
+    if (fits(EFFORTS[i])) return effectiveEffort(model, EFFORTS[i]);
+  }
+  return null;
 }
 
 /** Expected answer length in tokens, for the displayed estimate only. */
@@ -269,21 +317,8 @@ function titleMap(map) {
   return { byPlaceholder };
 }
 
-/**
- * [PERSON_1] -> "a person" for media prompts. Uses the redactor's genericizePlaceholders; the local
- * copy below only covers a redactor build that does not export it yet (same GENERIC_PHRASES).
- */
-function genericizePlaceholders(text) {
-  if (typeof redact.genericizePlaceholders === "function") return redact.genericizePlaceholders(text);
-  const phrases = redact.GENERIC_PHRASES || {};
-  const seen = {};
-  return String(text ?? "").replace(/\[([A-Z][A-Z_]*)_(\d+)\]/g, (match, type) => {
-    const list = phrases[type] || ["a private detail", "another private detail"];
-    const distinct = (seen[type] ||= new Set());
-    distinct.add(match);
-    return distinct.size === 1 || [...distinct][0] === match ? list[0] : list[1];
-  });
-}
+/** [PERSON_1] -> "a person" for media prompts (the redactor's rule, shared with its generic mode). */
+const genericizePlaceholders = redact.genericizePlaceholders;
 
 /** Distinct placeholders per type in a text: the "N personal details hidden" counts of a media prompt. */
 function placeholderCounts(text) {
@@ -364,12 +399,12 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     touch: db.prepare("UPDATE conversations SET updated_at = ? WHERE id = ?"),
     message: db.prepare("SELECT rowid AS seq, * FROM messages WHERE id = ?"),
     recentMessages: db.prepare(
-      `SELECT rowid AS seq, id, role, content_enc, created_at FROM messages
+      `SELECT rowid AS seq, id, role, content_enc, parent_id, created_at FROM messages
         WHERE conversation_id = ? AND superseded = 0
         ORDER BY created_at DESC, rowid DESC LIMIT ?`
     ),
     messagesBefore: db.prepare(
-      `SELECT rowid AS seq, id, role, content_enc, created_at FROM messages
+      `SELECT rowid AS seq, id, role, content_enc, parent_id, created_at FROM messages
         WHERE conversation_id = ? AND superseded = 0 AND (created_at < ? OR (created_at = ? AND rowid < ?))
         ORDER BY created_at DESC, rowid DESC LIMIT ?`
     ),
@@ -381,6 +416,12 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     supersede: db.prepare("UPDATE messages SET superseded = 1 WHERE id = ? AND superseded = 0"),
     request: db.prepare("SELECT * FROM requests WHERE id = ?"),
     modelJobs: db.prepare("SELECT jobs FROM models WHERE id = ?"),
+    modelBrief: db.prepare("SELECT label, gateway FROM models WHERE id = ?"),
+    // The classifier that first read a question (a regenerate or switch reuses its decision).
+    questionClassifier: db.prepare(
+      `SELECT r.classifier_model FROM messages m JOIN requests r ON r.id = m.request_id
+        WHERE m.parent_id = ? AND r.classifier_model IS NOT NULL ORDER BY r.created_at LIMIT 1`
+    ),
     holdAlive: db.prepare("SELECT 1 AS ok FROM holds WHERE id = ? AND user_id = ?"),
     markRegenerated: db.prepare("UPDATE requests SET regenerated = 1 WHERE id = ?"),
     markOverridden: db.prepare("UPDATE requests SET overridden = 1 WHERE id = ?"),
@@ -388,11 +429,11 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
       `INSERT INTO requests (id, user_id, conversation_id, message_id, kind, job, difficulty, private, tier, model_id,
          gateway, upstream_provider, effort, zdr, pinned, classifier_model, input_tokens, output_tokens,
          reasoning_tokens, media_units, api_cost_micros, charged_micros, latency_ms, status, error_code, redactions,
-         created_at)
+         context_included, created_at)
        VALUES ($id, $user_id, $conversation_id, $message_id, $kind, $job, $difficulty, $private, $tier, $model_id,
          $gateway, $upstream_provider, $effort, $zdr, $pinned, $classifier_model, $input_tokens, $output_tokens,
          $reasoning_tokens, $media_units, $api_cost_micros, $charged_micros, $latency_ms, $status, $error_code,
-         $redactions, $created_at)`
+         $redactions, $context_included, $created_at)`
     ),
   };
 
@@ -462,6 +503,17 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
 
   const toHistory = (turn) => (row) => ({ role: row.role, content: historyContent(messageContent(turn, row)) });
 
+  /**
+   * History rows without the questions that have no current answer (it failed, was stopped before
+   * any text, or the page closed mid-answer). The UI shows those as "No answer" with Ask again, so
+   * the model must not see them either; it would also get [..., user, user], which some providers
+   * refuse. A reply always follows its question in (created_at, rowid) order, so the window holds it.
+   */
+  function answeredOnly(rows) {
+    const answered = new Set(rows.filter((r) => r.role === "assistant" && r.parent_id).map((r) => r.parent_id));
+    return rows.filter((r) => r.role !== "user" || answered.has(r.id));
+  }
+
   /** Fail before redaction and classification when the user cannot pay for anything. */
   function requireCredit(turn) {
     if (credits.balance(turn.user.id) <= 0) {
@@ -494,7 +546,8 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     } else {
       turn.userMessageId = newId();
     }
-    turn.history = rows.slice(Math.max(0, rows.length - historyLimit)).map(toHistory(turn));
+    const kept = answeredOnly(rows);
+    turn.history = kept.slice(Math.max(0, kept.length - historyLimit)).map(toHistory(turn));
 
     requireCredit(turn);
     await redactTurn(turn);
@@ -564,17 +617,13 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     if (!parent || parent.role !== "user" || parent.conversation_id !== target.conversation_id || !original || original.user_id !== turn.user.id) {
       throw new AppError(409, "conflict", "This answer can't be redone.");
     }
-    // A feedback signal for the learner even if the new answer fails.
-    (mode === "switch" ? q.markOverridden : q.markRegenerated).run(original.id);
-
     turn.target = target;
     turn.text = messageContent(turn, parent).text;
     turn.userMessageId = parent.id;
     turn.reuseUserMessage = true;
-    turn.history = q.messagesBefore
-      .all(turn.conv.id, parent.created_at, parent.created_at, parent.seq, historyLimit)
-      .reverse()
-      .map(toHistory(turn));
+    turn.history = answeredOnly(q.messagesBefore.all(turn.conv.id, parent.created_at, parent.created_at, parent.seq, historyLimit).reverse()).map(
+      toHistory(turn)
+    );
 
     requireCredit(turn);
     await redactTurn(turn);
@@ -589,6 +638,8 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
       classifierModel: null,
       usage: { inputTokens: 0, outputTokens: 0, costMicros: 0 },
     };
+    // Not classified again, but whoever classified the question then has read it.
+    turn.readBy = q.questionClassifier.get(parent.id)?.classifier_model ?? null;
     turn.classified = true;
     turn.classifierCost = 0;
     turn.job = original.job;
@@ -601,6 +652,10 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
       pins: turn.conv.pins,
       overrideModelId: mode === "switch" ? modelId.trim() : null,
     });
+    // A feedback signal for the learner, also when the new answer then fails upstream. Only after
+    // the pick: a switch the picker refuses (a non-private model in a private chat, an unknown id)
+    // changed nothing, so it must not count as the user rejecting the answer.
+    (mode === "switch" ? q.markOverridden : q.markRegenerated).run(original.id);
   }
 
   // ---- redaction ---------------------------------------------------------------------------
@@ -687,9 +742,13 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
       zdr: Boolean(pick.zdrRequired),
       redactions: turn.redactions,
       est_cost_usd: microsToUsd(credits.priceFor(expectedApi + turn.classifierCost)),
+      ...classifierOf(turn),
     };
     if (title) route.title = title;
     if (turn.target) route.replaces_message_id = turn.target.id;
+    // The balance only paid for a short answer, so the model thinks less (holdAmount).
+    if (pick.effortLowered) route.effort_lowered = true;
+    if (turn.contextIncluded) route.context_included = true;
     send("route", route);
 
     turn.callStartedAt = now();
@@ -698,6 +757,12 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     turn.latencyMs = now() - turn.callStartedAt;
 
     finish(turn, send);
+  }
+
+  /** classifierFacts for this turn's question: its own classifier, else the one that read it first. */
+  function classifierOf(turn) {
+    const id = turn.classification?.classifierModel || turn.readBy || null;
+    return classifierFacts(id, id && id !== "heuristic" ? q.modelBrief.get(id) : null);
   }
 
   /**
@@ -709,6 +774,9 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
    */
   async function buildMediaRequest(turn, model, c) {
     const mediaPrompt = typeof c.output?.media_prompt === "string" ? c.output.media_prompt.trim() : "";
+    // The classifier writes media_prompt only for a follow-up that quotes earlier messages: the
+    // media provider then gets those too (genericised), which the privacy badge discloses.
+    turn.contextIncluded = Boolean(mediaPrompt);
     if (turn.redactedSend) {
       const source = mediaPrompt ? genericizePlaceholders(mediaPrompt) : turn.text;
       const generic = await redactor.redactMessages([{ role: "user", content: source }], turn.map, { mode: "generic" });
@@ -768,7 +836,10 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
   /**
    * The credit hold: the full estimate. A text answer the balance can't fully cover gets a lower
    * max_tokens (sent upstream) so the hold fits; below MIN_AFFORDABLE_OUTPUT_TOKENS it is refused.
-   * Media must be affordable in full. Runs inside the reserve transaction.
+   * On a reasoning model the effort is lowered too, until its reasoning allowance plus that minimum
+   * fits the lower cap (the effective effort shows in the route event, the chip and the requests
+   * row); when not even the model's lowest level fits, it is refused. Media must be affordable in
+   * full. Runs inside the reserve transaction.
    */
   function holdAmount(turn, model, media) {
     const balance = credits.balance(turn.user.id);
@@ -792,12 +863,18 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
         extraApiMicros: turn.classifierCost,
         balanceMicros: balance,
       });
-      if (affordable < minAffordableOutputTokens) {
-        throw new AppError(
+      const tooLow = () =>
+        new AppError(
           402,
           "insufficient_credits",
           `Your balance (${formatCost(microsToUsd(balance))}) is too low for an answer from ${model.label}. Buy credits to continue.`
         );
+      if (affordable < minAffordableOutputTokens) throw tooLow();
+      if (affordable < maxOutputTokens) {
+        const effort = effortForCap(model, turn.pick.effort, affordable, minAffordableOutputTokens);
+        if (effort === null) throw tooLow();
+        // In place: answer() holds this pick object for the route event.
+        if (effort !== turn.pick.effort) Object.assign(turn.pick, { effort, effortLowered: true });
       }
       turn.maxTokens = affordable;
     }
@@ -850,7 +927,11 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     const provider = providers.get(model.gateway);
     // A model that got the real text has no placeholders to put back: restoring would only rewrite
     // a placeholder-looking string the user typed themselves.
-    const restorer = redactor.createStreamRestorer(turn.redactedSend ? turn.map : null);
+    // maskHighRisk: a card number or key the model produced on its own is masked before any part of
+    // it reaches the screen (the final filterResponse below stays the safety net for what the
+    // incremental masker cannot see whole). ownMap: the user's own values are never masked, also
+    // when the model got the real text (no map to restore from).
+    const restorer = redactor.createStreamRestorer(turn.redactedSend ? turn.map : null, { maskHighRisk: responseFilterOn, ownMap: turn.map });
     // What the model produced (raw) and what the user was shown: a Stop is billed from raw and
     // stores what was shown.
     const streamed = { raw: "", shown: "", deltas: 0 };
@@ -870,14 +951,33 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
       sessionId: sessionIdFor(turn.conv.id),
       signal,
     });
-    for await (const ev of stream) {
-      if (ev?.type === "delta" && typeof ev.text === "string") {
-        streamed.raw += ev.text;
-        if (ev.text) streamed.deltas += 1;
-        emitSafe(restorer.push(ev.text));
-      } else if (ev?.type === "usage") {
-        turn.usage = ev;
+    try {
+      for await (const ev of stream) {
+        if (ev?.type === "delta" && typeof ev.text === "string") {
+          streamed.raw += ev.text;
+          if (ev.text) streamed.deltas += 1;
+          emitSafe(restorer.push(ev.text));
+        } else if (ev?.type === "usage") {
+          turn.usage = ev;
+        } else if (ev?.type === "meta" && typeof ev.upstreamProvider === "string") {
+          // Who got the prompt, known before the first delta: recorded even if the answer then
+          // fails or is stopped (the transparency log names it).
+          turn.upstreamProvider = ev.upstreamProvider;
+        }
       }
+    } catch (err) {
+      // The restorer may still hold the end of a word (or a placeholder's start). It is part of
+      // what the model produced: shown before an upstream error, stored with a stopped answer.
+      // flush() restores and masks it like everything before it.
+      try {
+        const tail = restorer.flush();
+        // Nobody is listening after a Stop: the tail only goes into the stored partial answer.
+        if (signal?.aborted) streamed.shown += tail;
+        else emitSafe(tail);
+      } catch {
+        // Keep what was shown.
+      }
+      throw err;
     }
     emitSafe(restorer.flush());
     // Providers throw on abort; one that just stops early without usage must not count as finished.
@@ -906,7 +1006,7 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
       outputTokens: estimateTokens(turn.streamed?.raw || ""),
       reasoningTokens: 0,
       costUsd: null,
-      upstreamProvider: null,
+      upstreamProvider: turn.upstreamProvider ?? null,
       estimated: true,
     };
   }
@@ -965,7 +1065,8 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     // Media only now, after the commit, and as links the browser can use: the stored message keeps
     // the upstream URL, the browser gets Gode's media proxy (/api/media/<message>/<i>).
     if (media) {
-      turn.answer.media.forEach((item, i) => send("media", { ...item, url: publicMediaUrl(config, turn.assistantMessageId, i, item.url) }));
+      // url null: a host the proxy may not fetch from (the UI says the file can't be shown).
+      turn.answer.media.forEach((item, i) => send("media", { ...item, url: publicMediaUrl(config, turn.assistantMessageId, i, item.url, { logger }) }));
     }
     send("done", {
       message_id: turn.assistantMessageId,
@@ -1047,6 +1148,12 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     q.touch.run(t, conv.id);
   }
 
+  /** The host that got the prompt: the usage event's, else the stream's meta event (or error). */
+  function upstreamProviderOf(turn, usage) {
+    const name = typeof usage?.upstreamProvider === "string" && usage.upstreamProvider ? usage.upstreamProvider : turn.upstreamProvider;
+    return typeof name === "string" && name ? name.slice(0, 80) : null;
+  }
+
   function insertRequest(turn, { status, errorCode, apiMicros, charged, messageId = null, usage = turn.usage }) {
     const c = turn.classification;
     const pick = turn.pick;
@@ -1064,7 +1171,7 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
       $tier: pick?.tier ?? null,
       $model_id: pick?.model?.id ?? null,
       $gateway: pick?.model?.gateway ?? null,
-      $upstream_provider: typeof usage?.upstreamProvider === "string" ? usage.upstreamProvider.slice(0, 80) : null,
+      $upstream_provider: upstreamProviderOf(turn, usage),
       $effort: pick?.effort ?? null,
       $zdr: pick?.zdrRequired ? 1 : 0,
       $pinned: pick?.pinned ? 1 : 0,
@@ -1079,6 +1186,7 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
       $status: status,
       $error_code: errorCode,
       $redactions: JSON.stringify(turn.redactions ?? turn.newCounts ?? {}),
+      $context_included: turn.contextIncluded ? 1 : 0,
       $created_at: turn.startedAt,
     });
   }
@@ -1134,6 +1242,8 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     const code = aborted ? (shutdown ? "interrupted" : "aborted") : known ? err.code : "internal";
     const message = aborted ? (shutdown ? SHUTDOWN_MESSAGE : "Stopped.") : known ? err.message : "Something went wrong.";
     const userExists = Boolean(turn.user && q.userExists.get(turn.user.id));
+    // An upstream error names the host once it had the prompt (never on our own abort).
+    if (!turn.upstreamProvider && typeof err?.extra?.upstreamProvider === "string") turn.upstreamProvider = err.extra.upstreamProvider;
 
     // What the upstream produced: reported usage or a finished media job, else (text) the deltas
     // that reached the user, estimated as input sent + streamed text.
@@ -1141,15 +1251,22 @@ function createPipeline({ db, config, keyring, redactor, classifier, picker, pro
     const finishedUpstream = Boolean(turn.usage || turn.mediaResult);
     const usage = turn.usage || (streamedOutput ? estimatedUsage(turn) : null);
     let apiMicros = apiCostMicros(turn, usage);
-    // A media job cancelled while running may still be billed: record (not charge) its estimate.
-    if (!turn.mediaResult && turn.mediaRunning && turn.estimateApi) apiMicros += turn.estimateApi;
+    // A media job that ended unfinished after the provider started it is billed upstream. The
+    // adapter knows best (fal's answer to the cancel: err.upstreamBilled); one that can't tell is
+    // taken at its word that the job was running.
+    const mediaCall = isMediaJob(turn.job) && Boolean(turn.callStartedAt) && !turn.mediaResult;
+    const mediaBilled = mediaCall && turn.estimateApi > 0 && (typeof err?.upstreamBilled === "boolean" ? err.upstreamBilled : Boolean(turn.mediaRunning));
+    if (mediaBilled) apiMicros += turn.estimateApi;
 
-    // Who pays: a Stop after output pays for that output; an answer that finished upstream but
-    // failed to store (deleted chat, conflict) is paid; errors, shutdowns and early stops are free.
-    const stopped = aborted && !shutdown && streamedOutput;
+    // Who pays: a Stop after output pays for that output, and a Stop of a media job the provider
+    // had started pays for the job; an answer that finished upstream but failed to store (deleted
+    // chat, conflict) is paid; errors, shutdowns and early stops are free.
+    const stopped = aborted && !shutdown && (streamedOutput || mediaBilled);
     const chargeable = stopped || (!aborted && finishedUpstream);
-    if (stopped && !turn.usage) turn.usage = usage;
-    if (stopped && !turn.target) turn.answer = { text: filtered(turn, turn.streamed.shown), stopped: true };
+    if (stopped && streamedOutput && !turn.usage) turn.usage = usage;
+    if (stopped && !turn.target) {
+      turn.answer = streamedOutput ? { text: filtered(turn, turn.streamed.shown), stopped: true } : { text: "", media: [], stopped: true };
+    }
     const bill = billFailure(turn, { chargeable, storeStopped: stopped && !turn.target, apiMicros, userExists });
 
     let requestLogged = bill.stored;
@@ -1244,7 +1361,9 @@ module.exports = {
   formatChip,
   formatCost,
   chipFor,
+  classifierFacts,
   sessionIdFor,
+  effortForCap,
   buildSystemPrompt,
   historyContent,
   estimateMediaUnits,

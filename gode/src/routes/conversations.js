@@ -5,7 +5,7 @@
 // never a 403, so ids can't be probed.
 const express = require("express");
 const { AppError, microsToUsd, newId, now, safeJsonParse } = require("../util");
-const { chipFor } = require("../chat/pipeline");
+const { chipFor, classifierFacts } = require("../chat/pipeline");
 const { publicMediaUrl } = require("../media");
 const { checkpointWal } = require("../auth");
 const { bodyObject, onlyKeys, stringField } = require("./validate");
@@ -79,7 +79,7 @@ function chipText({ label, job, effort, costUsd }) {
 /**
  * @param {object} ctx  app context (see src/app.js)
  */
-function createConversationRoutes({ db, config, auth, keyring }) {
+function createConversationRoutes({ db, config, auth, keyring, logger }) {
   const router = express.Router();
   const stmt = {
     list: db.prepare("SELECT id, title_enc, updated_at FROM conversations WHERE user_id = ? ORDER BY updated_at DESC, rowid DESC"),
@@ -91,13 +91,22 @@ function createConversationRoutes({ db, config, auth, keyring }) {
       `SELECT m.id, m.role, m.content_enc, m.parent_id, m.request_id, m.created_at,
               r.id AS r_id, r.kind, r.job, r.tier, r.model_id, md.label AS model_label, md.region AS model_region,
               md.gateway AS model_gateway, r.effort, r.charged_micros, r.private, r.zdr, r.redactions, r.feedback,
-              r.pinned, r.status
+              r.pinned, r.status, r.classifier_model, r.context_included
          FROM messages m
          LEFT JOIN requests r ON r.id = m.request_id AND r.user_id = m.user_id
          LEFT JOIN models md ON md.id = r.model_id
         WHERE m.conversation_id = ? AND m.user_id = ? AND m.superseded = 0
         ORDER BY m.created_at, m.rowid`
     ),
+    // The classifier that first read each question, superseded answers included: a regenerate or
+    // switch reuses that decision, so its own row names no classifier.
+    questionClassifiers: db.prepare(
+      `SELECT m.parent_id, r.classifier_model
+         FROM messages m JOIN requests r ON r.id = m.request_id AND r.user_id = m.user_id
+        WHERE m.conversation_id = ? AND m.user_id = ? AND m.parent_id IS NOT NULL AND r.classifier_model IS NOT NULL
+        ORDER BY r.created_at, m.rowid`
+    ),
+    modelBrief: db.prepare("SELECT label, gateway FROM models WHERE id = ?"),
     rename: db.prepare("UPDATE conversations SET title_enc = ?, updated_at = ? WHERE id = ? AND user_id = ?"),
     deleteMessages: db.prepare("DELETE FROM messages WHERE conversation_id = ?"),
     deleteConversation: db.prepare("DELETE FROM conversations WHERE id = ? AND user_id = ?"),
@@ -119,7 +128,22 @@ function createConversationRoutes({ db, config, auth, keyring }) {
     return row.pinned && pin && pin.source === "user" && pin.model_id === row.model_id ? "user" : "auto";
   }
 
-  function requestMeta(row, pins) {
+  /** parent message id -> classifierFacts of the classifier that first read that question. */
+  function classifierIndex(conversationId, userId) {
+    const firstByQuestion = new Map();
+    for (const r of stmt.questionClassifiers.all(conversationId, userId)) {
+      if (!firstByQuestion.has(r.parent_id)) firstByQuestion.set(r.parent_id, r.classifier_model);
+    }
+    const facts = new Map();
+    const models = new Map();
+    for (const [parentId, id] of firstByQuestion) {
+      if (id !== "heuristic" && !models.has(id)) models.set(id, stmt.modelBrief.get(id) || null);
+      facts.set(parentId, classifierFacts(id, models.get(id)));
+    }
+    return facts;
+  }
+
+  function requestMeta(row, pins, classifiers) {
     if (!row.r_id) return undefined;
     const label = row.model_label || row.model_id;
     const costUsd = microsToUsd(row.charged_micros);
@@ -142,6 +166,12 @@ function createConversationRoutes({ db, config, auth, keyring }) {
       feedback: row.feedback ?? null,
       pinned: Boolean(row.pinned),
       status: row.status,
+      // A media prompt that quoted earlier messages ("now make a video of it").
+      context_included: Boolean(row.context_included),
+      // Who read the question to route it (the privacy badge says so when it was a third party).
+      ...(row.classifier_model
+        ? classifierFacts(row.classifier_model, row.classifier_model === "heuristic" ? null : stmt.modelBrief.get(row.classifier_model))
+        : classifiers.get(row.parent_id) || classifierFacts(null)),
     };
   }
 
@@ -169,14 +199,15 @@ function createConversationRoutes({ db, config, auth, keyring }) {
     // A question with no current answer (its answer failed, was stopped before any text, or the
     // page closed mid-answer): the UI marks it "No answer" and offers to try again.
     const answeredIds = new Set(rows.filter((m) => m.role === "assistant" && m.parent_id).map((m) => m.parent_id));
+    const classifiers = classifierIndex(conv.id, req.user.id);
     const messages = rows.map((m) => {
       const { text, media, stopped } = readContent(req.user, keyring, m.content_enc);
       // The stored message keeps the upstream URL; the browser gets Gode's media proxy link.
-      const shown = media.map((item, i) => (item && typeof item === "object" ? { ...item, url: publicMediaUrl(config, m.id, i, item.url) } : item));
+      const shown = media.map((item, i) => (item && typeof item === "object" ? { ...item, url: publicMediaUrl(config, m.id, i, item.url, { logger }) } : item));
       const message = { id: m.id, role: m.role, text, media: shown, created_at: m.created_at, parent_id: m.parent_id || null };
       if (m.role === "assistant") {
         if (stopped) message.stopped = true;
-        const request = requestMeta(m, pins);
+        const request = requestMeta(m, pins, classifiers);
         if (request) message.request = request;
       } else {
         message.answered = answeredIds.has(m.id);

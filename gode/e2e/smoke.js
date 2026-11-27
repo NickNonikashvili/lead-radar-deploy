@@ -31,6 +31,7 @@ try {
 const ROOT = path.join(__dirname, "..");
 const SHOTS = path.resolve(process.env.E2E_SHOTS || path.join(__dirname, "shots"));
 const PASSWORD = "correct horse battery";
+const NEW_PASSWORD = "a brand new passphrase";
 const EMAIL = "ada@example.com";
 const NAME = "Ada Lovelace";
 const PII_PROMPT = `Hi, my name is ${NAME} and my email is ada.lovelace@example.org. Draft a short thank-you note to my landlord.`;
@@ -70,7 +71,10 @@ const EXPECTED_BROWSER = [
   /http 401 GET \/api\/me$/, // logged-out start screen
   /http 401 POST \/api\/auth\/login$/, // wrong password on the log-in form
   /http 401 DELETE \/api\/me$/, // wrong password on "delete everything"
+  /http 401 POST \/api\/me\/password$/, // wrong current password on "change password"
+  /http 400 POST \/api\/me\/password$/, // a too-common new password
   /console error: Failed to load resource: the server responded with a status of 401 \(Unauthorized\)$/,
+  /console error: Failed to load resource: the server responded with a status of 400 \(Bad Request\)$/,
 ];
 
 // Server log lines a clean run may print: boot, the dev master key notice, the one failure we
@@ -166,7 +170,10 @@ async function startServer() {
 // Page helpers
 // ---------------------------------------------------------------------------------------------
 
-const shot = (page, name, opts = {}) => page.screenshot({ path: path.join(SHOTS, `${name}.png`), ...opts });
+// animations "disabled" jumps finished-length animations (the 0.2 s message fade-in) to their end
+// state, so a screenshot taken right after a re-render shows the page as a person sees it.
+const shot = (page, name, opts = {}) =>
+  page.screenshot({ path: path.join(SHOTS, `${name}.png`), animations: "disabled", ...opts });
 
 async function noHorizontalScroll(page) {
   const { sw, iw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
@@ -318,6 +325,15 @@ async function desktopFlow(browser, base) {
     await shot(page, "d-chat-done");
   });
 
+  await check("the skip link moves focus to the page without leaving the chat", async () => {
+    const before = page.url();
+    await page.focus(".skip-link");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.activeElement && document.activeElement.id === "main");
+    assert.equal(page.url(), before, "the hash router did not navigate");
+    assert.ok(await page.isVisible(".msg-assistant .chip-text"), "still in the conversation");
+  });
+
   await check("thumbs up is stored on the request; pressing again clears it", async () => {
     const up = page.locator('.msg-assistant .action-btn[aria-label="Good answer"]').last();
     await up.click();
@@ -375,6 +391,11 @@ async function desktopFlow(browser, base) {
     await lastAnswerSettled(page);
     const live = await stop();
     assert.ok(live.seen[".generating"], `a generating state was shown: ${JSON.stringify(live.seen)}`);
+    // Media has no thinking effort: the live chip never says "no thinking" (as the final one).
+    // (The recorder starts while the previous answer is still the last one: skip its chip.)
+    const imageChips = live.chips.filter((c) => c.startsWith("Qwen Image 3"));
+    assert.ok(imageChips.some((c) => /est\. \$/.test(c)), `a live estimate was shown: ${JSON.stringify(live.chips)}`);
+    assert.ok(imageChips.every((c) => !/thinking|effort/.test(c)), `live media chips: ${JSON.stringify(live.chips)}`);
     const decoded = await page.$eval(".msg-assistant:last-child .media img", (img) => img.complete && img.naturalWidth > 0);
     assert.ok(decoded, "image decoded");
     assert.equal(await page.textContent(".msg-assistant:last-child .chip-text"), "Qwen Image 3 · $0.05");
@@ -386,6 +407,56 @@ async function desktopFlow(browser, base) {
     await page.waitForSelector(".msg-assistant:last-child .notice-error", { timeout: 15_000 });
     assert.ok(await page.$('.msg-assistant:last-child .notice-error button:has-text("Try again")'));
     await shot(page, "d-error-upstream");
+  });
+
+  await check("after a reload the unanswered question is marked; Try again answers it in place", async () => {
+    await page.reload();
+    await page.waitForSelector(".msg-user .msg-unanswered");
+    assert.match(await page.textContent(".msg-user:last-child .msg-unanswered"), /No answer/);
+    await shot(page, "d-unanswered");
+    await page.click('.msg-user:last-child .msg-unanswered button:has-text("Try again")');
+    // The mock fails this prompt every time; what matters is that it was not stored twice.
+    await page.waitForSelector(".msg-assistant:last-child .notice-error", { timeout: 15_000 });
+    const conv = await apiGet(page, base, `/api/conversations/${state.conversationId}`);
+    const copies = conv.messages.filter((m) => m.role === "user" && m.text.includes("GODE_MOCK_FAIL_MIDSTREAM"));
+    assert.equal(copies.length, 1, "the same question, answered again, not stored again");
+    assert.equal(copies[0].answered, false);
+  });
+
+  await check("Stop keeps the partial answer, marked Stopped, with what it cost; focus returns to the composer", async () => {
+    // Press Stop (with keyboard focus on it) the moment the first words arrive.
+    await page.evaluate(() => {
+      const obs = new MutationObserver(() => {
+        const last = [...document.querySelectorAll(".msg-assistant")].pop();
+        const md = last && last.querySelector(".md");
+        const btn = document.querySelector(".send-btn.is-stop");
+        if (md && md.textContent.length > 0 && btn) {
+          obs.disconnect();
+          btn.focus();
+          btn.click();
+        }
+      });
+      obs.observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+    await send(page, "Tell me a long story about a lighthouse keeper and the sea");
+    await page.waitForSelector(".msg-assistant:last-child .tag-stopped", { timeout: 15_000 });
+    await page.waitForFunction(() => document.activeElement && document.activeElement.id === "composer-input", null, { timeout: 5_000 });
+    // The conversation is fetched again after a stop: the chip then shows the charged cost.
+    await page.waitForFunction(
+      () => {
+        const c = [...document.querySelectorAll(".msg-assistant")].pop().querySelector(".chip-text");
+        return c && / · (\$[\d.]+|<\$0\.0001)$/.test(c.textContent) && !/est\./.test(c.textContent);
+      },
+      null,
+      { timeout: 10_000 }
+    );
+    const conv = await apiGet(page, base, `/api/conversations/${state.conversationId}`);
+    const last = conv.messages[conv.messages.length - 1];
+    assert.equal(last.role, "assistant");
+    assert.equal(last.stopped, true);
+    assert.equal(last.request.status, "stopped");
+    assert.ok(last.text.length > 0, "the partial text was kept");
+    await shot(page, "d-stopped");
   });
 
   await check("settings: plan and toggles are saved; strict privacy refuses media; transparency table", async () => {
@@ -404,6 +475,8 @@ async function desktopFlow(browser, base) {
     assert.ok(rows >= 5, `transparency rows: ${rows}`);
     const table = await page.textContent(".table");
     assert.ok(!table.includes("Lovelace") && !table.includes("fox"), "the log holds no prompt text");
+    assert.ok(table.includes("Classified by"), "the log names the classifier");
+    assert.ok(await page.$('.table-log .tag-stopped:has-text("stopped")'), "the stopped answer is listed as stopped");
     await shot(page, "d-settings");
     await page.locator(".page").evaluate((el) => el.scrollTo(0, el.scrollHeight));
     await shot(page, "d-settings-log");
@@ -423,10 +496,44 @@ async function desktopFlow(browser, base) {
     await page.waitForSelector('.plan-card.is-selected:has-text("Balanced")');
   });
 
+  await check("settings: change password (wrong current and common passwords refused inline)", async () => {
+    await page.goto(base + "/#/settings");
+    await page.waitForSelector("#password-current");
+    await page.fill("#password-current", "not-my-password");
+    await page.fill("#password-next", NEW_PASSWORD);
+    await page.fill("#password-again", NEW_PASSWORD);
+    await page.click('button:has-text("Change password")');
+    await page.waitForSelector("#password-error");
+    assert.match(await page.textContent("#password-error"), /current password is not right/);
+    assert.ok(await page.isVisible(".plan-card"), "still signed in");
+    await page.fill("#password-current", PASSWORD);
+    await page.fill("#password-next", "password");
+    await page.fill("#password-again", "password");
+    await page.click('button:has-text("Change password")');
+    await page.waitForFunction(() => /too common/.test(document.querySelector("#password-error")?.textContent || ""));
+    for (const [from, to] of [
+      [PASSWORD, NEW_PASSWORD],
+      [NEW_PASSWORD, PASSWORD],
+    ]) {
+      await page.fill("#password-current", from);
+      await page.fill("#password-next", to);
+      await page.fill("#password-again", to);
+      await page.click('button:has-text("Change password")');
+      await page.waitForSelector('.toast:has-text("Password changed")');
+      await page.waitForSelector('.toast:has-text("Password changed")', { state: "detached", timeout: 10_000 });
+    }
+    assert.equal(await page.inputValue("#password-current"), "", "the form is cleared");
+  });
+
   await check("auto-pick off: the composer offers a model select and that model answers", async () => {
+    await page.goto(base + "/#/settings");
     await page.click("#auto-pick");
     await page.waitForFunction(() => document.querySelector("#auto-pick").getAttribute("aria-checked") === "false");
     await page.click(".sidebar-new .btn");
+    // Media needs auto-pick: the empty state says so and offers no media suggestions.
+    await page.waitForSelector(".empty-note");
+    assert.match(await page.textContent(".empty-note"), /need auto-pick/);
+    assert.equal(await page.$('.suggestion:has-text("Make an image")'), null, "no media suggestions in manual mode");
     await page.waitForSelector('.model-picker select option[value="openrouter:mistralai/mistral-large-4-0"]', { state: "attached" });
     await page.selectOption(".model-picker select", "openrouter:mistralai/mistral-large-4-0");
     assert.match(await page.textContent(".mode-pill"), /Manual/);
@@ -445,7 +552,11 @@ async function desktopFlow(browser, base) {
     assert.match(await page.textContent("#packs-title + .card-sub"), /API cost \+ margin \(30%\)/);
     await page.fill("#topup", "150");
     await page.click('button:has-text("Add test credit")');
-    await page.waitForSelector("text=Enter an amount between $0.01 and $100.");
+    await page.waitForSelector("text=Enter an amount above $0 and up to $100.");
+    // A sub-cent amount is shown exactly, not rounded up to a cent.
+    await page.fill("#topup", "0.005");
+    await page.click('button:has-text("Add test credit")');
+    await page.waitForSelector('.toast:has-text("Added $0.005 of test credit")');
     const before = await page.textContent(".balance-hero-value");
     await page.fill("#topup", "3");
     await page.click('button:has-text("Add test credit")');
@@ -454,11 +565,51 @@ async function desktopFlow(browser, base) {
     assert.ok(await page.$('td:has-text("Welcome credit")'));
     const ledger = await apiGet(page, base, "/api/billing/ledger");
     assert.ok(ledger.entries.some((e) => e.kind === "dev_topup" && e.delta_usd === 3));
+    assert.ok(ledger.entries.some((e) => e.kind === "dev_topup" && e.delta_usd === 0.005));
     assert.ok(ledger.entries.some((e) => e.kind === "charge" && e.delta_usd < 0), "charges are listed");
     // Balances under $10 keep sub-cent precision ("$3.1956") so small charges visibly move it.
     const shown = Number((await page.textContent(".balance-hero-value")).replace(/[^0-9.]/g, ""));
     assert.ok(Math.abs(shown - ledger.balance_usd) < 0.00005, `shown ${shown}, ledger ${ledger.balance_usd}`);
     await shot(page, "d-billing");
+  });
+
+  await check("New chat from another page keeps the unsent text of the new-chat composer", async () => {
+    await page.goto(base + "/#/");
+    await page.click(".sidebar-new .btn");
+    await page.waitForSelector(".empty-state");
+    await page.fill("#composer-input", "A draft I have not sent yet");
+    await page.click('.nav-link:has-text("Settings")');
+    await page.waitForSelector(".plan-card");
+    await page.click(".sidebar-new .btn");
+    await page.waitForSelector("#composer-input");
+    assert.equal(await page.inputValue("#composer-input"), "A draft I have not sent yet");
+    await page.fill("#composer-input", "");
+  });
+
+  await check("plan Best: switching away from the quality pick is feedback for the learner", async () => {
+    // The learner compares models within one routing cell (job x tier), so give the chat quality
+    // cell a disliked pick (switched away from) and a liked one (thumbs up after the switch).
+    await page.goto(base + "/#/settings");
+    await page.click('.plan-card:has-text("Best")');
+    await page.waitForSelector('.plan-card.is-selected:has-text("Best")');
+    await page.click(".sidebar-new .btn");
+    await send(page, "Tell me about the history of lighthouses on rocky coasts");
+    await lastAnswerSettled(page);
+    assert.match(await page.textContent(".msg-assistant:last-child .chip-text"), /^Gemini 4 Carbon · /, "the quality pick answered");
+    await page.click(".msg-assistant:last-child .chip-button");
+    await page.waitForSelector(".menu .menu-item");
+    await page.click(`.menu .menu-item:has-text("${SONNET}")`);
+    await page.waitForSelector(".msg-assistant.is-live");
+    await lastAnswerSettled(page);
+    await page.locator('.msg-assistant .action-btn[aria-label="Good answer"]').last().click();
+    await page.waitForFunction(() => [...document.querySelectorAll('.action-btn[aria-label="Good answer"]')].pop().getAttribute("aria-pressed") === "true");
+    // The switch menu now calls the model the user's pick.
+    await page.click(".msg-assistant:last-child .chip-button");
+    await page.waitForSelector('.menu .menu-sub:has-text("Your pick")');
+    await page.keyboard.press("Escape");
+    await page.goto(base + "/#/settings");
+    await page.click('.plan-card:has-text("Balanced")');
+    await page.waitForSelector('.plan-card.is-selected:has-text("Balanced")');
   });
 
   await check("admin overview: gate metrics and per-model stats from real requests", async () => {
@@ -494,6 +645,9 @@ async function desktopFlow(browser, base) {
     const cell = routing.routes.find((x) => x.job === "code" && x.tier === "budget");
     assert.deepEqual({ model_id: cell.model_id, effort_override: cell.effort_override, source: cell.source }, { model_id: target, effort_override: "low", source: "admin" });
     assert.equal(await page.$('select[aria-label="Image Quality effort override"]'), null, "no effort select for media jobs");
+    // Phase 1 answers action requests with the Chat row: the Action row is read-only.
+    assert.equal(await page.$('select[aria-label="Action Quality model"]'), null, "no editable Action cells");
+    assert.match(await page.textContent(".table-grid tr.is-readonly"), /Uses the Chat row/);
     await shot(page, "d-admin-routing");
   });
 
@@ -519,6 +673,28 @@ async function desktopFlow(browser, base) {
       const jobName = r.job[0].toUpperCase() + r.job.slice(1);
       assert.equal(await page.inputValue(`select[aria-label="${jobName} ${tierName} model"]`), r.model_id, `grid shows ${label}`);
     }
+  });
+
+  await check("admin users: find an account by email and adjust its credit", async () => {
+    await page.click('.tab:has-text("Users")');
+    await page.fill('input[aria-label="Search users by email"]', "ada@");
+    await page.click('.filters button:has-text("Search")');
+    const row = page.locator(`.table-users tr:has-text("${EMAIL}")`);
+    await row.waitFor();
+    const balance = async () => (await apiGet(page, base, "/api/billing/ledger")).balance_usd;
+    const before = await balance();
+    await row.locator("input[type=number]").fill("1.5");
+    await row.locator('input[type="text"]').fill("e2e goodwill");
+    await row.locator('button:has-text("Apply")').click();
+    await page.waitForSelector('.toast:has-text("Added $1.50")');
+    assert.ok(Math.abs((await balance()) - (before + 1.5)) < 1e-6, "credit added");
+    await row.locator("input[type=number]").fill("-1.5");
+    await row.locator('button:has-text("Apply")').click();
+    await page.waitForSelector('.toast:has-text("Took back $1.50")');
+    assert.ok(Math.abs((await balance()) - before) < 1e-6, "and taken back");
+    const ledger = await apiGet(page, base, "/api/billing/ledger");
+    assert.equal(ledger.entries.filter((e) => e.kind === "admin_adjust").length, 2);
+    await shot(page, "d-admin-users");
   });
 
   await check("admin catalog: a cleared price is flagged, a price edit is saved", async () => {
@@ -562,6 +738,13 @@ async function desktopFlow(browser, base) {
     const n = await page.$$eval(".table-providers tbody tr", (r) => r.length);
     assert.ok(n >= 30, `providers: ${n}`);
     assert.match(await page.textContent(".privacy"), /can.t promise/i);
+    // Mock mode serves every gateway, the self-hosted one included, and runs no Presidio.
+    const promises = await page.textContent(".promise-grid");
+    assert.match(promises, /Sensitive requests stay on our servers/);
+    assert.match(promises, /classifier model \(DeepSeek V4\.1 Flash, zero retention/, "the classifier hop is disclosed");
+    assert.match(promises, /media providers that may keep them/, "private media is not called zero-retention");
+    assert.match(promises, /Names are only caught when you introduce them/, "no Presidio: names are not promised");
+    assert.match(promises, /Backups made before that still contain them/);
     await shot(page, "d-privacy");
 
     const p = await ctx.newPage();
@@ -610,6 +793,14 @@ async function mobileFlow(browser, base, scheme) {
     await m.waitForSelector(".sidebar.is-open");
     await m.waitForTimeout(300);
     await shot(m, `${tag}-drawer`);
+    // The drawer takes focus, the page behind it is inert, and Escape gives focus back.
+    assert.ok(await m.evaluate(() => document.getElementById("sidebar").contains(document.activeElement)), "focus moves into the drawer");
+    assert.ok(await m.evaluate(() => document.querySelector(".main").inert === true), "the page behind is inert");
+    await m.keyboard.press("Escape");
+    await m.waitForFunction(() => document.activeElement && document.activeElement.classList.contains("menu-btn"));
+    await m.click(".menu-btn");
+    await m.waitForSelector(".sidebar.is-open");
+    await m.waitForTimeout(300);
     await m.click(".conv-item .conv-link >> nth=0");
     await m.waitForSelector(".msg-assistant .chip-text");
     await m.waitForTimeout(300);

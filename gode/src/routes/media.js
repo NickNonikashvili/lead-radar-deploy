@@ -13,6 +13,10 @@
 // - Only image/video/audio types are passed through, never SVG or HTML: this is our origin, so a
 //   scriptable document here would be stored XSS. Everything else is a download.
 // - Range requests are forwarded so videos can seek. Nothing about the file is logged.
+// - The file is asked for uncompressed (Accept-Encoding: identity): fetch decodes a compressed body
+//   by itself, so a forwarded Content-Length would be the compressed size and break the response
+//   framing. If a host compresses anyway, the body goes out without Content-Length (chunked), and a
+//   compressed range answer (whose byte offsets mean nothing once decoded) is refused.
 const express = require("express");
 const { Readable } = require("stream");
 const { AppError } = require("../util");
@@ -72,7 +76,7 @@ function createMediaRoutes({ db, config, auth, keyring, mediaFetch, logger }) {
       const url = item && typeof item.url === "string" ? item.url : null;
       if (!url || !isProxyableUrl(url, hosts)) throw notFound();
 
-      const headers = { Accept: "image/*,video/*,audio/*;q=0.9,*/*;q=0.5" };
+      const headers = { Accept: "image/*,video/*,audio/*;q=0.9,*/*;q=0.5", "Accept-Encoding": "identity" };
       const range = req.headers.range;
       if (typeof range === "string" && /^bytes=\d*-\d*$/.test(range)) headers.Range = range;
       const timer = setTimeout(() => controller.abort(), HEADERS_TIMEOUT_MS);
@@ -90,12 +94,20 @@ function createMediaRoutes({ db, config, auth, keyring, mediaFetch, logger }) {
       }
       if (upstream.status === 416) throw new AppError(416, "bad_request", "Range not satisfiable.");
       if (upstream.status !== 200 && upstream.status !== 206) throw new AppError(502, "upstream_error", "This file couldn't be loaded right now.");
+      const encoding = String(upstream.headers.get("content-encoding") || "").trim().toLowerCase();
+      // fetch has decoded the body: its length and byte ranges are no longer the upstream's.
+      const decoded = Boolean(encoding) && encoding !== "identity";
+      if (decoded && upstream.status === 206) {
+        upstream.body?.cancel?.().catch(() => {});
+        throw new AppError(502, "upstream_error", "This file couldn't be loaded right now.");
+      }
       const declared = Number(upstream.headers.get("content-length"));
-      if (Number.isFinite(declared) && declared > MAX_BYTES) throw new AppError(502, "upstream_error", "This file is too large to show.");
+      if (!decoded && Number.isFinite(declared) && declared > MAX_BYTES) throw new AppError(502, "upstream_error", "This file is too large to show.");
 
       const type = String(upstream.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
       res.status(upstream.status);
       for (const h of PASS_HEADERS) {
+        if (decoded && (h === "content-length" || h === "content-range" || h === "accept-ranges" || h === "etag")) continue;
         const v = upstream.headers.get(h);
         if (v) res.setHeader(h, v);
       }

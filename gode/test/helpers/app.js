@@ -17,7 +17,7 @@
 //                 replace that dependency (later ones are built from the replacement)
 //   dbFile        use this SQLite file instead of :memory:
 //   seed          false to start with an empty catalog (default: seeded)
-//   rateLimits, ssePingMs, logger   passed to createApp
+//   rateLimits, ssePingMs, logger, mediaFetch   passed to createApp
 //   pipelineLogger                  the real pipeline's logger (default: warnings silent)
 const crypto = require("crypto");
 const http = require("http");
@@ -220,7 +220,7 @@ async function createTestApp(env = {}, overrides = {}) {
   const pipeline = buildPipeline(overrides.pipeline, { ...base, logger: overrides.pipelineLogger });
   const deps = { ...base, pipeline };
 
-  const app = createApp({ ...deps, rateLimits: overrides.rateLimits, ssePingMs: overrides.ssePingMs, logger: overrides.logger });
+  const app = createApp({ ...deps, rateLimits: overrides.rateLimits, ssePingMs: overrides.ssePingMs, logger: overrides.logger, mediaFetch: overrides.mediaFetch });
   const server = http.createServer(app);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const url = `http://127.0.0.1:${server.address().port}`;

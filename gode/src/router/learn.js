@@ -313,8 +313,14 @@ function listLearnRuns(db, { limit = 20, source = null } = {}) {
  *
  * Money: `api_cost_usd` is every upstream cost in the window, failed and stopped requests included.
  * `charged_usd` is what was deducted from balances, whoever paid for that balance: the signup bonus
- * and dev top-ups are free credit, so `free_credit_share_pct` and `cash_covers_api_costs`
- * (purchases in the window vs API cost) say how much of it is real money.
+ * and dev top-ups are free credit, so `credits_cover_api_costs` (charges, free credit included, vs
+ * API cost) can say yes with no purchases at all. `cash_covers_api_costs` (purchases in the window vs
+ * API cost) and `free_credit_share_pct` say how much of it is real money: that is the gate figure.
+ *
+ * Deleted accounts: "delete everything" removes their requests rows but keeps their purchases in
+ * the ledger (unlinked), so their requests' per-day totals live on in usage_archive and are added
+ * back here (request counts, API cost, charges, ratings). Archived days count when the day starts
+ * at or after the start of the window's first UTC day. Auto-pick figures cover live accounts only.
  */
 function gateMetrics(db, { sinceMs } = {}) {
   const since = resolveSince(sinceMs);
@@ -351,6 +357,17 @@ function gateMetrics(db, { sinceMs } = {}) {
     )
     .get(since);
   const totalUsers = Number(db.prepare("SELECT COUNT(*) AS n FROM users").get().n);
+  const a = db
+    .prepare(
+      `SELECT COALESCE(SUM(requests), 0) AS requests, COALESCE(SUM(auto), 0) AS auto, COALESCE(SUM(manual), 0) AS manual,
+              COALESCE(SUM(switches), 0) AS switches, COALESCE(SUM(api_micros), 0) AS api,
+              COALESCE(SUM(failed_api_micros), 0) AS api_failed, COALESCE(SUM(charged_micros), 0) AS charged,
+              COALESCE(SUM(up), 0) AS up, COALESCE(SUM(down), 0) AS down
+         FROM usage_archive WHERE day >= ?`
+    )
+    .get(since - (since % DAY_MS));
+  // Live rows plus the archived totals of deleted accounts.
+  for (const k of ["requests", "auto", "manual", "switches", "api", "api_failed", "charged", "up", "down"]) r[k] = Number(r[k]) + Number(a[k]);
 
   const requests = Number(r.requests);
   const api = Number(r.api);
@@ -378,6 +395,8 @@ function gateMetrics(db, { sinceMs } = {}) {
     adjusted_usd: microsToUsd(Number(l.adjusted)),
     free_credit_share_pct: pct(free, free + purchases),
     cash_covers_api_costs: requests ? purchases >= api : null,
+    // Of `requests`: those of accounts deleted since (their totals come from usage_archive).
+    deleted_account_requests: Number(a.requests),
     since_ms: since,
   };
 }

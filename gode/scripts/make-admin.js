@@ -6,8 +6,11 @@
 //
 // This is the operator-only way to create the first admin in production, where the "first account
 // becomes admin" rule is off (FIRST_USER_ADMIN). Sign up in the browser first, then run this on the
-// server. With ADMIN_EMAILS set, that list alone decides who is an admin (it is re-checked on every
-// request), so this script refuses to change anything: edit ADMIN_EMAILS and restart instead.
+// server. With ADMIN_EMAILS set in production (ADMIN_EMAILS_AUTO_GRANT off), a listed account is an
+// admin only once this script confirmed it: emails are not verified, so whoever registers a listed
+// address first must not get admin by that alone. Only listed addresses can be confirmed (the list
+// is re-checked on every request and would take admin away at once). With auto-grant on, the list
+// alone decides, so the script refuses to change anything: edit ADMIN_EMAILS and restart instead.
 // Admin rights take effect on the user's next request; no restart is needed.
 const path = require("path");
 
@@ -55,11 +58,15 @@ function main(argv = process.argv.slice(2), env = process.env, io = console) {
     return 2;
   }
   const config = loadConfig(env);
-  if (config.adminEmails.length) {
+  if (config.adminEmails.length && config.adminEmailsAutoGrant) {
     io.error(
       "ADMIN_EMAILS is set, so it alone decides who is an admin (checked on every request). " +
         `${opts.revoke ? "Remove the address from" : "Add the address to"} ADMIN_EMAILS and restart Gode instead.`
     );
+    return 1;
+  }
+  if (config.adminEmails.length && !opts.revoke && !config.adminEmails.includes(email)) {
+    io.error("That address is not in ADMIN_EMAILS, which is checked on every request. Add it to ADMIN_EMAILS, restart Gode, then run this again.");
     return 1;
   }
   const db = openDb(config.databasePath);
@@ -75,6 +82,10 @@ function main(argv = process.argv.slice(2), env = process.env, io = console) {
       return 0;
     }
     db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(want, row.id);
+    if (!opts.revoke && config.adminEmails.length) {
+      // Confirming a listed address: make sure it is the operator's own account, not a squatter's.
+      io.log("Admin rights confirmed. Check that you created this account yourself: emails are not verified.");
+    }
     io.log(opts.revoke ? "Admin rights removed." : "Admin rights granted. They apply on the account's next request.");
     return 0;
   } finally {

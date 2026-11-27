@@ -826,15 +826,12 @@ test("handleEvent skips sessions it cannot safely credit", () => {
     sessionEvent({ type: "checkout.session.async_payment_succeeded", sessionId: "cs_weird", paymentStatus: "unpaid" }),
     // A Payment Link for another product on the same Stripe account: ?client_reference_id=<our user>.
     sessionEvent({ sessionId: "cs_paymentlink", amountTotal: 300, metadata: {} }),
-    // Our metadata, but an amount that is not one of the credit packs.
-    sessionEvent({ sessionId: "cs_notpack", amountTotal: 300, metadata: { user_id: "user-alpha", credit_micros: "3000000" } }),
   ];
   for (const ev of cases) assert.deepEqual(stripe.handleEvent(ev), { handled: false, duplicate: false }, ev.data.object.id);
   assert.equal(credits.balance("user-alpha"), 0);
   assert.equal(credits.balance("user-beta"), 0);
-  assert.equal(logs.length, 7); // every anomaly logged except the foreign subscription
+  assert.equal(logs.length, 6); // every anomaly logged except the foreign subscription
   assert.ok(logs.some((l) => /no metadata\.user_id/.test(l) && l.includes("cs_paymentlink")));
-  assert.ok(logs.some((l) => /not one of the credit packs/.test(l) && l.includes("cs_notpack")));
   assert.ok(logs.every((l) => !l.includes("user-alpha") && !l.includes("user-beta")));
 
   // Older Adaptive Pricing sessions: the customer's currency, our amount in currency_conversion.
@@ -889,4 +886,17 @@ test("end to end: signed webhook body -> verify -> handle", () => {
   assert.deepEqual(stripe.handleEvent(event), { handled: true, duplicate: false });
   assert.equal(credits.balance("user-alpha"), 25_001_000);
   assertInvariant(db);
+});
+
+test("handleEvent credits a pack that was removed from CREDIT_PACKS while its Checkout Session was open", () => {
+  // Bought as $50 under CREDIT_PACKS=5,10,25,50; the operator dropped the $50 pack before Stripe
+  // delivered the event. The metadata matches what was paid, so it is one of our sessions.
+  const { db, credits, stripe, logs } = stripeSetup({ CREDIT_PACKS: "5,10,25" });
+  addUser(db, credits, "user-alpha");
+  const ev = sessionEvent({ eventId: "evt_removed_pack", sessionId: "cs_removed_pack", amountTotal: 5000, metadata: { user_id: "user-alpha", credit_micros: "50000000" } });
+  assert.deepEqual(stripe.handleEvent(ev), { handled: true, duplicate: false });
+  assert.equal(credits.balance("user-alpha"), 50_000_000);
+  assert.deepEqual(stripe.handleEvent(ev), { handled: false, duplicate: true }, "a resend grants nothing more");
+  assert.equal(credits.balance("user-alpha"), 50_000_000);
+  assert.equal(logs.length, 0);
 });

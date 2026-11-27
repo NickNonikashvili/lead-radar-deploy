@@ -324,7 +324,7 @@ const seededDb = (() => {
 // ---------------------------------------------------------------------------------------------
 // text: redaction, restoration, response filter (real OpenRouter adapter)
 
-test("auto text via OpenRouter: PII redacted upstream, restored in deltas, replace and storage", async () => {
+test("auto text via OpenRouter: PII redacted upstream, restored in deltas, foreign card masked live, storage", async () => {
   up.reset();
   up.setScenario({
     chat: {
@@ -354,12 +354,16 @@ test("auto text via OpenRouter: PII redacted upstream, restored in deltas, repla
   assert.ok(r.route.est_cost_usd > 0);
   for (const k of ["request_id", "user_message_id", "message_id"]) assert.match(r.route[k], /^[0-9a-f-]{36}$/);
 
-  // deltas: restored, never a placeholder or a piece of one
-  const expected = `Dear ${NAME}, I will write to ${EMAIL} today. Card on file: 5425 2334 3010 9903.`;
+  // deltas: restored, never a placeholder or a piece of one. The card number the model produced
+  // (not the user's) is masked by the stream masker before any digit of it is shown, so the final
+  // response filter has nothing left to replace.
+  const expected = `Dear ${NAME}, I will write to ${EMAIL} today. Card on file: [redacted CARD].`;
   assert.equal(r.text, expected);
-  for (const d of r.of("delta")) assert.ok(!/\[|PERSON|EMAIL/.test(d.text), `delta leaked a placeholder: ${d.text}`);
-  // response filter: the foreign card is masked, the restored values stay
-  assert.equal(r.replace.text, `Dear ${NAME}, I will write to ${EMAIL} today. Card on file: [redacted CARD].`);
+  for (const d of r.of("delta")) {
+    assert.ok(!/PERSON|EMAIL|\[(?!redacted)/.test(d.text), `delta leaked a placeholder: ${d.text}`);
+    assert.ok(!/5425|2334|3010|9903/.test(d.text), `delta showed part of the foreign card: ${d.text}`);
+  }
+  assert.equal(r.replace, undefined);
 
   // upstream: nothing personal left Gode, in any request
   assert.equal(up.requests.length, 2);
@@ -381,7 +385,7 @@ test("auto text via OpenRouter: PII redacted upstream, restored in deltas, repla
   const stored = messages(h, convId);
   assert.deepEqual(stored.map((m) => m.role), ["user", "assistant"]);
   assert.equal(stored[0].content.text, PII_TEXT);
-  assert.equal(stored[1].content.text, r.replace.text);
+  assert.equal(stored[1].content.text, expected);
   assert.equal(stored[1].parent_id, stored[0].id);
   assert.equal(stored[1].request_id, r.route.request_id);
   const conv = h.db.prepare("SELECT * FROM conversations WHERE id = ?").get(convId);
@@ -442,17 +446,36 @@ test("a later turn re-redacts history with the stored map: same placeholders, no
   checkInvariants(h);
 });
 
-test("response filter: high-risk data the model invents is masked with a replace event and stored masked", async () => {
+test("response filter: high-risk data the model invents is masked before it is shown, and stored masked", async () => {
   const h = setup();
   const user = h.user();
   h.ctl.script = ["Sure. An example ", "number: 078-05-", "1120", " (made up)."];
   const r = await h.turn({ user, text: "What does a US social security number look like?" });
   assertTerminal(r, "done");
-  assert.equal(r.text, "Sure. An example number: 078-05-1120 (made up).");
-  assert.equal(r.replace.text, "Sure. An example number: [redacted SSN] (made up).");
-  assert.deepEqual(r.names.slice(-2), ["replace", "done"]);
+  // The stream masker holds digit groups back until it knows what they are: no piece of the SSN
+  // is ever on screen, so no replace event is needed.
+  assert.equal(r.text, "Sure. An example number: [redacted SSN] (made up).");
+  for (const d of r.of("delta")) assert.ok(!/078|05-|1120/.test(d.text), `delta showed part of the SSN: ${d.text}`);
+  assert.equal(r.replace, undefined);
   const [, answer] = messages(h, r.route.conversation_id);
   assert.equal(answer.content.text, "Sure. An example number: [redacted SSN] (made up).");
+  checkInvariants(h);
+});
+
+test("response filter: what the stream masker can't see whole (a key block) is replaced at the end", async () => {
+  const h = setup();
+  const user = h.user();
+  const body = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7";
+  h.ctl.script = ["Here is a key:\n-----BEGIN PRIVATE KEY-----\n", `${body}\n${body}\n`, "-----END PRIVATE KEY-----\nKeep it safe."];
+  const r = await h.turn({ user, text: "Show me what a PEM private key looks like." });
+  assertTerminal(r, "done");
+  // A multi-line block passes the masker line by line; the final filter replaces the whole text.
+  assert.ok(r.replace, "a replace event masks the key block");
+  assert.ok(!r.replace.text.includes(body));
+  assert.match(r.replace.text, /\[redacted SECRET\]/);
+  assert.deepEqual(r.names.slice(-2), ["replace", "done"]);
+  const [, answer] = messages(h, r.route.conversation_id);
+  assert.equal(answer.content.text, r.replace.text);
   checkInvariants(h);
 });
 
@@ -600,8 +623,10 @@ test("private request goes to self-hosted with unredacted text (REDACT_SELF_HOST
   assert.equal(r.route.zdr, true);
   assert.deepEqual(r.route.redactions, {}, "nothing was hidden from the self-hosted model");
 
-  // The classifier (an outside gateway) saw placeholders; the self-hosted model saw the real text.
+  // "my diagnosis" is private by our own checks, so the classifier never went outside: the
+  // self-hosted model classified it (from the redacted text) and then answered with the real text.
   const [cls] = jsonCalls();
+  assert.equal(cls.body.model, "qwen3.8-27b");
   assert.ok(!containsPII(cls.rawBody));
   const [self] = chatStreams();
   assert.equal(self.body.model, "qwen3.8-27b");
@@ -609,9 +634,11 @@ test("private request goes to self-hosted with unredacted text (REDACT_SELF_HOST
   assert.ok(!self.body.messages[0].content.includes("placeholder"), "no placeholder note when none were sent");
   assert.equal(self.body.provider, undefined);
 
-  assert.equal(r.replace.text, `Take care, ${NAME}. Reference [redacted SSN].`);
+  // The response filter still runs for the self-hosted model, live: the SSN it produced is never shown.
+  assert.equal(r.text, `Take care, ${NAME}. Reference [redacted SSN].`);
+  assert.equal(r.replace, undefined);
   const [, answer] = messages(h, r.route.conversation_id);
-  assert.equal(answer.content.text, r.replace.text);
+  assert.equal(answer.content.text, r.text);
   const row = requestRow(h, r.route.request_id);
   assert.equal(row.private, 1);
   assert.equal(row.zdr, 1);
@@ -787,11 +814,13 @@ test("switch: answers with the chosen model, pins it for the conversation, recor
   assert.equal(next.route.model.id, SONNET);
   assert.equal(next.route.pinned, true);
 
-  // An ineligible target is refused and the current answer stays.
+  // An ineligible target is refused and the current answer stays. The refused switch changed
+  // nothing, so it is not feedback against the answer (the learner and the Override rate read it).
   const bad = await h.turn({ user, mode: "switch", modelId: "fal:alibaba/qwen-image-3/text-to-image", targetMessageId: next.done.message_id });
   assertTerminal(bad, "error");
   assert.equal(bad.error.code, "bad_request");
   assert.equal(messages(h, convId).length, 4);
+  assert.equal(requestRow(h, next.route.request_id).overridden, 0);
   checkInvariants(h);
 });
 
@@ -873,6 +902,28 @@ test("stop mid-stream: the partial answer is stored as stopped and charged for w
   const again = await h.turn({ user, conversationId: convId, text: PII_TEXT });
   assertTerminal(again, "done");
   assert.notEqual(again.route.user_message_id, r.route.user_message_id);
+  checkInvariants(h);
+});
+
+test("stop while the stream masker holds the end of a word: the held text is stored with the partial answer", async () => {
+  const h = setup();
+  const user = h.user();
+  const controller = new AbortController();
+  // The masker shows "... thanks for the " and holds "no" (it could still grow into a value).
+  h.ctl.script = ["Dear [PERSON_1], thanks for the no", "te and the rest."];
+  const r = await h.turn({
+    user,
+    text: PII_TEXT,
+    signal: controller.signal,
+    onEvent: (event) => {
+      if (event === "delta") controller.abort();
+    },
+  });
+  assertTerminal(r, "error");
+  assert.equal(r.error.stopped, true);
+  assert.equal(r.of("delta").map((d) => d.text).join(""), `Dear ${NAME}, thanks for the `, "nothing is sent after the Stop");
+  const [, answer] = messages(h, r.route.conversation_id);
+  assert.deepEqual(answer.content, { text: `Dear ${NAME}, thanks for the no`, stopped: true });
   checkInvariants(h);
 });
 
@@ -1011,7 +1062,9 @@ test("retry dedupe: re-sending an unanswered question reuses it instead of stori
   const call = h.ctl.chatCalls[1];
   assert.deepEqual(call.messages.map((m) => m.role), ["system", "user"], "no duplicate question upstream");
 
-  // A different text after a failure is a new message; the unanswered one stays in the history.
+  // A different text after a failure is a new message. The unanswered one stays stored (the UI
+  // shows it as "No answer" with Ask again), but it is not sent upstream: the model sees the
+  // conversation the user sees answered, and never [..., user, user].
   h.ctl.failNext = true;
   const lost = await h.turn({ user, conversationId: convId, text: "What about the deposit?" });
   assertTerminal(lost, "error");
@@ -1019,6 +1072,13 @@ test("retry dedupe: re-sending an unanswered question reuses it instead of stori
   assertTerminal(other, "done");
   assert.notEqual(other.route.user_message_id, lost.route.user_message_id);
   assert.deepEqual(messages(h, convId).map((m) => m.role), ["user", "assistant", "user", "user", "assistant"]);
+  const sent = h.ctl.chatCalls.at(-1).messages;
+  assert.deepEqual(sent.map((m) => m.role), ["system", "user", "assistant", "user"]);
+  assert.ok(!sent.some((m) => m.content.includes("deposit")), "the unanswered question is not in the history");
+  assert.equal(sent.at(-1).content, "Actually, what about the rent?");
+  // The classifier got the same history.
+  const cls = h.calls.classify.at(-1);
+  assert.ok(!cls.history.some((m) => m.content.includes("deposit")));
   checkInvariants(h);
 });
 
@@ -1316,6 +1376,11 @@ test("media: the classifier's media_prompt (genericized) and duration reach the 
   assert.equal(durationFor(model, 20), "8s", "20 s snaps to Veo's longest clip");
   assert.deepEqual(call.params, { aspect: "16:9", duration: "8s" });
   assert.equal(call.model.params.duration_options, undefined, "catalog-only keys never reach the adapter");
+  // The follow-up quoted the earlier request: recorded, so the privacy badge can say so.
+  assert.equal(r.route.context_included, true);
+  assert.equal(requestRow(h, r.route.request_id).context_included, 1);
+  assert.equal(r1.route.context_included, undefined, "a request that stands alone");
+  assert.equal(requestRow(h, r1.route.request_id).context_included, 0);
 
   // Hold: 8 s x $0.05 plus the classifier, with the margin.
   const row = requestRow(h, r.route.request_id);
@@ -1366,6 +1431,56 @@ test("history is trimmed to the model's context window, newest kept; a message t
   assert.equal(huge.error.code, "bad_request");
   assert.match(huge.error.error, /too long for DeepSeek V4\.1 Flash/);
   assert.equal(balance(h, user.id), before);
+  checkInvariants(h);
+});
+
+test("a shrunk max_tokens never goes out with an effort whose reasoning allowance would use it up", async () => {
+  const OPUS = "openrouter:anthropic/claude-opus-5.5";
+  const HAIKU_ID = "openrouter:anthropic/claude-haiku-5.5";
+  const ALLOWANCE = { none: 0, low: 300, medium: 1000, high: 2500 };
+  const min = 256;
+  const h = setup({}, { classify: scripted({ difficulty: 5 }) });
+  const ask = (user, modelId) => h.turn({ user, mode: "manual", modelId, text: "Prove that there are infinitely many primes." });
+
+  // Plenty of credit: high effort, full cap.
+  const rich = await ask(h.user({ balanceUsd: 5 }), OPUS);
+  assertTerminal(rich, "done");
+  assert.equal(rich.route.effort, "high");
+  assert.equal(h.ctl.chatCalls.at(-1).maxTokens, h.config.router.maxOutputTokens);
+
+  // About 1,500 tokens affordable: high (2,500 + 256) can't fit, medium can.
+  const mid = await ask(h.user({ balanceUsd: 0.04 }), OPUS);
+  assertTerminal(mid, "done");
+  let call = h.ctl.chatCalls.at(-1);
+  assert.equal(call.effort, "medium");
+  assert.equal(mid.route.effort, "medium", "the route event shows the effort that runs");
+  assert.equal(mid.route.effort_lowered, true);
+  assert.equal(requestRow(h, mid.route.request_id).effort, "medium");
+  assert.match(mid.done.chip, /medium effort/);
+  assert.ok(ALLOWANCE[call.effort] + min <= call.maxTokens, `${call.effort} with max_tokens ${call.maxTokens}`);
+
+  // About 750 tokens: only low fits.
+  const low = await ask(h.user({ balanceUsd: 0.02 }), OPUS);
+  assertTerminal(low, "done");
+  call = h.ctl.chatCalls.at(-1);
+  assert.equal(call.effort, "low");
+  assert.ok(ALLOWANCE.low + min <= call.maxTokens);
+
+  // About 450 tokens: above the 256 floor, but Opus can't think less than "low" (300): refused.
+  const poor = h.user({ balanceUsd: 0.012 });
+  const calls = h.ctl.chatCalls.length;
+  const refused = await ask(poor, OPUS);
+  assertTerminal(refused, "error");
+  assert.equal(refused.error.code, "insufficient_credits");
+  assert.equal(h.ctl.chatCalls.length, calls, "nothing sent upstream");
+  assert.equal(balance(h, poor.id), 12_000);
+
+  // A model that can switch thinking off answers that balance with no thinking.
+  const haiku = await ask(h.user({ balanceUsd: 0.0006 }), HAIKU_ID);
+  assertTerminal(haiku, "done");
+  call = h.ctl.chatCalls.at(-1);
+  assert.ok(call.maxTokens < h.config.router.maxOutputTokens, `maxTokens ${call.maxTokens}`);
+  assert.ok(ALLOWANCE[call.effort] + min <= call.maxTokens, `${call.effort} with max_tokens ${call.maxTokens}`);
   checkInvariants(h);
 });
 

@@ -5,6 +5,7 @@ const { publicUser, PASSWORD_MAX } = require("../auth");
 const { AppError, ah, microsToUsd, safeJsonParse } = require("../util");
 const { PLANS } = require("../router/effort");
 const { TEXT_MAX } = require("./chat");
+const { presidioFacts } = require("./public");
 const { bodyObject, onlyKeys, stringField, booleanField, intQuery, idField, badRequest } = require("./validate");
 
 const BOOLEAN_SETTINGS = ["strict_privacy", "eu_only", "auto_pick", "share_prompts"];
@@ -21,8 +22,7 @@ function createMeRoutes({ db, config, auth, stripe, redactor, providers, limiter
   // regenerate/switch that reused the earlier decision) means nothing was sent for classifying.
   const TRANSPARENCY_SELECT = `SELECT r.id, r.created_at, r.kind, r.job, r.tier, r.model_id, m.label AS model_label, r.gateway,
               r.upstream_provider, r.effort, r.zdr, r.private, r.redactions, r.charged_micros, r.status, r.error_code,
-              r.classifier_model, cm.label AS classifier_label, cm.gateway AS classifier_gateway, cm.zdr AS classifier_zdr,
-              cm.region AS classifier_region, cm.self_hosted AS classifier_self_hosted
+              r.classifier_model, cm.label AS classifier_label
          FROM requests r
          LEFT JOIN models m ON m.id = r.model_id
          LEFT JOIN models cm ON cm.id = r.classifier_model`;
@@ -42,6 +42,7 @@ function createMeRoutes({ db, config, auth, stripe, redactor, providers, limiter
   /** What the UI needs to know about this deployment. No secrets, no per-user data. */
   function clientConfig() {
     const status = typeof providers.status === "function" ? providers.status() : {};
+    const presidio = presidioFacts(redactor);
     return {
       mock: Boolean(config.mock),
       // Both Stripe keys are needed (stripe.enabled), not just the secret key: without the webhook
@@ -51,7 +52,9 @@ function createMeRoutes({ db, config, auth, stripe, redactor, providers, limiter
       margin: config.billing.margin,
       packs_usd: [...config.billing.packsUsd],
       redaction: Boolean(config.privacy.redaction),
-      presidio: Boolean(redactor.presidioEnabled),
+      // Named only while it really checks what is sent (see src/routes/public.js presidioFacts).
+      presidio: presidio.claim,
+      presidio_state: presidio.state,
       // Whether private requests can reach a self-hosted model (always true in mock mode, where the
       // mock serves every gateway; that is also what the router does).
       selfhosted: Boolean(status.selfhosted ?? config.gateways.selfhosted.baseUrl),
@@ -153,11 +156,10 @@ function createMeRoutes({ db, config, auth, stripe, redactor, providers, limiter
       cost_usd: microsToUsd(r.charged_micros),
       status: r.status,
       error_code: r.error_code,
+      // Contract (docs/ARCHITECTURE.md): exactly these two classifier columns. Where that model
+      // runs and what it keeps is on the privacy page (/api/public/providers `classifier`).
       classifier_model: r.classifier_model || null,
       classifier_label: r.classifier_model === "heuristic" ? "Gode's own rules" : r.classifier_label || r.classifier_model || null,
-      classifier_gateway: r.classifier_gateway || null,
-      classifier_zdr: r.classifier_model && r.classifier_model !== "heuristic" ? Boolean(r.classifier_zdr || r.classifier_self_hosted) : null,
-      classifier_region: r.classifier_region || null,
     }));
     res.json({ requests, has_more: hasMore, next_before: hasMore ? requests[requests.length - 1].id : null });
   });

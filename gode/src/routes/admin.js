@@ -1,7 +1,9 @@
 // Admin: the routing table, the model catalog, the learner, catalog export/import, and user
 // accounts (find a user, adjust their credit). Every route here needs an admin
-// (auth.requireAdmin: 401 signed out, 403 signed in without the role). The first account and any
-// address in ADMIN_EMAILS are admins (src/auth.js signup).
+// (auth.requireAdmin: 401 signed out, 403 signed in without the role). Who is an admin is decided
+// in src/auth.js: exactly the ADMIN_EMAILS addresses when that is set (re-checked on every
+// request), else the first account when FIRST_USER_ADMIN is on (development), plus anyone granted
+// with scripts/make-admin.js.
 const express = require("express");
 const {
   JOBS,
@@ -15,6 +17,7 @@ const {
   getRoutes,
   exportCatalog,
   importCatalog,
+  privateSafe,
 } = require("../seed/catalog");
 const {
   computeStats,
@@ -118,10 +121,23 @@ function routableModel(model, job, tier, { requireEnabled = true } = {}) {
   if (!model.jobs.includes(job)) return `${model.label} can't do ${job}.`;
   // Text jobs re-send the whole history, so the private cell must keep it: zero-retention or
   // self-hosted only. (Media private cells may hold the budget pick: no media model is ZDR.)
-  if (tier === "private" && TEXT_JOBS.includes(job) && !(model.zdr || model.self_hosted)) {
+  // Self-hosted by gateway (privateSafe), never by the editable flag.
+  if (tier === "private" && TEXT_JOBS.includes(job) && !privateSafe(model)) {
     return `The private ${job} pick must be zero-retention or self-hosted; ${model.label} is neither.`;
   }
   return null;
+}
+
+/**
+ * Private text cells an edited model would no longer be allowed in (it lost zdr, say). The picker
+ * would skip such a cell silently and fall back, so the edit is refused instead: route another
+ * model to the cell first. `routes` overrides the stored cells (an import brings its own).
+ */
+function brokenPrivateCells(db, model, routes = getRoutes(db)) {
+  return routes
+    .filter((r) => r.tier === "private" && TEXT_JOBS.includes(r.job) && r.model_id === model.id)
+    .filter((r) => routableModel(model, r.job, r.tier, { requireEnabled: false }))
+    .map((r) => r.job);
 }
 
 function daysQuery(req, dflt) {
@@ -171,7 +187,7 @@ const escapeLike = (s) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 /**
  * @param {object} ctx  app context (see src/app.js)
  */
-function createAdminRoutes({ db, config, auth, classifier, credits }) {
+function createAdminRoutes({ db, config, auth, classifier, credits, redactor }) {
   const router = express.Router();
   router.use("/admin", auth.requireAdmin);
 
@@ -221,7 +237,15 @@ function createAdminRoutes({ db, config, auth, classifier, credits }) {
       if (patch[k] !== undefined && patch[k] !== existing[k]) throw badRequest(`${k} can't be changed; add a new model instead.`);
     }
     if (!Object.keys(patch).length) throw badRequest("Nothing to update.");
-    upsertModel(db, checkFullModel({ ...existing, ...patch }, "model", modelOpts));
+    const next = checkFullModel({ ...existing, ...patch }, "model", modelOpts);
+    const broken = brokenPrivateCells(db, next);
+    if (broken.length) {
+      throw badRequest(
+        `${existing.label} is the private ${broken.join(" and ")} pick, which must be zero-retention or self-hosted. ` +
+          "Route another model to that cell first."
+      );
+    }
+    upsertModel(db, next);
     res.json({ ok: true });
   });
 
@@ -236,6 +260,9 @@ function createAdminRoutes({ db, config, auth, classifier, credits }) {
       // What the learner compares: each routing cell's own traffic.
       cells: computeCellStats(db, { sinceMs }),
       last_learn_run: lastRun ? { id: lastRun.id, source: lastRun.source, created_at: lastRun.created_at, proposals: lastRun.proposals.length, applied: lastRun.applied } : null,
+      // The overview shows a banner while the Presidio analyzer is down (prompts are refused in
+      // fail mode 'closed', or sent with built-in checks only in 'open').
+      presidio: typeof redactor?.presidioStatus === "function" ? redactor.presidioStatus() : null,
     });
   });
 
@@ -344,6 +371,14 @@ function createAdminRoutes({ db, config, auth, classifier, credits }) {
       if (why) throw badRequest(`${where}: ${why}`);
       if (r.effort_override !== undefined) effortOverride(r.effort_override, `${where}.effort_override`);
     });
+
+    // Stored private text cells this import does not replace must stay valid for the incoming models.
+    const replaced = new Set(routes.map((r) => `${r.job}|${r.tier}`));
+    const kept = getRoutes(db).filter((r) => !replaced.has(`${r.job}|${r.tier}`));
+    for (const m of models) {
+      const broken = brokenPrivateCells(db, m, kept);
+      if (broken.length) throw badRequest(`${m.id} is the private ${broken.join(" and ")} pick and must stay zero-retention or self-hosted.`);
+    }
 
     // importCatalog / setRoute throw AppError 400 for anything the checks above missed.
     importCatalog(db, { models, routes }, { source: "admin", ...modelOpts });

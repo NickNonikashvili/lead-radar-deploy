@@ -216,6 +216,7 @@ describe("auth routes", () => {
       packs_usd: [5, 10, 25],
       redaction: true,
       presidio: false,
+      presidio_state: "off",
       selfhosted: true,
       private_fallback: "zdr",
       media_proxy: true,
@@ -367,18 +368,27 @@ describe("rate limits", () => {
     }
   });
 
-  test("login: a much higher global ceiling per email stops guessing spread over many networks", async () => {
+  test("login: past the global ceiling per email, each failing network group gets no more guesses, a fresh one still can", async () => {
     const t = await createTestApp({ TRUST_PROXY: "1" }, { rateLimits: { auth: { max: 1000 }, authEmailGlobal: { max: 15 } } });
     try {
       const email = nextEmail("target");
       await t.client().signup(email, PASSWORD);
       const c = t.client();
+      const from = (ip) => ({ headers: { "X-Forwarded-For": ip } });
+      // 15 guesses spread over 15 addresses of one /24 (each under its own per-network limit).
       for (let i = 0; i < 15; i++) {
-        const r = await c.json("POST", "/api/auth/login", { email, password: "wrong" }, { headers: { "X-Forwarded-For": `192.0.2.${i + 1}` } });
+        const r = await c.json("POST", "/api/auth/login", { email, password: "wrong" }, from(`192.0.2.${i + 1}`));
         assert.equal(r.status, 401);
       }
-      const r = await c.json("POST", "/api/auth/login", { email, password: PASSWORD }, { headers: { "X-Forwarded-For": "192.0.2.200" } });
-      assert.equal(r.status, 429);
+      // That /24 failed while the account is under attack: refused, even with the right password.
+      const sameGroup = await c.json("POST", "/api/auth/login", { email, password: PASSWORD }, from("192.0.2.200"));
+      assert.equal(sameGroup.status, 429);
+      assert.ok(Number(sameGroup.headers.get("retry-after")) > 0);
+      // Another /24: one more wrong guess is checked (401), then that group is refused too.
+      assert.equal((await c.json("POST", "/api/auth/login", { email, password: "wrong" }, from("198.51.100.1"))).status, 401);
+      assert.equal((await c.json("POST", "/api/auth/login", { email, password: "wrong" }, from("198.51.100.2"))).status, 429);
+      // The owner from a network group that never failed gets in.
+      assert.equal((await t.client().json("POST", "/api/auth/login", { email, password: PASSWORD }, from("203.0.113.50"))).status, 200);
     } finally {
       await t.close();
     }
@@ -648,6 +658,11 @@ describe("conversations", () => {
       feedback: 1,
       pinned: true,
       status: "ok",
+      context_included: false,
+      // No classifier on either row: nobody outside is named as having read the question.
+      classifier_model: null,
+      classifier_label: null,
+      classified_outside: false,
     });
     assert.ok(!r.text.includes("Five"));
   });
@@ -1018,7 +1033,7 @@ describe("GET /api/transparency", () => {
       assert.equal(r.status, 200);
       assert.equal(r.body.requests.length, 4, "only my rows");
       assert.deepEqual(Object.keys(r.body.requests[0]).sort(), [
-        "classifier_gateway", "classifier_label", "classifier_model", "classifier_region", "classifier_zdr",
+        "classifier_label", "classifier_model",
         "cost_usd", "created_at", "effort", "error_code", "gateway", "id", "job", "kind", "model_id", "model_label", "private",
         "redactions", "status", "tier", "upstream_provider", "zdr",
       ]);
@@ -1064,14 +1079,13 @@ describe("GET /api/transparency", () => {
 
       const byId = Object.fromEntries(seen.map((id, i) => [id, [...page1.body.requests, ...page2.body.requests, ...page3.body.requests][i]]));
       assert.deepEqual(
-        [byId[ids[0]], byId[ids[1]], byId[ids[2]]].map((r) => [r.classifier_model, r.classifier_label, r.classifier_zdr]),
+        [byId[ids[0]], byId[ids[1]], byId[ids[2]]].map((r) => [r.classifier_model, r.classifier_label]),
         [
-          ["heuristic", "Gode's own rules", null],
-          ["openai:gpt-6-luna", "GPT-6 Luna", false],
-          ["openrouter:deepseek/deepseek-v4.1-flash", "DeepSeek V4.1 Flash", true],
+          ["heuristic", "Gode's own rules"],
+          ["openai:gpt-6-luna", "GPT-6 Luna"],
+          ["openrouter:deepseek/deepseek-v4.1-flash", "DeepSeek V4.1 Flash"],
         ]
       );
-      assert.equal(byId[ids[2]].classifier_gateway, "openrouter");
 
       // Someone else's row (or junk) is not a cursor.
       const theirs = insertRequest(t, { user_id: b.user.id });
@@ -1781,5 +1795,126 @@ describe("chat with the real pipeline", () => {
     assert.equal(r.aborted, true);
     await waitFor(() => t.app.locals.activeStreams() === 0);
     await waitFor(() => t.deps.db.prepare("SELECT COUNT(*) AS n FROM holds WHERE user_id = ?").get(me.user.id).n === 0);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Stopped and unanswered turns, password change, the privacy page's deployment facts
+// ---------------------------------------------------------------------------------------------
+
+describe("conversation state, password change and privacy facts", () => {
+  test("a stopped answer reads back as stopped; a question without a live answer is unanswered", async () => {
+    const t = await createTestApp({}, { pipeline: scriptedPipeline() });
+    try {
+      const me = await signedIn(t, "stopper");
+      const convId = insertConversation(t, me.user, { title: "Stops" });
+      const at = Date.now() - 10_000;
+      const answered = insertTurn(t, me.user, convId, { at });
+      // A stopped answer: content { text, stopped: true }, requests.status 'stopped', charged.
+      const stopped = insertTurn(t, me.user, convId, { at: at + 10, question: "Tell me a story", answer: "Once upon", request: { status: "stopped", charged_micros: 1234 } });
+      const dek = userRow(t, me.user.id).wrapped_dek;
+      t.deps.db.prepare("UPDATE messages SET content_enc = ? WHERE id = ?").run(t.deps.keyring.encrypt(dek, { text: "Once upon", stopped: true }, { json: true }), stopped.asstId);
+      // A question whose answer failed (only the question was stored).
+      const orphanId = crypto.randomUUID();
+      t.deps.db
+        .prepare("INSERT INTO messages (id, conversation_id, user_id, role, content_enc, parent_id, request_id, superseded, created_at) VALUES (?, ?, ?, 'user', ?, NULL, NULL, 0, ?)")
+        .run(orphanId, convId, me.user.id, t.deps.keyring.encrypt(dek, { text: "This one failed" }, { json: true }), at + 20);
+
+      const r = await me.c.json("GET", `/api/conversations/${convId}`);
+      assert.equal(r.status, 200);
+      const byId = Object.fromEntries(r.body.messages.map((m) => [m.id, m]));
+      assert.equal(byId[answered.userMsgId].answered, true);
+      assert.equal(byId[stopped.userMsgId].answered, true, "a kept partial answer answers its question");
+      assert.equal(byId[orphanId].answered, false);
+      const kept = byId[stopped.asstId];
+      assert.equal(kept.stopped, true);
+      assert.equal(kept.text, "Once upon");
+      assert.equal(kept.request.status, "stopped");
+      assert.equal(kept.request.cost_usd, 0.001234);
+      assert.match(kept.request.chip, / · \$0\.0012$/);
+      assert.equal(byId[answered.asstId].stopped, undefined, "only stopped answers carry the flag");
+    } finally {
+      await t.close();
+    }
+  });
+
+  test("POST /api/me/password: checks the current one, applies the rules, signs out the other devices", async () => {
+    const t = await createTestApp({}, { pipeline: scriptedPipeline() });
+    try {
+      const me = await signedIn(t, "pwchange");
+      const other = t.client();
+      assert.equal((await other.json("POST", "/api/auth/login", { email: me.user.email, password: PASSWORD })).status, 200);
+
+      const wrong = await me.c.json("POST", "/api/me/password", { current: "not-the-password", next: "a fresh passphrase" });
+      assert.equal(wrong.status, 401);
+      assert.equal(wrong.body.code, "unauthorized");
+      assert.equal((await me.c.json("GET", "/api/me")).status, 200, "a wrong current password does not sign this device out");
+      for (const next of ["password", "        ", "short"]) {
+        const r = await me.c.json("POST", "/api/me/password", { current: PASSWORD, next });
+        assert.equal(r.status, 400, JSON.stringify(next));
+      }
+      assert.equal((await me.c.json("POST", "/api/me/password", { current: PASSWORD })).status, 400, "next is required");
+      assert.equal((await me.c.json("POST", "/api/me/password", { current: PASSWORD, next: "x".repeat(20), extra: 1 })).status, 400, "unknown keys");
+
+      const ok = await me.c.json("POST", "/api/me/password", { current: PASSWORD, next: "a fresh passphrase" });
+      assert.equal(ok.status, 200);
+      assert.deepEqual(ok.body, { ok: true, signed_out_sessions: 1 });
+      assert.equal((await me.c.json("GET", "/api/me")).status, 200, "this device stays signed in");
+      assert.equal((await other.json("GET", "/api/me")).status, 401, "the other device is signed out");
+      assert.equal((await t.client().json("POST", "/api/auth/login", { email: me.user.email, password: PASSWORD })).status, 401);
+      assert.equal((await t.client().json("POST", "/api/auth/login", { email: me.user.email, password: "a fresh passphrase" })).status, 200);
+      assert.equal((await t.client().json("POST", "/api/me/password", { current: "a", next: "b" })).status, 401, "needs a session");
+    } finally {
+      await t.close();
+    }
+  });
+
+  test("POST /api/me/password is rate limited per user", async () => {
+    const t = await createTestApp({}, { pipeline: scriptedPipeline(), rateLimits: { password: { max: 2 } } });
+    try {
+      const me = await signedIn(t, "pwlimit");
+      for (let i = 0; i < 2; i++) assert.equal((await me.c.json("POST", "/api/me/password", { current: "nope-nope", next: "a fresh passphrase" })).status, 401);
+      assert.equal((await me.c.json("POST", "/api/me/password", { current: PASSWORD, next: "a fresh passphrase" })).status, 429);
+    } finally {
+      await t.close();
+    }
+  });
+
+  test("GET /api/public/providers states what the privacy promises depend on (mock: everything runs)", async () => {
+    const t = await createTestApp({}, { pipeline: scriptedPipeline() });
+    try {
+      const r = await t.client({ origin: null }).json("GET", "/api/public/providers");
+      assert.equal(r.status, 200);
+      assert.equal(r.body.selfhosted, true);
+      assert.equal(r.body.presidio, false);
+      assert.equal(r.body.private_fallback, "zdr");
+      assert.equal(r.body.media_proxy, true);
+      assert.deepEqual(r.body.classifier, { label: "DeepSeek V4.1 Flash", zdr: true, region: "cn", self_hosted: false });
+      assert.ok(!JSON.stringify(r.body).includes("openrouter:"), "no model ids or other internals");
+    } finally {
+      await t.close();
+    }
+  });
+
+  test("GET /api/public/providers without a self-hosted model and with PRIVATE_FALLBACK=block", async () => {
+    const t = await createTestApp(
+      { GODE_MOCK: "0", OPENROUTER_API_KEY: "sk-or-test", SELFHOSTED_BASE_URL: "", PRIVATE_FALLBACK: "block", MEDIA_PROXY: "0" },
+      { pipeline: scriptedPipeline() }
+    );
+    try {
+      const r = await t.client({ origin: null }).json("GET", "/api/public/providers");
+      assert.equal(r.status, 200);
+      assert.equal(r.body.selfhosted, false, "no 'stays on our servers' promise");
+      assert.equal(r.body.private_fallback, "block");
+      assert.equal(r.body.media_proxy, false);
+      assert.ok(r.body.models.length > 0 && r.body.models.every((m) => m.gateway === "openrouter"), "only reachable gateways are listed");
+      assert.equal(r.body.classifier.label, "DeepSeek V4.1 Flash");
+      const me = await signedIn(t, "nofacts");
+      const cfg = (await me.c.json("GET", "/api/me")).body.config;
+      assert.equal(cfg.selfhosted, false);
+      assert.equal(cfg.private_fallback, "block");
+    } finally {
+      await t.close();
+    }
   });
 });

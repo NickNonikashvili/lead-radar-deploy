@@ -66,7 +66,16 @@ function openEventStream(req, res, { pingMs = DEFAULT_PING_MS } = {}) {
 
   /** Server-side cancel (shutdown): abort the work, then close the stream. */
   function abort(reason) {
-    if (!controller.signal.aborted) controller.abort(reason || new DOMException("The server is shutting down.", "AbortError"));
+    if (!controller.signal.aborted) {
+      let r = reason;
+      if (!r) {
+        r = new DOMException("The server is shutting down.", "AbortError");
+        // Tells the pipeline this is our restart, not the user's Stop (DOMException.code is a
+        // read-only getter, hence a separate property).
+        Object.defineProperty(r, "shutdown", { value: true });
+      }
+      controller.abort(r);
+    }
     end();
   }
 

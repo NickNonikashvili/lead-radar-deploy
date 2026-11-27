@@ -582,6 +582,17 @@ describe("resolveOverlaps", () => {
         ["EMAIL", 20, 24],
       ]
     );
+    // A grown high-risk span that now reaches another span of its own type merges with it: the
+    // ranking would otherwise drop one and expose the part only it covered ("mn" here).
+    const regrown = resolveOverlaps(
+      [
+        { type: "SECRET", start: 0, end: 6, score: 0.9 },
+        { type: "PERSON", start: 4, end: 12, score: 0.95 },
+        { type: "SECRET", start: 10, end: 14, score: 0.85 },
+      ],
+      text
+    );
+    assert.deepEqual(regrown.map((e) => [e.type, e.start, e.end, e.score]), [["SECRET", 0, 14, 0.9]]);
     // Two high-risk types: the winner takes the union.
     const both = resolveOverlaps(
       [

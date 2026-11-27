@@ -84,7 +84,7 @@ function formatGate(gate, { days }) {
     ["Auto-pick on now (same users)", fmtPct(gate.auto_pick_on_pct)],
     ["Auto-picked share of new turns", fmtPct(gate.auto_requests_pct)],
     ["Override rate (switches / auto picks)", fmtRate(gate.override_rate)],
-    ["Requests", fmtInt(gate.requests)],
+    ["Requests", `${fmtInt(gate.requests)}${gate.deleted_account_requests ? ` (${fmtInt(gate.deleted_account_requests)} from deleted accounts)` : ""}`],
     ["API cost (what we paid)", `${fmtUsd(gate.api_cost_usd)}${failed}`],
     ["Charged (taken from balances)", fmtUsd(gate.charged_usd)],
     ["Gross margin", fmtPct(gate.gross_margin_pct)],
@@ -103,7 +103,9 @@ function formatGate(gate, { days }) {
   const cash = gate.requests && !na(gate.cash_covers_api_costs) ? `; purchases cover API costs: ${yes(gate.cash_covers_api_costs)}` : "";
   const kept = na(gate.auto_pick_kept_pct) && !na(gate.auto_pick_on_pct) ? gate.auto_pick_on_pct : gate.auto_pick_kept_pct;
   lines.push("");
-  lines.push(`Phase-1 gate: auto-pick kept on by ${fmtPct(kept)} of active users; credits cover API costs: ${covers}${cash}.`);
+  // "charges (incl. free credit)": the signup bonus pays for answers too, so this can say yes with no
+  // purchases at all; the purchases figure after it is the one that is real money.
+  lines.push(`Phase-1 gate: auto-pick kept on by ${fmtPct(kept)} of active users; charges (incl. free credit) cover API costs: ${covers}${cash}.`);
   return lines;
 }
 

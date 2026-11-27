@@ -8,6 +8,9 @@ const ENDPOINT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)
 const REQUEST_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 const FIELD_RE = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 const CANCEL_TIMEOUT_MS = 5000;
+// A job that fal finished just as the caller stopped it was paid for: its result is still fetched,
+// within this long.
+const RESULT_AFTER_STOP_MS = 10_000;
 const DEFAULT_SECONDS = 5; // fal's usual clip length when neither input nor output says otherwise
 const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
 const MIN_POLL_MS = 50;
@@ -16,7 +19,9 @@ const MAX_RETRY_DELAY_MS = 10_000;
 const MAX_RETRY_AFTER_MS = 30_000;
 // Catalog-only keys and generic hints that must never reach a model's input schema: fal answers
 // 422 to unknown fields on strict endpoints, and the rest are ours (see src/seed/catalog.js).
-const META_KEYS = new Set(["prompt_field", "max_chars", "openrouter_provider", "aspect", "duration_s", "reasoning"]);
+const META_KEYS = new Set([
+  "prompt_field", "max_chars", "openrouter_provider", "aspect", "duration_s", "reasoning", "duration_options", "pricing",
+]);
 // fal image_size presets -> pixels, for megapixel billing when the result omits dimensions.
 const PRESET_PIXELS = {
   square_hd: [1024, 1024],
@@ -251,14 +256,43 @@ function createFalProvider(config) {
     }
   }
 
-  /** Best effort: the request already failed or was aborted, so a cancel failure changes nothing. */
+  /**
+   * Best effort: the request already failed or was aborted, so a cancel failure changes nothing
+   * here. Returns fal's answer, which tells whether a stopped job is billed:
+   *   'cancelled'  200 OK: removed from the queue before it ran (not billed)
+   *   'requested'  202 CANCELLATION_REQUESTED: it was running and may still complete (billed)
+   *   'completed'  400 ALREADY_COMPLETED (billed)
+   *   'unknown'    404, any other answer, or the queue was unreachable
+   */
   async function cancelQuietly(cancelUrl) {
-    if (!cancelUrl) return;
+    if (!cancelUrl) return "unknown";
     try {
       const res = await fetch(cancelUrl, { method: "PUT", headers: headers(), signal: AbortSignal.timeout(CANCEL_TIMEOUT_MS) });
-      await res.body?.cancel().catch(() => {});
+      let status = null;
+      try {
+        // Our own queue origin (queueUrls) answers a tiny JSON body.
+        status = JSON.parse(await res.text())?.status ?? null;
+      } catch {
+        // Not JSON: decided by the HTTP status alone.
+      }
+      if (res.status === 202 || status === "CANCELLATION_REQUESTED") return "requested";
+      if (status === "ALREADY_COMPLETED") return "completed";
+      if (res.status === 200) return "cancelled";
+      return "unknown";
     } catch {
       // Unreachable queue: fal drops unclaimed results after an hour anyway.
+      return "unknown";
+    }
+  }
+
+  /** The finished job's media after the caller stopped it, or null (the stop stands). */
+  async function lateResult(model, input, prompt, responseUrl, deadline) {
+    try {
+      const { json: result } = await getWithRetry(responseUrl, AbortSignal.any([deadline, AbortSignal.timeout(RESULT_AFTER_STOP_MS)]));
+      const media = extractMedia(result);
+      return media.length ? { media, units: computeUnits(model, { input, result, media, prompt }), costUsd: null } : null;
+    } catch {
+      return null;
     }
   }
 
@@ -289,8 +323,13 @@ function createFalProvider(config) {
     const urls = queueUrls(submitted, model.slug);
 
     let completed = false;
+    let running = false;
     try {
-      const report = progressReporter(onProgress);
+      const reportProgress = progressReporter(onProgress);
+      const report = (falStatus, position) => {
+        if (falStatus === "IN_PROGRESS") running = true;
+        reportProgress(falStatus, position);
+      };
       report(submitted.status || "IN_QUEUE", submitted.queue_position);
       const final = await waitForCompletion(urls.status, combined, report);
       completed = true;
@@ -305,8 +344,17 @@ function createFalProvider(config) {
       // Reached only by the caller's abort, our deadline or a final (non-transient) failure: the
       // job can no longer be followed, so stop it rather than let it run and bill. Transient
       // polling errors never get here; getWithRetry keeps polling until the deadline.
-      if (!completed) await cancelQuietly(urls.cancel);
-      throw mapTimeout(err, signal, timeout);
+      const cancel = completed ? "completed" : await cancelQuietly(urls.cancel);
+      if (!signal?.aborted) throw mapTimeout(err, signal, timeout);
+      // The caller stopped it. A job fal finished anyway is paid for: hand back its result if it
+      // can still be fetched (the pipeline keeps and bills it like any finished generation).
+      if (cancel === "completed") {
+        const late = await lateResult(model, input, prompt, urls.response, timeout);
+        if (late) return late;
+      }
+      // Billed unless fal confirmed it left the queue before running; when fal's answer is unknown,
+      // billed once it had been reported running.
+      throw stoppedError(signal, cancel === "requested" || cancel === "completed" || (cancel === "unknown" && running));
     }
   }
 
@@ -341,6 +389,17 @@ function progressReporter(onProgress) {
 function resultError(result) {
   const detail = typeof result?.detail === "string" ? result.detail : typeof result?.error === "string" ? result.error : null;
   return upstreamError("fal", { message: detail || "no media in result", type: result?.error_type });
+}
+
+/**
+ * The caller's abort of a submitted job, as an AbortError that says whether fal bills the job
+ * (`upstreamBilled`): the pipeline charges a stopped generation only then.
+ */
+function stoppedError(signal, billed) {
+  const reason = abortReason(signal);
+  const err = new DOMException(typeof reason?.message === "string" && reason.message ? reason.message : "This operation was aborted", "AbortError");
+  err.upstreamBilled = Boolean(billed);
+  return err;
 }
 
 /** Our own deadline firing is an upstream failure; the caller's abort stays an abort. */

@@ -1,13 +1,15 @@
 // Model picker: turns a classification + the user's settings + the conversation's pins into one
 // concrete model, tier and effort. The routing table and catalog are read from the database on
 // every call (they are tiny), so admin edits and learned routes apply to the very next request.
-const { JOBS, TEXT_JOBS, listModels, getRoutes } = require("../seed/catalog");
+const { JOBS, TEXT_JOBS, listModels, getRoutes, onOwnServers, privateSafe: isPrivateSafe } = require("../seed/catalog");
 const { AppError, safeJsonParse } = require("../util");
 const { EFFORTS, TIER_RANK, chooseTier, clampDifficulty, difficultyToEffort, isMediaJob, normalizePlan } = require("./effort");
 const { resolveEffort } = require("../providers/effort-map");
 
 const ROUTED_TIERS = ["quality", "balanced", "budget"];
-const EU_REGIONS = ["eu", "self"];
+// EU-only accepts region "eu", or our own servers (by gateway: a third-party row marked region
+// "self" is not on our servers).
+const inEu = (model) => model?.region === "eu" || onOwnServers(model);
 
 // "Typical request" sizes used only to ORDER models by price (switch menu, cheapest fallback, the
 // learner's budget guard). Billing always uses real usage.
@@ -162,7 +164,8 @@ function createPicker({ db, config, providers } = {}) {
     if (!model.enabled) return `${model.label} is turned off`;
     if (!model.jobs.includes(ctx.job)) return `${model.label} can't do ${ctx.job}`;
     if (!providers.isAvailable(model)) return `${model.label} is not available right now`;
-    const privateSafe = model.zdr || model.self_hosted;
+    // Gateway-based (src/seed/catalog.js onOwnServers): never the editable self_hosted flag.
+    const privateSafe = isPrivateSafe(model);
     if (ctx.strict && !privateSafe) return "Strict privacy allows only zero-retention or self-hosted models";
     // Media: no media model is zero-retention today, so the admin's private cell for a media job
     // (prompts go out generically redacted) is accepted for private requests. Strict privacy, the
@@ -171,7 +174,7 @@ function createPicker({ db, config, providers } = {}) {
     if (ctx.private && !privateSafe && !privateMediaPick) {
       return "This conversation looks private, so only zero-retention or self-hosted models can answer it";
     }
-    if (ctx.euOnly && TEXT_JOBS.includes(ctx.job) && !EU_REGIONS.includes(model.region)) {
+    if (ctx.euOnly && TEXT_JOBS.includes(ctx.job) && !inEu(model)) {
       return `EU-only is on and ${model.label} is not EU-hosted`;
     }
     return null;
@@ -246,7 +249,7 @@ function createPicker({ db, config, providers } = {}) {
       pinned: pinned || Boolean(old && old.model_id === model.id),
       // Restrict the gateway to zero-retention endpoints whenever the request needs it and the model
       // has them. Also what the 🔒 badge shows, so it is never set for a model that can't honour it.
-      zdrRequired: (ctx.private || ctx.strict) && Boolean(model.zdr || model.self_hosted),
+      zdrRequired: (ctx.private || ctx.strict) && isPrivateSafe(model),
       reason,
       pinsUpdate,
       private: ctx.private,
@@ -309,7 +312,7 @@ function createPicker({ db, config, providers } = {}) {
     // The private cell (self-hosted) always wins, also over an earlier zero-retention fallback pin.
     const own = routeModel(ctx, "private");
     if (own) {
-      const kind = own.self_hosted
+      const kind = onOwnServers(own)
         ? "self-hosted model"
         : own.zdr
           ? "zero-retention private pick"

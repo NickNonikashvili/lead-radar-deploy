@@ -14,6 +14,8 @@
   --surface-3: #e8e8e2;
   --border: #e3e3dc;
   --border-strong: #cfcfc6;
+  /* Off-state switch track: >= 3:1 against the card and against its white thumb (WCAG 1.4.11). */
+  --switch-off: #868982;
   --text: #1b1c1a;
   --text-2: #4c4e49;
   --text-3: #686b65;
@@ -62,6 +64,7 @@
     --surface-3: #262b28;
     --border: #2b302d;
     --border-strong: #3c423e;
+    --switch-off: #6e736f;
     --text: #eceeea;
     --text-2: #bcc0ba;
     --text-3: #949992;
@@ -558,7 +561,7 @@ pre {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--border-strong);
+  background: var(--switch-off);
   cursor: pointer;
   transition: background-color 0.2s;
 }
@@ -575,7 +578,8 @@ pre {
   height: 20px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  /* A hairline edge keeps the thumb distinct from the track in both states. */
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.2s;
 }
 
@@ -1155,6 +1159,26 @@ pre {
   justify-content: flex-end;
 }
 
+.msg-user.is-unanswered {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.msg-unanswered {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.msg-unanswered .icon {
+  color: var(--warn);
+}
+
 .bubble {
   max-width: min(85%, 620px);
   padding: 10px 15px;
@@ -1288,6 +1312,56 @@ pre {
 
 .md a {
   overflow-wrap: anywhere;
+}
+
+.md li > ul,
+.md li > ol {
+  margin-top: 0.3em;
+}
+
+.md-li-blocks > * {
+  margin: 0;
+}
+
+.md-li-blocks > * + * {
+  margin-top: 0.5em;
+}
+
+/* Tables scroll sideways inside the answer instead of widening the page on a phone. */
+.md-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.94em;
+  overflow-wrap: normal;
+}
+
+.md-table th,
+.md-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-table th {
+  background: var(--surface-2);
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.md-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.md del {
+  color: var(--text-3);
 }
 
 .md-code {
@@ -1559,6 +1633,17 @@ pre {
   color: var(--accent-text);
 }
 
+/* Private media: details were removed, but the provider is not zero-retention (no lock). */
+.badge-redacted {
+  border-color: var(--warn-border);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.badge-redacted .icon {
+  color: var(--warn);
+}
+
 .msg-actions {
   display: flex;
   gap: 2px;
@@ -1810,6 +1895,13 @@ pre {
   color: var(--accent);
 }
 
+.empty-note {
+  margin: -4px 0 14px;
+  font-size: 13.5px;
+  color: var(--text-3);
+  text-align: center;
+}
+
 .thread-loading {
   padding-top: 8px;
 }
@@ -1870,6 +1962,11 @@ pre {
   color: var(--text-3);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.composer-hint.is-limit {
+  color: var(--warn);
+  font-variant-numeric: tabular-nums;
 }
 
 .send-btn {
@@ -2094,6 +2191,16 @@ td > .tag + .tag {
   border-color: var(--danger-border);
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+.tag-stopped {
+  border-color: var(--warn-border);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.msg-stopped .tag-stopped {
+  margin-left: 0;
 }
 
 /* plan picker */
@@ -3301,4 +3408,43 @@ td > .tag + .tag {
     animation-duration: 1.2s !important;
     animation-iteration-count: infinite !important;
   }
+}
+
+/* ---------- settings: password; admin: users, read-only route row ---------- */
+
+.password-form {
+  display: grid;
+  gap: 12px;
+  max-width: 420px;
+}
+
+.password-form .field {
+  margin: 0;
+}
+
+.route-readonly {
+  font-size: 13px;
+}
+
+.table-grid tr.is-readonly th .job-kind {
+  color: var(--text-3);
+}
+
+.adjust-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.adjust-form .input-num {
+  width: 92px;
+}
+
+.adjust-form .input:not(.input-num) {
+  width: 160px;
+}
+
+.table-users td {
+  vertical-align: middle;
 }
